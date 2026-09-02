@@ -1662,16 +1662,16 @@
   #avOutlookBtn.show { display: inline-flex; }
   #avOutlookBtn:hover { background: var(--purple-deep); }
   /* Towing email preview */
-  .av-tow-preview { font-size: 13px; line-height: 1.45; }
-  .av-tow-preview .tow-meta { font-size: 12px; color: var(--muted); margin-bottom: 0; line-height: 1.4; }
+  .av-tow-preview { font-size: 13px; line-height: 1.4; white-space: normal; font-family: var(--sans); }
+  .av-tow-preview .tow-meta { font-size: 12px; color: var(--muted); margin: 0; padding: 0; line-height: 1.35; }
   .av-tow-preview .tow-meta b { color: var(--ink-soft); font-weight: 600; }
-  .av-tow-preview .tow-divider { border: none; border-top: 1px solid var(--line); margin: 4px 0; }
-  .av-tow-preview .tow-section { font-weight: 700; margin: 5px 0 0; font-size: 12.5px; }
-  .av-tow-preview .tow-legal { font-size: 11.5px; color: var(--ink-soft); line-height: 1.4; }
-  .av-tow-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 2px; }
+  .av-tow-preview .tow-divider { border: none; border-top: 1px solid var(--line); margin: 5px 0; }
+  .av-tow-preview .tow-section { font-weight: 700; margin: 8px 0 1px; padding: 0; font-size: 12.5px; line-height: 1.3; }
+  .av-tow-preview .tow-legal { font-size: 11.5px; color: var(--ink-soft); line-height: 1.35; margin: 0; padding: 0; }
+  .av-tow-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 1px 0 0; }
   .av-tow-table td { padding: 1px 6px; vertical-align: top; border-bottom: 1px solid var(--line); }
   .av-tow-table td:first-child { width: 200px; color: var(--muted); font-weight: 500; }
-  .av-tow-loc { font-size: 11.5px; white-space: pre-wrap; background: var(--paper); padding: 6px 8px; border-radius: 5px; border: 1px solid var(--line); margin-top: 2px; }
+  .av-tow-loc { font-size: 11.5px; white-space: pre-wrap; background: var(--paper); padding: 5px 7px; border-radius: 4px; border: 1px solid var(--line); margin: 1px 0 0; line-height: 1.35; }
 </style>
 </head>
 <body>
@@ -1872,7 +1872,7 @@
           <button type="button" class="step-btn bcc-xs" id="bccCopyTableBtn" onclick="bccCopyTable()" style="display:none;" title="Copy the formatted table for pasting into Outlook">Copy as table</button>
           <button type="button" class="step-btn bcc-xs" id="bccCopyPlainBtn" onclick="bccCopyPlain()" style="display:none;" title="Copy the whole email as plain text">Copy plain text</button>
           <!-- AV wizard step navigation (v197) -->
-          <a id="avOutlookBtn" href="#" target="_blank" onclick="saveDraft({auto:true})">✉️ Open in Outlook</a>
+          <a id="avOutlookBtn" href="#" target="_blank" onclick="saveDraft({auto:true})">✉️ Send in Outlook</a>
           <div class="av-step-btns" id="avStepBtns" style="display:none;">
             <button type="button" class="av-step-btn" id="avPrevBtn" style="display:none;" onclick="goAvStep(avStep-1)">← Back</button>
             <button type="button" class="av-step-btn primary" id="avNextBtn" onclick="goAvStep(avStep+1)">→ Next: Towing email</button>
@@ -8564,7 +8564,7 @@ function renderAV(){
 }
 
 /* Towing Authority Email preview (step 2). Renders an HTML preview in g_output_text
-   and builds a mailto: link for the "Open in Outlook" button. */
+   and builds a mailto: link for the "Send in Outlook" button. */
 function renderAvTowingEmail(){
   const get = id => (document.getElementById(id)||{value:''}).value.trim();
   let colour = document.getElementById('av_colour').value;
@@ -8580,31 +8580,29 @@ function renderAvTowingEmail(){
 
   // Build readable HTML preview
   const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  out.innerHTML = `<div class="av-tow-preview">
-    <div class="tow-meta"><b>To:</b> ${esc(AV_TOW_TO)}</div>
-    <div class="tow-meta"><b>BCC:</b> SNO_MetroRTNM; BMTMC_Traffic</div>
-    <div class="tow-meta"><b>Subject:</b> ${esc(AV_TOW_SUBJ_BASE + (covRaw || 'XXXXXXXX'))}</div>
-    <hr class="tow-divider">
-    <div>To Clayton\u2019s Towing,</div>
-    <div class="tow-section">Authorisation</div>
-    <div class="tow-legal">I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton\u2019s Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.</div>
-    <div style="margin-top:2px;font-size:12.5px;"><b>Authorised by:</b> Amanda Tomlinson</div>
-    <div class="tow-section">Towing and Vehicle Details</div>
-    <table class="av-tow-table">
-      <tr><td>STREAMS COV DM ID:</td><td>${esc(covRaw || '[COV DM ID]')}</td></tr>
-      <tr><td>STREAMS COV DM Title:</td><td>${esc(covTitle || '[enter in form]')}</td></tr>
-      <tr><td>Vehicle Registration:</td><td>${esc(plate || '[plate]')}</td></tr>
-      <tr><td>Tow Service Type:</td><td>Clayton\u2019s - Abandoned</td></tr>
-    </table>
-    <div class="tow-section">Location Details</div>
-    <div class="av-tow-loc">${esc(locDetail || '[paste location details]')}</div>
-    <div class="tow-section">Response Details</div>
-    <div class="tow-legal">Service Order is confirmed received on receipt of the Service Order by phone, as per conditions of contract.\nContractor shall provide estimate of arrival time within fifteen (15) minutes of receipt of Service Order.</div>
-    <div class="tow-section">Set Down Location</div>
-    <div class="tow-legal">SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.\nAbandoned vehicles \u2013 light &amp; heavy \u2013 Vehicle shall be set down at Contractors storage facility.</div>
-    <div class="tow-section">Key Performance Indicators</div>
-    <div class="tow-legal">SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.\nSVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.\nAbandoned vehicles \u2013 light &amp; heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.</div>
-  </div>`;
+  out.innerHTML = '<div class="av-tow-preview">'
+    + '<div class="tow-meta"><b>To:</b> ' + esc(AV_TOW_TO) + '</div>'
+    + '<div class="tow-meta"><b>BCC:</b> SNO_MetroRTNM; BMTMC_Traffic</div>'
+    + '<div class="tow-meta"><b>Subject:</b> ' + esc(AV_TOW_SUBJ_BASE + (covRaw || 'XXXXXXXX')) + '</div>'
+    + '<hr class="tow-divider">'
+    + '<div style="font-size:12.5px;">To Clayton\u2019s Towing,</div>'
+    + '<div class="tow-section">Authorisation</div>'
+    + '<div class="tow-legal">I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton\u2019s Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.</div>'
+    + '<div style="font-size:12px;"><b>Authorised by:</b> Amanda Tomlinson</div>'
+    + '<div class="tow-section">Towing and Vehicle Details</div>'
+    + '<table class="av-tow-table"><tr><td>STREAMS COV DM ID:</td><td>' + esc(covRaw || '[COV DM ID]') + '</td></tr>'
+    + '<tr><td>STREAMS COV DM Title:</td><td>' + esc(covTitle || '[enter in form]') + '</td></tr>'
+    + '<tr><td>Vehicle Registration:</td><td>' + esc(plate || '[plate]') + '</td></tr>'
+    + '<tr><td>Tow Service Type:</td><td>Clayton\u2019s - Abandoned</td></tr></table>'
+    + '<div class="tow-section">Location Details</div>'
+    + '<div class="av-tow-loc">' + esc(locDetail || '[paste location details]') + '</div>'
+    + '<div class="tow-section">Response Details</div>'
+    + '<div class="tow-legal">Service Order is confirmed received on receipt of the Service Order by phone, as per conditions of contract.<br>Contractor shall provide estimate of arrival time within fifteen (15) minutes of receipt of Service Order.</div>'
+    + '<div class="tow-section">Set Down Location</div>'
+    + '<div class="tow-legal">SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.<br>Abandoned vehicles \u2013 light &amp; heavy \u2013 Vehicle shall be set down at Contractors storage facility.</div>'
+    + '<div class="tow-section">Key Performance Indicators</div>'
+    + '<div class="tow-legal">SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.<br>SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.<br>Abandoned vehicles \u2013 light &amp; heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.</div>'
+    + '</div>';
 
   // Build mailto link
   const towBody = "To Clayton's Towing,\n\n"
