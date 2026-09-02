@@ -789,6 +789,8 @@
   .tmpl-head .dot::before { content: "01"; }
   .tmpl[data-tmpl="av"] .tmpl-head .dot { background: #eef0ee; color: var(--muted); }
   .tmpl[data-tmpl="av"] .tmpl-head .dot::before { content: "02"; }
+  .tmpl[data-tmpl="tts"] .tmpl-head .dot { background: #eef0ee; color: var(--muted); }
+  .tmpl[data-tmpl="tts"] .tmpl-head .dot::before { content: "03"; }
 
   /* SEQ OPS group — blue accent */
   .tmpl-group-head {
@@ -1658,9 +1660,9 @@
   .av-step-btns .av-step-btn:hover { border-color: var(--purple); color: var(--purple); background: var(--purple-soft-2); }
   .av-step-btns .av-step-btn.primary { background: var(--purple-soft-2); border-color: var(--purple-soft); color: var(--purple-deep); }
   .av-step-btns .av-step-btn.primary:hover { background: var(--purple-soft); }
-  #avOutlookBtn { display: none; flex: 1 1 0; min-width: 0; padding: 9px 10px; border: none; border-radius: var(--radius-sm); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--purple); color: #fff; align-items: center; justify-content: center; gap: 6px; text-decoration: none; transition: background 0.12s; white-space: nowrap; }
-  #avOutlookBtn.show { display: inline-flex; }
-  #avOutlookBtn:hover { background: var(--purple-deep); }
+  #ttsOutlookBtn, #avOutlookBtn { display: none; flex: 1 1 0; min-width: 0; padding: 9px 10px; border: none; border-radius: var(--radius-sm); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--purple); color: #fff; align-items: center; justify-content: center; gap: 6px; text-decoration: none; transition: background 0.12s; white-space: nowrap; }
+  #ttsOutlookBtn.show, #avOutlookBtn.show { display: inline-flex; }
+  #ttsOutlookBtn:hover, #avOutlookBtn:hover { background: var(--purple-deep); }
   /* Towing email preview */
   .av-tow-preview { font-size: 13px; line-height: 1.4; white-space: normal; font-family: var(--sans); }
   .av-tow-preview .tow-meta { font-size: 12px; color: var(--muted); margin: 0; padding: 0; line-height: 1.35; }
@@ -1792,6 +1794,19 @@
           </div>
         </div>
 
+        <!-- Template 3: Tow to Safety -->
+        <div class="tmpl" data-tmpl="tts">
+          <button type="button" class="tmpl-head" onclick="toggleTmpl(this)">
+            <span class="dot"></span>
+            <span class="tmpl-title">Tow to Safety</span>
+            <span class="tmpl-live" id="tmpl-live-tts"></span>
+            <span class="chev">▸</span>
+          </button>
+          <div class="tmpl-body" id="body-tts">
+            <!-- built by JS -->
+          </div>
+        </div>
+
         <!-- SEQ OPS group -->
         <div class="tmpl-group-head">SEQ OPS</div>
 
@@ -1910,6 +1925,7 @@
           <button type="button" class="step-btn bcc-xs" id="bccCopyTableBtn" onclick="bccCopyTable()" style="display:none;" title="Copy the formatted table for pasting into Outlook">Copy as table</button>
           <button type="button" class="step-btn bcc-xs" id="bccCopyPlainBtn" onclick="bccCopyPlain()" style="display:none;" title="Copy the whole email as plain text">Copy plain text</button>
           <!-- AV wizard step navigation (v197) -->
+          <a id="ttsOutlookBtn" href="#" target="_blank" onclick="saveDraft({auto:true})">✉️ Send in Outlook</a>
           <a id="avOutlookBtn" href="#" target="_blank" onclick="saveDraft({auto:true})">✉️ Send in Outlook</a>
           <div class="av-step-btns" id="avStepBtns" style="display:none;">
             <button type="button" class="av-step-btn" id="avPrevBtn" style="display:none;" onclick="goAvStep(avStep-1)">← Back</button>
@@ -1923,6 +1939,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
+    <span style="display:block;font-size:10px;opacity:0.6;margin-top:2px;">Version 201.1</span>
   </footer>
 </div>
 
@@ -2366,6 +2383,19 @@ const AV_TOW_TO = 'despatch@claytonstowing.com.au';
 const AV_TOW_BCC = 'SNO_MetroRTNM@tmr.qld.gov.au,BMTMC_Traffic@brisbane.qld.gov.au';
 const AV_TOW_SUBJ_BASE = 'QLD GOV - DTMR - METRO - Stationary (Abandoned / Broken-down) Vehicle Removal Authority - Service Order - COV DM ID: ';
 
+const AUTH_NAME_KEY = 'bmtmc_auth_name_v1';
+function loadSavedAuthName(el){
+  if (el.value) return;
+  try { const n = window.localStorage.getItem(AUTH_NAME_KEY); if (n) el.value = n; renderPreview(); } catch(e){}
+}
+function persistAuthName(el){
+  const v = (el.value||'').trim();
+  if (v) try { window.localStorage.setItem(AUTH_NAME_KEY, v); } catch(e){}
+}
+function getSavedAuthName(){
+  try { return window.localStorage.getItem(AUTH_NAME_KEY) || ''; } catch(e){ return ''; }
+}
+
 function goAvStep(n){
   avStep = n;
   applyAvStepVisibility();
@@ -2471,8 +2501,12 @@ function buildAV(){
     <div id="av_step2_fields" style="display:none;">
       <div class="seg-head" style="margin-top:36px;">TOWING EMAIL DETAILS</div>
       <div class="field">
+        <span class="field-label">Authorised by</span>
+        <input type="text" id="av_auth_name" placeholder="e.g. John Smith" onfocus="loadSavedAuthName(this)" onblur="persistAuthName(this)">
+      </div>
+      <div class="field">
         <span class="field-label">STREAMS COV DM Title</span>
-        <input type="text" id="av_cov_title" placeholder="e.g. Abandoned vehicle — Pacific Mwy EMP">
+        <input type="text" id="av_cov_title" placeholder="e.g. U12A - Abandoned Vehicle - White Toyota Camry">
         <p class="hint">The incident title from STREAMS.</p>
       </div>
       <div class="field">
@@ -3193,6 +3227,66 @@ function onAvColourChange(){
 
 function clearFormAV(){
   buildAV();
+  attachLiveListeners();
+  renderPreview();
+  setAutosave(false, 'Not saved');
+  scheduleWorkingSave();
+}
+
+
+
+/* ---------- Build Template 3: Tow to Safety (standalone email, v197) ---------- */
+function buildTTS(){
+  const b = document.getElementById('body-tts');
+  if (!b) return;
+  b.innerHTML = `
+    <div class="form-topbar">
+      <button type="button" class="back-btn" onclick="closeTemplate('tts')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back to templates
+      </button>
+      <button type="button" class="reset-btn" onclick="clearFormTTS()" title="Reset form">
+        <svg class="reset-ico" width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 109-9 9 9 0 00-6.4 2.6L3 8M3 3v5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Reset
+      </button>
+    </div>
+
+    <div class="seg-head">AUTHORISATION</div>
+    <div class="field">
+      <span class="field-label">Authorised by</span>
+      <input type="text" id="tts_auth_name" placeholder="e.g. John Smith" onfocus="loadSavedAuthName(this)" onblur="persistAuthName(this)">
+    </div>
+
+    <div class="seg-head" style="margin-top:36px;">TOWING AND VEHICLE DETAILS</div>
+    <div class="field">
+      <span class="field-label">STREAMS COV DM ID</span>
+      <input type="text" id="tts_cov_id" placeholder="e.g. D26-00097535" style="max-width:220px;">
+    </div>
+    <div class="field">
+      <span class="field-label">STREAMS COV DM Title</span>
+      <input type="text" id="tts_cov_title" placeholder="e.g. U12A - Broken-down Vehicle - TTS - White Toyota Camry">
+    </div>
+    <div class="field">
+      <span class="field-label">Vehicle Registration</span>
+      <input type="text" id="tts_plate" placeholder="e.g. 123ABC">
+    </div>
+
+    <div class="seg-head" style="margin-top:36px;">LOCATION DETAILS</div>
+    <div class="field">
+      <textarea id="tts_loc_detail" rows="6" placeholder="Paste location details from STREAMS (route, description, address, coordinates)\u2026" style="font-size:13px;"></textarea>
+    </div>
+
+    <div class="action-row">
+      <button type="button" class="draft-btn" onclick="saveDraft()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 3h11l3 3v15H5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 3v6h7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        Save draft
+      </button>
+    </div>
+    <span class="draft-note" id="tts_draft_note"></span>
+  `;
+}
+function clearFormTTS(){
+  buildTTS();
   attachLiveListeners();
   renderPreview();
   setAutosave(false, 'Not saved');
@@ -7429,6 +7523,7 @@ function updateLiveHeader(t){
   let road = '', suburb = '';
   if (t === 'ino'){ road = gv('s_road'); suburb = gv('s_suburb'); }
   else if (t === 'av'){ road = gv('av_road'); suburb = gv('av_suburb'); }
+  else if (t === 'tts'){ road = ''; suburb = ''; }
   else if (t === 'bcc'){ road = gv('b_road'); suburb = gv('b_suburb'); }
   else { road = gv('g_road'); suburb = gv('g_suburb'); }
   const loc = [titleCaseProperNoun(road), titleCaseProperNoun(suburb)].filter(Boolean).join(' · ');
@@ -7446,6 +7541,7 @@ function updateLiveHeader(t){
     seq = s;
   } else if (t === 'bcc'){ seq = (typeof bccStage === 'function') ? bccStage() : ''; }
   else if (t === 'av'){ seq = AV_STEP_LABELS[avStep] || 'Initial notice'; }
+  else if (t === 'tts'){ seq = 'Tow to Safety'; }
 
   // Type chip: incident/event type for INO & Generic; vehicle + rego for AV/AVR
   let chipText = '', chipStyle = null;
@@ -7469,7 +7565,8 @@ function updateLiveHeader(t){
   // Prompts when nothing entered yet
   const promptFor = { ino:'New INO escalation — enter a location to begin',
     generic:'New disruption notice — enter a location to begin',
-    av:'New AV notice — enter a location to begin' };
+    av:'New AV notice — enter a location to begin',
+    tts:'New TTS email — fill in the details to begin' };
 
   if (!loc && !chipText){
     el.innerHTML = `<span class="tl-prompt">${escapeHtml(promptFor[t] || 'New message')}</span>`;
@@ -7526,6 +7623,7 @@ function renderPreview(){
     return;
   }
   if (t === 'av') { renderAV(); refreshPreviewActions(); return; }
+  if (t === 'tts') { renderTTS(); refreshPreviewActions(); return; }
   if (t === 'ino') { renderINO(); decoratePreviewSegments('ino'); refreshPreviewActions(); return; }
   renderGeneric();
   decoratePreviewSegments('generic');
@@ -8211,15 +8309,20 @@ function refreshPreviewActions(){
   if (copyBtn) copyBtn.style.display = isBcc ? 'none' : '';
   // AV wizard: show/hide step navigation and Outlook button based on current step.
   const isAv = (t === 'av');
+  const isTts = (t === 'tts');
   const avStepBtns = document.getElementById('avStepBtns');
   const avOutBtn = document.getElementById('avOutlookBtn');
+  const ttsOutBtn = document.getElementById('ttsOutlookBtn');
   if (avStepBtns) avStepBtns.style.display = isAv ? 'flex' : 'none';
   if (avOutBtn) avOutBtn.classList.toggle('show', isAv && avStep === 2);
+  if (ttsOutBtn) ttsOutBtn.classList.toggle('show', isTts);
   // Hide SMS copy button on AV step 2 (email step).
   if (copyBtn && isAv) copyBtn.style.display = avStep === 2 ? 'none' : '';
+  if (copyBtn && isTts) copyBtn.style.display = 'none';
   // Hide character counts on step 2
   const countEl = document.getElementById('g_charcount');
   if (countEl && isAv) countEl.parentElement.style.display = avStep === 2 ? 'none' : '';
+  if (countEl && isTts) countEl.parentElement.style.display = 'none';
   // Update AV step button labels
   if (isAv){
     const avPrev = document.getElementById('avPrevBtn');
@@ -8239,6 +8342,7 @@ function refreshPreviewActions(){
   if (nextBtn && isAv) nextBtn.style.display = 'none';
   // Hide edit toggle on AV step 2 (HTML preview like BCC)
   if (editToggle && isAv) editToggle.style.display = avStep === 2 ? 'none' : '';
+  if (editToggle && isTts) editToggle.style.display = 'none';
   // Sync SLO approval UI whenever the active template or action state changes.
   if (typeof renderSloApproval === 'function') renderSloApproval();
 }
@@ -8355,6 +8459,7 @@ function nextEscalation(){
 function newMessage(){
   const t = activeTemplate();
   if (t === 'av')  return clearFormAV();
+  if (t === 'tts') return clearFormTTS();
   if (t === 'ino') return clearFormINO();
   if (t === 'bcc') return clearFormBCC();
   if (t === 'generic') return clearForm();
@@ -8612,6 +8717,7 @@ function renderAvTowingEmail(){
   const covRaw = get('av_sims');
   const covTitle = get('av_cov_title');
   const locDetail = get('av_loc_detail');
+  const authName = get('av_auth_name') || getSavedAuthName();
 
   const out = document.getElementById('g_output_text');
   out.classList.remove('empty');
@@ -8626,7 +8732,7 @@ function renderAvTowingEmail(){
     + '<div style="font-size:12.5px;">To Clayton\u2019s Towing,</div>'
     + '<div class="tow-section">Authorisation</div>'
     + '<div class="tow-legal">I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton\u2019s Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.</div>'
-    + '<div style="font-size:12px;"><b>Authorised by:</b> Amanda Tomlinson</div>'
+    + '<div style="font-size:12px;"><b>Authorised by:</b> ' + esc(authName || '[enter name]') + '</div>'
     + '<div class="tow-section">Towing and Vehicle Details</div>'
     + '<table class="av-tow-table"><tr><td>STREAMS COV DM ID:</td><td>' + esc(covRaw || '[COV DM ID]') + '</td></tr>'
     + '<tr><td>STREAMS COV DM Title:</td><td>' + esc(covTitle || '[enter in form]') + '</td></tr>'
@@ -8646,7 +8752,7 @@ function renderAvTowingEmail(){
   const towBody = "To Clayton's Towing,\n\n"
     + "Authorisation\n"
     + "I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton's Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.\n\n"
-    + "Authorised by: Amanda Tomlinson\n\n"
+    + "Authorised by: " + (authName || '[name]') + "\n\n"
     + "Towing and Vehicle Details\n"
     + "STREAMS COV DM ID:\t\t" + (covRaw || '[COV DM ID]') + "\n"
     + "STREAMS COV DM Title:\t\t" + (covTitle || '[STREAMS COV DM Title]') + "\n"
@@ -8669,6 +8775,74 @@ function renderAvTowingEmail(){
   const btn = document.getElementById('avOutlookBtn');
   if (btn) btn.href = href;
 
+  updateCounts('');
+}
+
+
+/* ---------- Assemble TTS: Tow to Safety email (live) ---------- */
+function renderTTS(){
+  if (!document.getElementById('tts_cov_id')) return;
+  const get = id => (document.getElementById(id)||{value:''}).value.trim();
+  const covRaw = get('tts_cov_id');
+  const covTitle = get('tts_cov_title');
+  const plate = get('tts_plate');
+  const locDetail = get('tts_loc_detail');
+  const authName = get('tts_auth_name') || getSavedAuthName();
+
+  const out = document.getElementById('g_output_text');
+  out.classList.remove('empty');
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  out.innerHTML = '<div class="av-tow-preview">'
+    + '<div class="tow-meta"><b>To:</b> ' + esc(AV_TOW_TO) + '</div>'
+    + '<div class="tow-meta"><b>BCC:</b> SNO_MetroRTNM; BMTMC_Traffic</div>'
+    + '<div class="tow-meta"><b>Subject:</b> ' + esc(AV_TOW_SUBJ_BASE + (covRaw || 'XXXXXXXX')) + '</div>'
+    + '<hr class="tow-divider">'
+    + '<div style="font-size:12.5px;">To Clayton\u2019s Towing,</div>'
+    + '<div class="tow-section">Authorisation</div>'
+    + '<div class="tow-legal">I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton\u2019s Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.</div>'
+    + '<div style="font-size:12px;"><b>Authorised by:</b> ' + esc(authName || '[enter name]') + '</div>'
+    + '<div class="tow-section">Towing and Vehicle Details</div>'
+    + '<table class="av-tow-table"><tr><td>STREAMS COV DM ID:</td><td>' + esc(covRaw || '[COV DM ID]') + '</td></tr>'
+    + '<tr><td>STREAMS COV DM Title:</td><td>' + esc(covTitle || '[enter in form]') + '</td></tr>'
+    + '<tr><td>Vehicle Registration:</td><td>' + esc(plate || '[plate]') + '</td></tr>'
+    + '<tr><td>Tow Service Type:</td><td>Clayton\u2019s - Abandoned</td></tr></table>'
+    + '<div class="tow-section">Location Details</div>'
+    + '<div class="av-tow-loc">' + esc(locDetail || '[paste location details]') + '</div>'
+    + '<div class="tow-section">Response Details</div>'
+    + '<div class="tow-legal">Service Order is confirmed received on receipt of the Service Order by phone, as per conditions of contract.<br>Contractor shall provide estimate of arrival time within fifteen (15) minutes of receipt of Service Order.</div>'
+    + '<div class="tow-section">Set Down Location</div>'
+    + '<div class="tow-legal">SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.<br>Abandoned vehicles \u2013 light &amp; heavy \u2013 Vehicle shall be set down at Contractors storage facility.</div>'
+    + '<div class="tow-section">Key Performance Indicators</div>'
+    + '<div class="tow-legal">SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.<br>SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.<br>Abandoned vehicles \u2013 light &amp; heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.</div>'
+    + '</div>';
+
+  // Build mailto
+  const towBody = "To Clayton's Towing,\n\n"
+    + "Authorisation\n"
+    + "I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton's Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.\n\n"
+    + "Authorised by: " + (authName || '[name]') + "\n\n"
+    + "Towing and Vehicle Details\n"
+    + "STREAMS COV DM ID:\t\t" + (covRaw || '[COV DM ID]') + "\n"
+    + "STREAMS COV DM Title:\t\t" + (covTitle || '[STREAMS COV DM Title]') + "\n"
+    + "Vehicle Registration:\t\t" + (plate || '[plate]') + "\n"
+    + "Tow Service Type:\t\t\tClayton's - Abandoned\n\n"
+    + "Locations Details\n"
+    + (locDetail || '[Location Details]') + "\n\n\n"
+    + "Response Details\n"
+    + "Service Order is confirmed received on receipt of the Service Order by phone, as per conditions of contract.\n"
+    + "Contractor shall provide estimate of arrival time within fifteen (15) minutes of receipt of Service Order.\n\n"
+    + "Set Down Location\n"
+    + "SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.\n"
+    + "Abandoned vehicles \u2013 light & heavy \u2013 Vehicle shall be set down at Contractors storage facility.\n\n"
+    + "Key Performance Indicators\n"
+    + "SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.\n"
+    + "SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.\n"
+    + "Abandoned vehicles \u2013 light & heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.";
+  const subj = AV_TOW_SUBJ_BASE + (covRaw || 'XXXXXXXX');
+  const href = 'mailto:' + AV_TOW_TO + '?bcc=' + encodeURIComponent(AV_TOW_BCC) + '&subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(towBody);
+  const btn = document.getElementById('ttsOutlookBtn');
+  if (btn) btn.href = href;
   updateCounts('');
 }
 
@@ -9365,7 +9539,7 @@ function validateBeforeCopy(){
   if (missing.length === 0) return true;
 
   // Quiet note + focus the first offender so the fix is one keystroke away.
-  const noteId = tmpl === 'av' ? 'av_draft_note' : tmpl === 'avr' ? 'avr_draft_note' : tmpl === 'ino' ? 's_draft_note' : 'g_draft_note';
+  const noteId = tmpl === 'tts' ? 'tts_draft_note' : tmpl === 'av' ? 'av_draft_note' : tmpl === 'avr' ? 'avr_draft_note' : tmpl === 'ino' ? 's_draft_note' : 'g_draft_note';
   const note = document.getElementById(noteId);
   if (note){
     note.classList.add('warn');
@@ -9426,6 +9600,16 @@ function collectFormState(){
       }
     };
   }
+  if (tmpl === 'tts'){
+    return {
+      tmpl: 'tts',
+      tts: {
+        authName: gv('tts_auth_name'),
+        covId: gv('tts_cov_id'), covTitle: gv('tts_cov_title'),
+        plate: gv('tts_plate'), locDetail: gv('tts_loc_detail')
+      }
+    };
+  }
   if (tmpl === 'av'){
     return {
       tmpl: 'av',
@@ -9436,7 +9620,8 @@ function collectFormState(){
         road: gv('av_road'), suburb: gv('av_suburb'),
         date: gv('av_date'), sims: gv('av_sims'),
         exit: gv('av_exit'),
-        covTitle: gv('av_cov_title'), locDetail: gv('av_loc_detail')
+        covTitle: gv('av_cov_title'), locDetail: gv('av_loc_detail'),
+        authName: gv('av_auth_name')
       }
     };
   }
@@ -9650,6 +9835,11 @@ function deriveDraftName(state){
     const stage = a.stage || 'Initial';
     const loc = [a.road, a.suburb].filter(Boolean).join(' · ');
     return loc ? `BCC ${stage} · ${loc}` : `BCC ${stage} ${draftSeq}`;
+  }
+  if (state.tmpl === 'tts'){
+    const a = state.tts || {};
+    const bits = ['TTS', a.plate].filter(Boolean);
+    return bits.length > 1 ? bits.join(' · ') : `TTS ${draftSeq}`;
   }
   if (state.tmpl === 'av' || state.tmpl === 'avr'){
     const a = state.av || state.avr || {};
@@ -10153,7 +10343,7 @@ function saveDraft(opts){
   drafts.unshift(draft);
   draftSeq++;
 
-  const note = document.getElementById((state.tmpl === 'av' || state.tmpl === 'avr') ? 'av_draft_note' : (state.tmpl === 'ino') ? 's_draft_note' : (state.tmpl === 'bcc') ? 'b_draft_note' : 'g_draft_note');
+  const note = document.getElementById((state.tmpl === 'tts') ? 'tts_draft_note' : (state.tmpl === 'av' || state.tmpl === 'avr') ? 'av_draft_note' : (state.tmpl === 'ino') ? 's_draft_note' : (state.tmpl === 'bcc') ? 'b_draft_note' : 'g_draft_note');
   const t = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
   if (note){
     note.classList.remove('warn');
@@ -10207,7 +10397,7 @@ function loadDraftById(id){
   applyDraft(draft.state);
   renderPreview();
   closeDraftsPanel();
-  const note = document.getElementById(tmpl === 'av' ? 'av_draft_note' : tmpl === 'avr' ? 'avr_draft_note' : tmpl === 'ino' ? 's_draft_note' : tmpl === 'bcc' ? 'b_draft_note' : 'g_draft_note');
+  const note = document.getElementById(tmpl === 'tts' ? 'tts_draft_note' : tmpl === 'av' ? 'av_draft_note' : tmpl === 'avr' ? 'avr_draft_note' : tmpl === 'ino' ? 's_draft_note' : tmpl === 'bcc' ? 'b_draft_note' : 'g_draft_note');
   if (note){ note.classList.remove('warn'); note.textContent = `Loaded “${draft.name}” ✓`; }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -10462,6 +10652,7 @@ function draftFamily(tmpl){
   if (tmpl === 'ino') return 'ino';
   if (tmpl === 'av') return 'av';
   if (tmpl === 'avr') return 'av'; // legacy — merged into AV wizard v197
+  if (tmpl === 'tts') return 'tts';
   if (tmpl === 'bcc') return 'bcc';
   return 'generic';
 }
@@ -10470,6 +10661,7 @@ function draftTypeBadge(tmpl){
   if (tmpl === 'ino') return 'INO';
   if (tmpl === 'av') return 'AV';
   if (tmpl === 'avr') return 'AVR';
+  if (tmpl === 'tts') return 'TTS';
   if (tmpl === 'bcc') return 'BCC';
   return 'GEN';
 }
@@ -11020,6 +11212,7 @@ function renderDraftsList(){
     { fam: 'ino',     label: 'SEQ OPS · INO' },
     { fam: 'generic', label: 'Generic Disruption' },
     { fam: 'av',      label: 'Abandoned Vehicles' },
+    { fam: 'tts',     label: 'Tow to Safety' },
     { fam: 'bcc',     label: 'BCC · SLAM Escalation Email' }
   ];
   let html = '';
@@ -11187,6 +11380,16 @@ function applyDraft(s){
     renderPreview();
     return;
   }
+  if (s.tmpl === 'tts'){
+    buildTTS();
+    const a = s.tts || {};
+    const set = (id,val)=>{ const el=document.getElementById(id); if(el) el.value = val||''; };
+    set('tts_auth_name', a.authName);
+    set('tts_cov_id', a.covId); set('tts_cov_title', a.covTitle);
+    set('tts_plate', a.plate); set('tts_loc_detail', a.locDetail);
+    renderPreview();
+    return;
+  }
   if (s.tmpl === 'av' || s.tmpl === 'avr'){
     buildAV();
     const a = s.av || s.avr || {};
@@ -11201,6 +11404,7 @@ function applyDraft(s){
     set('av_exit', a.exit);
     set('av_cov_title', a.covTitle);
     set('av_loc_detail', a.locDetail);
+    set('av_auth_name', a.authName);
     // Restore step (legacy avr drafts open at step 3)
     avStep = s.tmpl === 'avr' ? 3 : (a.step || 1);
     applyAvStepVisibility();
@@ -11501,7 +11705,7 @@ function markUnsavedIfSaved(){
 
 /* ---------- Live update wiring ---------- */
 function attachLiveListeners(){
-  ['body-generic','body-av','body-avr','body-ino','body-bcc'].forEach(rid=>{
+  ['body-generic','body-av','body-tts','body-ino','body-bcc'].forEach(rid=>{
     const root = document.getElementById(rid);
     if (!root || root.dataset.bound) return;
     root.dataset.bound = '1';
@@ -11766,6 +11970,7 @@ function renderFreqChips(){
 /* init */
 buildGeneric();
 buildAV();
+buildTTS();
 buildINO();
 buildBCC();
 // Main-Lanes position count boxes start disabled until their checkbox is ticked.
