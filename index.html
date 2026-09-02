@@ -789,8 +789,6 @@
   .tmpl-head .dot::before { content: "01"; }
   .tmpl[data-tmpl="av"] .tmpl-head .dot { background: #eef0ee; color: var(--muted); }
   .tmpl[data-tmpl="av"] .tmpl-head .dot::before { content: "02"; }
-  .tmpl[data-tmpl="avr"] .tmpl-head .dot { background: #eef0ee; color: var(--muted); }
-  .tmpl[data-tmpl="avr"] .tmpl-head .dot::before { content: "03"; }
 
   /* SEQ OPS group — blue accent */
   .tmpl-group-head {
@@ -1642,6 +1640,37 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
   }
+
+  /* ---- AV wizard step indicator (v197) ---- */
+  .av-step-track { display: flex; align-items: center; gap: 0; margin: 0 0 20px; }
+  .av-step-node { display: flex; align-items: center; gap: 7px; cursor: pointer; padding: 7px 12px; border-radius: 999px; transition: all 0.15s; border: 2px solid transparent; }
+  .av-step-node .av-step-num { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11px; font-weight: 600; background: var(--line); color: var(--muted); transition: all 0.15s; flex-shrink: 0; }
+  .av-step-node .av-step-label { font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; transition: color 0.15s; }
+  .av-step-node.av-step-active { background: var(--purple-soft-2); border-color: var(--purple-soft); }
+  .av-step-node.av-step-active .av-step-num { background: var(--purple); color: #fff; }
+  .av-step-node.av-step-active .av-step-label { color: var(--purple-deep); }
+  .av-step-node.av-step-done .av-step-num { background: var(--purple-soft); color: var(--purple-deep); }
+  .av-step-node.av-step-done .av-step-label { color: var(--ink-soft); }
+  .av-step-connector { width: 20px; height: 2px; background: var(--line); flex-shrink: 0; }
+  /* AV step-specific preview buttons */
+  .av-step-btns { display: flex; gap: 8px; margin-top: 8px; }
+  .av-step-btns .av-step-btn { flex: 1; padding: 10px; border: 1.5px solid var(--line); border-radius: var(--radius); background: var(--card); font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; text-align: center; transition: all 0.12s; }
+  .av-step-btns .av-step-btn:hover { border-color: var(--purple); color: var(--purple); background: var(--purple-soft-2); }
+  .av-step-btns .av-step-btn.primary { background: var(--purple-soft-2); border-color: var(--purple-soft); color: var(--purple-deep); }
+  .av-step-btns .av-step-btn.primary:hover { background: var(--purple-soft); }
+  #avOutlookBtn { display: none; width: 100%; padding: 13px; border: none; border-radius: var(--radius); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; background: var(--purple); color: #fff; text-align: center; text-decoration: none; transition: background 0.12s; }
+  #avOutlookBtn:hover { background: var(--purple-deep); }
+  /* Towing email preview */
+  .av-tow-preview { font-size: 13px; line-height: 1.6; }
+  .av-tow-preview .tow-meta { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+  .av-tow-preview .tow-meta b { color: var(--ink-soft); font-weight: 600; }
+  .av-tow-preview .tow-divider { border: none; border-top: 1px solid var(--line); margin: 10px 0; }
+  .av-tow-preview .tow-section { font-weight: 700; margin: 14px 0 2px; }
+  .av-tow-preview .tow-legal { font-size: 12px; color: var(--ink-soft); line-height: 1.55; }
+  .av-tow-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
+  .av-tow-table td { padding: 3px 8px; vertical-align: top; border-bottom: 1px solid var(--line); }
+  .av-tow-table td:first-child { width: 230px; color: var(--muted); font-weight: 500; }
+  .av-tow-loc { font-size: 12px; white-space: pre-wrap; background: var(--paper); padding: 10px; border-radius: 6px; border: 1px solid var(--line); margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -1715,24 +1744,11 @@
         <div class="tmpl" data-tmpl="av">
           <button type="button" class="tmpl-head" onclick="toggleTmpl(this)">
             <span class="dot"></span>
-            <span class="tmpl-title">AV Initial</span>
+            <span class="tmpl-title">Abandoned Vehicle</span>
             <span class="tmpl-live" id="tmpl-live-av"></span>
             <span class="chev">▸</span>
           </button>
           <div class="tmpl-body" id="body-av">
-            <!-- built by JS -->
-          </div>
-        </div>
-
-        <!-- Template 3: AV Removal -->
-        <div class="tmpl" data-tmpl="avr">
-          <button type="button" class="tmpl-head" onclick="toggleTmpl(this)">
-            <span class="dot"></span>
-            <span class="tmpl-title">AV Removal</span>
-            <span class="tmpl-live" id="tmpl-live-avr"></span>
-            <span class="chev">▸</span>
-          </button>
-          <div class="tmpl-body" id="body-avr">
             <!-- built by JS -->
           </div>
         </div>
@@ -1854,6 +1870,12 @@
           </button>
           <button type="button" class="step-btn bcc-xs" id="bccCopyTableBtn" onclick="bccCopyTable()" style="display:none;" title="Copy the formatted table for pasting into Outlook">Copy as table</button>
           <button type="button" class="step-btn bcc-xs" id="bccCopyPlainBtn" onclick="bccCopyPlain()" style="display:none;" title="Copy the whole email as plain text">Copy plain text</button>
+          <!-- AV wizard step navigation (v197) -->
+          <a id="avOutlookBtn" href="#" target="_blank" style="display:none;">✉️ Open in Outlook</a>
+          <div class="av-step-btns" id="avStepBtns" style="display:none;">
+            <button type="button" class="av-step-btn" id="avPrevBtn" style="display:none;" onclick="goAvStep(avStep-1)">← Back</button>
+            <button type="button" class="av-step-btn primary" id="avNextBtn" onclick="goAvStep(avStep+1)">→ Next: Towing email</button>
+          </div>
         </div>
         <span class="copied-note" id="g_copied">Copied to clipboard ✓</span>
       </div>
@@ -2295,14 +2317,41 @@ function buildGeneric(){
   applyLowercasePref();
 }
 
-/* ---------- Build Template 2: AV Initial ---------- */
+/* ---------- Build Template 2: Abandoned Vehicle (3-step wizard, v197) ---------- */
+/* Step 1 = Initial SMS, Step 2 = Towing Authority Email, Step 3 = Removal SMS.
+   Vehicle, location and reference fields are shared across all three steps.
+   Step-specific fields (towing email details, removal "Near") show/hide per step. */
+let avStep = 1;
+const AV_STEP_LABELS = { 1:'Initial notice', 2:'Towing authority', 3:'Removal' };
+const AV_TOW_TO = 'despatch@claytonstowing.com.au';
+const AV_TOW_BCC = 'SNO_MetroRTNM@tmr.qld.gov.au,BMTMC_Traffic@brisbane.qld.gov.au';
+const AV_TOW_SUBJ_BASE = 'QLD GOV - DTMR - METRO - Stationary (Abandoned / Broken-down) Vehicle Removal Authority - Service Order - COV DM ID: ';
+
+function goAvStep(n){
+  avStep = n;
+  applyAvStepVisibility();
+  renderPreview();
+  scheduleWorkingSave();
+}
+function applyAvStepVisibility(){
+  document.querySelectorAll('.av-step-node').forEach((el,i) => {
+    el.classList.remove('av-step-active','av-step-done');
+    if (i+1 === avStep) el.classList.add('av-step-active');
+    else if (i+1 < avStep) el.classList.add('av-step-done');
+  });
+  const s2 = document.getElementById('av_step2_fields');
+  const s3 = document.getElementById('av_step3_fields');
+  if (s2) s2.style.display = avStep === 2 ? 'block' : 'none';
+  if (s3) s3.style.display = avStep === 3 ? 'block' : 'none';
+}
+
 function buildAV(){
   const b = document.getElementById('body-av');
   if (!b) return;
   const colourOptions = `<option value="" selected>— select colour —</option>`
     + CAR_COLOURS.map(c=>`<option value="${c}">${c}</option>`).join('')
     + `<option value="__other">Other (type below)…</option>`;
-  const _d = new Date(); const today = `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`; // yyyy-mm-dd local
+  const _d = new Date(); const today = `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;
 
   b.innerHTML = `
     <div class="form-topbar">
@@ -2316,56 +2365,92 @@ function buildAV(){
       </button>
     </div>
 
-    <!-- Colour -->
+    <!-- Step indicator -->
+    <div class="av-step-track">
+      <div class="av-step-node av-step-active" onclick="goAvStep(1)">
+        <span class="av-step-num">1</span>
+        <span class="av-step-label">Initial SMS</span>
+      </div>
+      <div class="av-step-connector"></div>
+      <div class="av-step-node" onclick="goAvStep(2)">
+        <span class="av-step-num">2</span>
+        <span class="av-step-label">Towing Email</span>
+      </div>
+      <div class="av-step-connector"></div>
+      <div class="av-step-node" onclick="goAvStep(3)">
+        <span class="av-step-num">3</span>
+        <span class="av-step-label">Removal SMS</span>
+      </div>
+    </div>
+
+    <!-- Shared: Vehicle details -->
+    <div class="seg-head">VEHICLE DETAILS</div>
     <div class="field">
       <span class="field-label">Colour</span>
       <select id="av_colour" onchange="onAvColourChange()">${colourOptions}</select>
       <input type="text" id="av_colour_other" placeholder="Enter colour" style="display:none;margin-top:8px;">
     </div>
-
-    <!-- Make -->
     <div class="field">
       <span class="field-label">Make</span>
       <input type="text" id="av_make" placeholder="e.g. Toyota">
     </div>
-
-    <!-- Model -->
     <div class="field">
       <span class="field-label">Model</span>
       <input type="text" id="av_model" placeholder="e.g. Hilux">
     </div>
-
-    <!-- Plate -->
     <div class="field">
       <span class="field-label">Plate Number</span>
       <input type="text" id="av_plate" placeholder="e.g. 123ABC">
     </div>
 
-    <!-- Road -->
+    <!-- Shared: Location -->
+    <div class="seg-head">LOCATION</div>
     <div class="field">
       <span class="field-label">Road</span>
       <div class="freqloc-bar"></div>
       <input type="text" id="av_road" placeholder="e.g. Pacific Mwy" onblur="onAvFieldBlur(this)">
     </div>
-
-    <!-- Suburb -->
     <div class="field">
       <span class="field-label">Suburb</span>
       <input type="text" id="av_suburb" placeholder="e.g. Eight Mile Plains">
     </div>
 
-    <!-- Date -->
+    <!-- Shared: Reference -->
+    <div class="seg-head">REFERENCE</div>
     <div class="field">
       <span class="field-label">Date located</span>
       <input type="date" id="av_date" value="${today}">
-      <p class="hint">Defaults to today. Reads in the message as e.g. “3 July 2026”.</p>
+      <p class="hint">Defaults to today. Initial SMS reads "3 July 2026"; Removal SMS reads "03/07/26".</p>
     </div>
-
-    <!-- COV number -->
     <div class="field">
       <span class="field-label">COV number</span>
       <input type="text" id="av_sims" placeholder="e.g. D26-00097535" style="max-width:220px;">
-      <p class="hint">Paste the full COV reference. The prefix and leading zeros are dropped, leaving the significant digits (e.g. D26-00097535 → 97535).</p>
+      <p class="hint">Paste the full COV reference. SMS uses the significant digits; the towing email uses the full ID.</p>
+    </div>
+
+    <!-- Step 2 only: Towing email details -->
+    <div id="av_step2_fields" style="display:none;">
+      <div class="seg-head">TOWING EMAIL DETAILS</div>
+      <div class="field">
+        <span class="field-label">STREAMS COV DM Title</span>
+        <input type="text" id="av_cov_title" placeholder="e.g. Abandoned vehicle — Pacific Mwy EMP">
+        <p class="hint">The incident title from STREAMS.</p>
+      </div>
+      <div class="field">
+        <span class="field-label">Location Details</span>
+        <textarea id="av_loc_detail" rows="6" placeholder="Paste location details from STREAMS (route, description, address, coordinates)…" style="font-size:13px;"></textarea>
+        <p class="hint">Paste the full location block. Appears verbatim in the email.</p>
+      </div>
+    </div>
+
+    <!-- Step 3 only: Removal details -->
+    <div id="av_step3_fields" style="display:none;">
+      <div class="seg-head">REMOVAL DETAILS</div>
+      <div class="field">
+        <span class="field-label">Near</span>
+        <input type="text" id="av_exit" placeholder="e.g. Exit 25 / Smith St" style="max-width:220px;" onblur="onAvFieldBlur(this)">
+        <p class="hint">Landmark or exit for the removal SMS (e.g. "near Exit 25").</p>
+      </div>
     </div>
 
     <div class="action-row">
@@ -2376,6 +2461,8 @@ function buildAV(){
     </div>
     <span class="draft-note" id="av_draft_note"></span>
   `;
+  avStep = 1;
+  applyAvStepVisibility();
 }
 
 
@@ -3073,108 +3160,9 @@ function clearFormAV(){
   scheduleWorkingSave();
 }
 
-/* ---------- Build Template 3: AV Removal ---------- */
-function buildAVR(){
-  const b = document.getElementById('body-avr');
-  if (!b) return;
-  const colourOptions = `<option value="" selected>— select colour —</option>`
-    + CAR_COLOURS.map(c=>`<option value="${c}">${c}</option>`).join('')
-    + `<option value="__other">Other (type below)…</option>`;
-  const _d = new Date(); const today = `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`; // yyyy-mm-dd local
+/* buildAVR removed in v197 — merged into unified AV wizard */
 
-  b.innerHTML = `
-    <div class="form-topbar">
-      <button type="button" class="back-btn" onclick="closeTemplate('avr')">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Back to templates
-      </button>
-      <button type="button" class="reset-btn" onclick="clearFormAVR()" title="Reset form">
-        <svg class="reset-ico" width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 109-9 9 9 0 00-6.4 2.6L3 8M3 3v5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Reset
-      </button>
-    </div>
 
-    <!-- Colour -->
-    <div class="field">
-      <span class="field-label">Colour</span>
-      <select id="avr_colour" onchange="onAvrColourChange()">${colourOptions}</select>
-      <input type="text" id="avr_colour_other" placeholder="Enter colour" style="display:none;margin-top:8px;">
-    </div>
-
-    <!-- Make -->
-    <div class="field">
-      <span class="field-label">Make</span>
-      <input type="text" id="avr_make" placeholder="e.g. Toyota">
-    </div>
-
-    <!-- Model -->
-    <div class="field">
-      <span class="field-label">Model</span>
-      <input type="text" id="avr_model" placeholder="e.g. Hilux">
-    </div>
-
-    <!-- Plate -->
-    <div class="field">
-      <span class="field-label">Plate Number</span>
-      <input type="text" id="avr_plate" placeholder="e.g. 123ABC">
-    </div>
-
-    <!-- Road -->
-    <div class="field">
-      <span class="field-label">Road</span>
-      <div class="freqloc-bar"></div>
-      <input type="text" id="avr_road" placeholder="e.g. Pacific Mwy" onblur="onAvFieldBlur(this)">
-    </div>
-
-    <!-- Near -->
-    <div class="field">
-      <span class="field-label">Near</span>
-      <input type="text" id="avr_exit" placeholder="e.g. Exit 25 / Smith St" style="max-width:220px;" onblur="onAvFieldBlur(this)">
-    </div>
-
-    <!-- Suburb -->
-    <div class="field">
-      <span class="field-label">Suburb</span>
-      <input type="text" id="avr_suburb" placeholder="e.g. Eight Mile Plains">
-    </div>
-
-    <!-- Date -->
-    <div class="field">
-      <span class="field-label">Date located</span>
-      <input type="date" id="avr_date" value="${today}">
-      <p class="hint">Defaults to today. Reads in the message as dd/mm/yy (e.g. 03/07/26).</p>
-    </div>
-
-    <!-- COV number -->
-    <div class="field">
-      <span class="field-label">COV number</span>
-      <input type="text" id="avr_sims" placeholder="e.g. D26-00097535" style="max-width:220px;">
-      <p class="hint">Paste the full COV reference. The prefix and leading zeros are dropped, leaving the significant digits (e.g. D26-00097535 → 97535).</p>
-    </div>
-
-    <div class="action-row">
-      <button type="button" class="draft-btn" onclick="saveDraft()">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 3h11l3 3v15H5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 3v6h7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-        Save draft
-      </button>
-    </div>
-    <span class="draft-note" id="avr_draft_note"></span>
-  `;
-}
-
-function onAvrColourChange(){
-  const v = document.getElementById('avr_colour').value;
-  document.getElementById('avr_colour_other').style.display = (v==='__other') ? 'block' : 'none';
-  renderPreview();
-}
-
-function clearFormAVR(){
-  buildAVR();
-  attachLiveListeners();
-  renderPreview();
-  setAutosave(false, 'Not saved');
-  scheduleWorkingSave();
-}
 
 /* ---------- Field interactions ---------- */
 function onSeqChange(){
@@ -7402,7 +7390,6 @@ function updateLiveHeader(t){
   let road = '', suburb = '';
   if (t === 'ino'){ road = gv('s_road'); suburb = gv('s_suburb'); }
   else if (t === 'av'){ road = gv('av_road'); suburb = gv('av_suburb'); }
-  else if (t === 'avr'){ road = gv('avr_road'); suburb = gv('avr_suburb'); }
   else if (t === 'bcc'){ road = gv('b_road'); suburb = gv('b_suburb'); }
   else { road = gv('g_road'); suburb = gv('g_suburb'); }
   const loc = [titleCaseProperNoun(road), titleCaseProperNoun(suburb)].filter(Boolean).join(' · ');
@@ -7419,8 +7406,7 @@ function updateLiveHeader(t){
     if ((document.getElementById('g_final')||{}).checked && s) s += ' FINAL';
     seq = s;
   } else if (t === 'bcc'){ seq = (typeof bccStage === 'function') ? bccStage() : ''; }
-  else if (t === 'av'){ seq = 'Initial notice'; }
-  else if (t === 'avr'){ seq = 'Removal'; }
+  else if (t === 'av'){ seq = AV_STEP_LABELS[avStep] || 'Initial notice'; }
 
   // Type chip: incident/event type for INO & Generic; vehicle + rego for AV/AVR
   let chipText = '', chipStyle = null;
@@ -7433,7 +7419,7 @@ function updateLiveHeader(t){
     chipText = label;
     if (label) chipStyle = chipStyleForType(label, 'generic');
   } else {
-    const pfx = (t === 'avr') ? 'avr' : 'av';
+    const pfx = 'av';
     let colour = gv(pfx + '_colour'); if (colour === '__other') colour = gv(pfx + '_colour_other');
     const veh = [colour, gv(pfx + '_make'), gv(pfx + '_model')].filter(Boolean).join(' ');
     const plate = gv(pfx + '_plate');
@@ -7444,8 +7430,7 @@ function updateLiveHeader(t){
   // Prompts when nothing entered yet
   const promptFor = { ino:'New INO escalation — enter a location to begin',
     generic:'New disruption notice — enter a location to begin',
-    av:'New AV notice — enter a location to begin',
-    avr:'New AV removal — enter a location to begin' };
+    av:'New AV notice — enter a location to begin' };
 
   if (!loc && !chipText){
     el.innerHTML = `<span class="tl-prompt">${escapeHtml(promptFor[t] || 'New message')}</span>`;
@@ -7502,7 +7487,6 @@ function renderPreview(){
     return;
   }
   if (t === 'av') { renderAV(); refreshPreviewActions(); return; }
-  if (t === 'avr') { renderAVR(); refreshPreviewActions(); return; }
   if (t === 'ino') { renderINO(); decoratePreviewSegments('ino'); refreshPreviewActions(); return; }
   renderGeneric();
   decoratePreviewSegments('generic');
@@ -8186,6 +8170,36 @@ function refreshPreviewActions(){
   // The SMS copy button and character counts are meaningless for the email template.
   const copyBtn = document.getElementById('copyBtn');
   if (copyBtn) copyBtn.style.display = isBcc ? 'none' : '';
+  // AV wizard: show/hide step navigation and Outlook button based on current step.
+  const isAv = (t === 'av');
+  const avStepBtns = document.getElementById('avStepBtns');
+  const avOutBtn = document.getElementById('avOutlookBtn');
+  if (avStepBtns) avStepBtns.style.display = isAv ? 'flex' : 'none';
+  if (avOutBtn) avOutBtn.style.display = (isAv && avStep === 2) ? 'block' : 'none';
+  // Hide SMS copy button on AV step 2 (email step).
+  if (copyBtn && isAv) copyBtn.style.display = avStep === 2 ? 'none' : '';
+  // Hide character counts on step 2
+  const countEl = document.getElementById('g_charcount');
+  if (countEl && isAv) countEl.parentElement.style.display = avStep === 2 ? 'none' : '';
+  // Update AV step button labels
+  if (isAv){
+    const avPrev = document.getElementById('avPrevBtn');
+    const avNext = document.getElementById('avNextBtn');
+    if (avPrev) avPrev.style.display = avStep > 1 ? '' : 'none';
+    if (avNext){
+      avNext.style.display = avStep < 3 ? '' : 'none';
+      const labels = { 1:'→ Next: Towing email', 2:'→ Next: Removal SMS' };
+      avNext.textContent = labels[avStep] || '';
+    }
+    if (avPrev){
+      const backLabels = { 2:'← Back to Initial SMS', 3:'← Back to Towing email' };
+      avPrev.textContent = backLabels[avStep] || '';
+    }
+  }
+  // Hide "Next escalation" for AV (it has its own step buttons)
+  if (nextBtn && isAv) nextBtn.style.display = 'none';
+  // Hide edit toggle on AV step 2 (HTML preview like BCC)
+  if (editToggle && isAv) editToggle.style.display = avStep === 2 ? 'none' : '';
   // Sync SLO approval UI whenever the active template or action state changes.
   if (typeof renderSloApproval === 'function') renderSloApproval();
 }
@@ -8302,7 +8316,6 @@ function nextEscalation(){
 function newMessage(){
   const t = activeTemplate();
   if (t === 'av')  return clearFormAV();
-  if (t === 'avr') return clearFormAVR();
   if (t === 'ino') return clearFormINO();
   if (t === 'bcc') return clearFormBCC();
   if (t === 'generic') return clearForm();
@@ -8491,40 +8504,52 @@ function wordDiffHtml(before, after, cls){
 
 function renderAV(){
   if (!document.getElementById('av_make')) return;
+  if (avStep === 2) { renderAvTowingEmail(); return; }
+  // Step 1 (Initial SMS) or Step 3 (Removal SMS)
   const get = id => (document.getElementById(id)||{value:''}).value.trim();
   let colour = document.getElementById('av_colour').value;
   if (colour === '__other') colour = get('av_colour_other');
   else if (colour === '') colour = '';
-  const make = get('av_make');
-  const model = get('av_model');
-  const plate = get('av_plate');
+  const make = get('av_make'), model = get('av_model'), plate = get('av_plate');
   const road = titleCaseProperNoun(get('av_road'));
   const suburb = titleCaseProperNoun(get('av_suburb'));
   const dateRaw = get('av_date');
   const covRaw = get('av_sims');
   const cov = extractCov(covRaw);
-
-  const dateStr = formatAvDate(dateRaw);
-
-  // Re: [Colour] [make] [model] Rego: [Plate] located on the [Road], [Suburb] on the [date].
-  // Please contact the TMR Traffic Management Centre on 13 19 40 and quote [COV] to discuss
-  // removal of the vehicle OR the vehicle will be removed at the owner's cost.
-  // Please do not reply to this text.
   const vehicle = [colour, make, model].filter(Boolean).join(' ');
-  let msg = 'Re: ';
-  msg += vehicle ? vehicle : '[vehicle]';
-  msg += ` Rego: ${plate || '[plate]'}`;
-  msg += ` located on the ${road || '[road]'}, ${suburb || '[suburb]'}`;
-  msg += ` on the ${dateStr || '[date]'}.`;
-  msg += ` Please contact the TMR Traffic Management Centre on 13 19 40 and quote ${cov || '[COV]'}`;
-  msg += ` to discuss removal of the vehicle OR the vehicle will be removed at the owner's cost.`;
-  msg += ` Please do not reply to this text.`;
+
+  let msg;
+  if (avStep === 3){
+    // Removal SMS
+    const exit = titleCaseProperNoun(get('av_exit'));
+    const dateStr = formatAvrDate(dateRaw);
+    msg = 'Re: ';
+    msg += vehicle ? vehicle : '[vehicle]';
+    msg += ` Rego: ${plate || '[plate]'}`;
+    msg += ` located on the ${road || '[road]'}, near ${exit || '[near]'}, ${suburb || '[suburb]'}`;
+    msg += ` on the ${dateStr || '[date]'}.`;
+    msg += ` We have attempted to contact you to discuss the removal of your vehicle without success.`;
+    msg += ` Your vehicle has been removed as it was left in a hazardous location.`;
+    msg += ` Please contact the TMR Traffic Management Centre on 13 19 40 and quote ${cov || '[COV]'}`;
+    msg += ` to discuss your vehicle.`;
+    msg += ` Please do not reply to this text.`;
+  } else {
+    // Initial SMS (step 1)
+    const dateStr = formatAvDate(dateRaw);
+    msg = 'Re: ';
+    msg += vehicle ? vehicle : '[vehicle]';
+    msg += ` Rego: ${plate || '[plate]'}`;
+    msg += ` located on the ${road || '[road]'}, ${suburb || '[suburb]'}`;
+    msg += ` on the ${dateStr || '[date]'}.`;
+    msg += ` Please contact the TMR Traffic Management Centre on 13 19 40 and quote ${cov || '[COV]'}`;
+    msg += ` to discuss removal of the vehicle OR the vehicle will be removed at the owner's cost.`;
+    msg += ` Please do not reply to this text.`;
+  }
 
   msg = msg.replace(/\s+/g,' ').trim();
   msg = capitalizeSentences(msg);
 
   const out = document.getElementById('g_output_text');
-  // empty = no real content entered yet (all placeholders)
   const meaningful = colour||make||model||plate||road||suburb||covRaw;
   if (!meaningful){
     out.classList.add('empty');
@@ -8535,6 +8560,79 @@ function renderAV(){
   out.classList.remove('empty');
   out.textContent = msg;
   updateCounts(msg);
+}
+
+/* Towing Authority Email preview (step 2). Renders an HTML preview in g_output_text
+   and builds a mailto: link for the "Open in Outlook" button. */
+function renderAvTowingEmail(){
+  const get = id => (document.getElementById(id)||{value:''}).value.trim();
+  let colour = document.getElementById('av_colour').value;
+  if (colour === '__other') colour = get('av_colour_other');
+  else if (colour === '') colour = '';
+  const plate = get('av_plate');
+  const covRaw = get('av_sims');
+  const covTitle = get('av_cov_title');
+  const locDetail = get('av_loc_detail');
+
+  const out = document.getElementById('g_output_text');
+  out.classList.remove('empty');
+
+  // Build readable HTML preview
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  out.innerHTML = `<div class="av-tow-preview">
+    <div class="tow-meta"><b>To:</b> ${esc(AV_TOW_TO)}</div>
+    <div class="tow-meta"><b>BCC:</b> SNO_MetroRTNM; BMTMC_Traffic</div>
+    <div class="tow-meta"><b>Subject:</b> ${esc(AV_TOW_SUBJ_BASE + (covRaw || 'XXXXXXXX'))}</div>
+    <hr class="tow-divider">
+    <div>To Clayton\u2019s Towing,</div>
+    <div class="tow-section">Authorisation</div>
+    <div class="tow-legal">I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton\u2019s Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.</div>
+    <div style="margin-top:8px;font-size:13px;"><b>Authorised by:</b> Amanda Tomlinson</div>
+    <div class="tow-section">Towing and Vehicle Details</div>
+    <table class="av-tow-table">
+      <tr><td>STREAMS COV DM ID:</td><td>${esc(covRaw || '[COV DM ID]')}</td></tr>
+      <tr><td>STREAMS COV DM Title:</td><td>${esc(covTitle || '[enter in form]')}</td></tr>
+      <tr><td>Vehicle Registration:</td><td>${esc(plate || '[plate]')}</td></tr>
+      <tr><td>Tow Service Type:</td><td>Clayton\u2019s - Abandoned</td></tr>
+    </table>
+    <div class="tow-section">Location Details</div>
+    <div class="av-tow-loc">${esc(locDetail || '[paste location details]')}</div>
+    <div class="tow-section">Response Details</div>
+    <div class="tow-legal">Service Order is confirmed received on receipt of the Service Order by phone, as per conditions of contract.\nContractor shall provide estimate of arrival time within fifteen (15) minutes of receipt of Service Order.</div>
+    <div class="tow-section">Set Down Location</div>
+    <div class="tow-legal">SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.\nAbandoned vehicles \u2013 light &amp; heavy \u2013 Vehicle shall be set down at Contractors storage facility.</div>
+    <div class="tow-section">Key Performance Indicators</div>
+    <div class="tow-legal">SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.\nSVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.\nAbandoned vehicles \u2013 light &amp; heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.</div>
+  </div>`;
+
+  // Build mailto link
+  const towBody = "To Clayton's Towing,\n\n"
+    + "Authorisation\n"
+    + "I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton's Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.\n\n"
+    + "Authorised by: Amanda Tomlinson\n\n"
+    + "Towing and Vehicle Details\n"
+    + "STREAMS COV DM ID:\t\t" + (covRaw || '[COV DM ID]') + "\n"
+    + "STREAMS COV DM Title:\t\t" + (covTitle || '[STREAMS COV DM Title]') + "\n"
+    + "Vehicle Registration:\t\t" + (plate || '[plate]') + "\n"
+    + "Tow Service Type:\t\t\tClayton's - Abandoned\n\n"
+    + "Locations Details\n"
+    + (locDetail || '[Location Details]') + "\n\n\n"
+    + "Response Details\n"
+    + "Service Order is confirmed received on receipt of the Service Order by phone, as per conditions of contract.\n"
+    + "Contractor shall provide estimate of arrival time within fifteen (15) minutes of receipt of Service Order.\n\n"
+    + "Set Down Location\n"
+    + "SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.\n"
+    + "Abandoned vehicles \u2013 light & heavy \u2013 Vehicle shall be set down at Contractors storage facility.\n\n"
+    + "Key Performance Indicators\n"
+    + "SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.\n"
+    + "SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.\n"
+    + "Abandoned vehicles \u2013 light & heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.";
+  const subj = AV_TOW_SUBJ_BASE + (covRaw || 'XXXXXXXX');
+  const href = 'mailto:' + AV_TOW_TO + '?bcc=' + encodeURIComponent(AV_TOW_BCC) + '&subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(towBody);
+  const btn = document.getElementById('avOutlookBtn');
+  if (btn) btn.href = href;
+
+  updateCounts('');
 }
 
 function extractCov(raw){
@@ -8558,57 +8656,7 @@ function formatAvDate(yyyymmdd){
   return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-/* ---------- Assemble Template 3: AV Removal (live) ---------- */
-function renderAVR(){
-  if (!document.getElementById('avr_make')) return;
-  const get = id => (document.getElementById(id)||{value:''}).value.trim();
-  let colour = document.getElementById('avr_colour').value;
-  if (colour === '__other') colour = get('avr_colour_other');
-  else if (colour === '') colour = '';
-  const make = get('avr_make');
-  const model = get('avr_model');
-  const plate = get('avr_plate');
-  const road = titleCaseProperNoun(get('avr_road'));
-  const exit = titleCaseProperNoun(get('avr_exit'));
-  const suburb = titleCaseProperNoun(get('avr_suburb'));
-  const dateRaw = get('avr_date');
-  const simsRaw = get('avr_sims');
-  const sims = extractCov(simsRaw);
-  const dateStr = formatAvrDate(dateRaw);
-
-  // Re: (Colour, Make, Model), Rego: (Rego) located on the [Road, Suburb], near (Near), (Suburb)
-  // on the (dd/mm/yy). We have attempted to contact you to discuss the removal of your vehicle
-  // without success. Your vehicle has been removed as it was left in a hazardous location.
-  // Please contact the TMR Traffic Management Centre on 13 19 40 and quote (COV significant digits)
-  // to discuss your vehicle. Please do not reply to this text.
-  const vehicle = [colour, make, model].filter(Boolean).join(' ');
-  let msg = 'Re: ';
-  msg += vehicle ? vehicle : '[vehicle]';
-  msg += ` Rego: ${plate || '[plate]'}`;
-  msg += ` located on the ${road || '[road]'}, near ${exit || '[near]'}, ${suburb || '[suburb]'}`;
-  msg += ` on the ${dateStr || '[date]'}.`;
-  msg += ` We have attempted to contact you to discuss the removal of your vehicle without success.`;
-  msg += ` Your vehicle has been removed as it was left in a hazardous location.`;
-  msg += ` Please contact the TMR Traffic Management Centre on 13 19 40 and quote ${sims || '[COV]'}`;
-  msg += ` to discuss your vehicle.`;
-  msg += ` Please do not reply to this text.`;
-
-  msg = msg.replace(/\s+/g,' ').trim();
-  msg = capitalizeSentences(msg);
-
-  const out = document.getElementById('g_output_text');
-  const meaningful = colour||make||model||plate||road||exit||suburb||simsRaw;
-  if (!meaningful){
-    out.classList.add('empty');
-    out.textContent = 'Fill in the form — your message builds here as you type.';
-    updateCounts('');
-    return;
-  }
-  out.classList.remove('empty');
-  out.textContent = msg;
-  updateCounts(msg);
-}
-
+/* renderAVR removed in v197 — merged into renderAV */
 function extractSims(raw){
   if (!raw) return '';
   const s = raw.trim();
@@ -9214,7 +9262,7 @@ function tidyProperNounFields(){
     generic: ['g_road','g_suburb','g_cross','g_impact_loc'],
     ino:     ['s_road','s_suburb','s_cross','s_congestion'],
     av:      ['av_road','av_suburb'],
-    avr:     ['avr_road','avr_exit','avr_suburb']
+    avr:     ['av_road','av_exit','av_suburb']
   }[t] || [];
   ids.forEach(id => {
     const el = document.getElementById(id);
@@ -9241,9 +9289,6 @@ function requiredFieldsFor(tmpl){
   if (tmpl === 'av') return [
     { id: 'av_road', label: 'Road' }
   ];
-  if (tmpl === 'avr') return [
-    { id: 'avr_road', label: 'Road' }
-  ];
   return [];
 }
 
@@ -9254,7 +9299,7 @@ function clearFieldError(el){
 
 // Wire each required field to clear its own error the moment it's filled.
 function attachValidationClearers(){
-  ['generic','ino','av','avr'].forEach(t=>{
+  ['generic','ino','av'].forEach(t=>{
     requiredFieldsFor(t).forEach(f=>{
       const el = document.getElementById(f.id);
       if (!el || el.dataset.valBound) return;
@@ -9348,21 +9393,13 @@ function collectFormState(){
     return {
       tmpl: 'av',
       av: {
+        step: avStep,
         colour: gv('av_colour'), colourOther: gv('av_colour_other'),
         make: gv('av_make'), model: gv('av_model'), plate: gv('av_plate'),
         road: gv('av_road'), suburb: gv('av_suburb'),
-        date: gv('av_date'), sims: gv('av_sims')
-      }
-    };
-  }
-  if (tmpl === 'avr'){
-    return {
-      tmpl: 'avr',
-      avr: {
-        colour: gv('avr_colour'), colourOther: gv('avr_colour_other'),
-        make: gv('avr_make'), model: gv('avr_model'), plate: gv('avr_plate'),
-        road: gv('avr_road'), exit: gv('avr_exit'), suburb: gv('avr_suburb'),
-        date: gv('avr_date'), sims: gv('avr_sims')
+        date: gv('av_date'), sims: gv('av_sims'),
+        exit: gv('av_exit'),
+        covTitle: gv('av_cov_title'), locDetail: gv('av_loc_detail')
       }
     };
   }
@@ -9577,17 +9614,12 @@ function deriveDraftName(state){
     const loc = [a.road, a.suburb].filter(Boolean).join(' · ');
     return loc ? `BCC ${stage} · ${loc}` : `BCC ${stage} ${draftSeq}`;
   }
-  if (state.tmpl === 'av'){
-    const a = state.av || {};
+  if (state.tmpl === 'av' || state.tmpl === 'avr'){
+    const a = state.av || state.avr || {};
     let colour = a.colour === '__other' ? a.colourOther : a.colour;
-    const bits = ['AV', colour, a.make, a.model, a.plate].filter(Boolean);
-    return bits.length > 1 ? bits.join(' · ') : `AV Initial ${draftSeq}`;
-  }
-  if (state.tmpl === 'avr'){
-    const a = state.avr || {};
-    let colour = a.colour === '__other' ? a.colourOther : a.colour;
-    const bits = ['AV Removal', colour, a.make, a.model, a.plate].filter(Boolean);
-    return bits.length > 1 ? bits.join(' · ') : `AV Removal ${draftSeq}`;
+    const stepLabel = (a.step === 3 || state.tmpl === 'avr') ? 'AV Removal' : a.step === 2 ? 'AV Towing' : 'AV Initial';
+    const bits = [stepLabel, colour, a.make, a.model, a.plate].filter(Boolean);
+    return bits.length > 1 ? bits.join(' · ') : `${stepLabel} ${draftSeq}`;
   }
   if (state.tmpl === 'ino'){
     const a = state.ino || {};
@@ -9613,7 +9645,7 @@ function draftLocation(state){
   let road = '', suburb = '';
   if (t === 'ino'){ const a = state.ino||{}; road = a.road; suburb = a.suburb; }
   else if (t === 'av'){ const a = state.av||{}; road = a.road; suburb = a.suburb; }
-  else if (t === 'avr'){ const a = state.avr||{}; road = a.road; suburb = a.suburb; }
+  else if (t === 'avr'){ const a = state.avr||{}; road = a.road; suburb = a.suburb; } // legacy
   else { road = (state.texts||{})['g_road']||''; suburb = (state.texts||{})['g_suburb']||''; }
   const bits = [titleCaseProperNoun((road||'').trim()), titleCaseProperNoun((suburb||'').trim())].filter(Boolean);
   return bits.join(' · ');
@@ -10084,7 +10116,7 @@ function saveDraft(opts){
   drafts.unshift(draft);
   draftSeq++;
 
-  const note = document.getElementById((state.tmpl === 'av') ? 'av_draft_note' : (state.tmpl === 'avr') ? 'avr_draft_note' : (state.tmpl === 'ino') ? 's_draft_note' : (state.tmpl === 'bcc') ? 'b_draft_note' : 'g_draft_note');
+  const note = document.getElementById((state.tmpl === 'av' || state.tmpl === 'avr') ? 'av_draft_note' : (state.tmpl === 'ino') ? 's_draft_note' : (state.tmpl === 'bcc') ? 'b_draft_note' : 'g_draft_note');
   const t = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
   if (note){
     note.classList.remove('warn');
@@ -10277,7 +10309,7 @@ function escalateAvToRemoval(id){
   const a = draft.state.av || {};
   openTemplateCard('avr');
   // Rebuild the AVR form fresh, then populate from the initial notice.
-  if (typeof clearFormAVR === 'function') clearFormAVR();
+  // clearFormAVR removed v197 — use clearFormAV
   const set = (fid, val) => { const el = document.getElementById(fid); if (el && val != null) el.value = val; };
   // colour: carry the dropdown value, and the "other" text if it was custom
   const colEl = document.getElementById('avr_colour');
@@ -10291,8 +10323,8 @@ function escalateAvToRemoval(id){
   set('avr_make', a.make);
   set('avr_model', a.model);
   set('avr_plate', a.plate);
-  set('avr_road', titleCaseProperNoun(a.road || ''));
-  set('avr_suburb', titleCaseProperNoun(a.suburb || ''));
+  set( titleCaseProperNoun(a.road || ''));
+  set( titleCaseProperNoun(a.suburb || ''));
   // Carry the COV number across from the initial notice (both forms store it in *_sims).
   set('avr_sims', a.sims || '');
   renderPreview();
@@ -11102,9 +11134,9 @@ function applyDraft(s){
     renderPreview();
     return;
   }
-  if (s.tmpl === 'av'){
-    buildAV(); // reset AV form fresh
-    const a = s.av || {};
+  if (s.tmpl === 'av' || s.tmpl === 'avr'){
+    buildAV();
+    const a = s.av || s.avr || {};
     const set = (id,val)=>{ const el=document.getElementById(id); if(el) el.value = val||''; };
     set('av_colour', a.colour);
     onAvColourChange();
@@ -11112,19 +11144,13 @@ function applyDraft(s){
     set('av_make', a.make); set('av_model', a.model); set('av_plate', a.plate);
     set('av_road', a.road); set('av_suburb', a.suburb);
     set('av_date', a.date); set('av_sims', a.sims);
-    renderPreview();
-    return;
-  }
-  if (s.tmpl === 'avr'){
-    buildAVR(); // reset AV Removal form fresh
-    const a = s.avr || {};
-    const set = (id,val)=>{ const el=document.getElementById(id); if(el) el.value = val||''; };
-    set('avr_colour', a.colour);
-    onAvrColourChange();
-    set('avr_colour_other', a.colourOther);
-    set('avr_make', a.make); set('avr_model', a.model); set('avr_plate', a.plate);
-    set('avr_road', a.road); set('avr_exit', a.exit); set('avr_suburb', a.suburb);
-    set('avr_date', a.date); set('avr_sims', a.sims);
+    // Step 2+3 fields (v197)
+    set('av_exit', a.exit);
+    set('av_cov_title', a.covTitle);
+    set('av_loc_detail', a.locDetail);
+    // Restore step (legacy avr drafts open at step 3)
+    avStep = s.tmpl === 'avr' ? 3 : (a.step || 1);
+    applyAvStepVisibility();
     renderPreview();
     return;
   }
@@ -11543,8 +11569,8 @@ const RECENT_LIMIT = 15;
 
 // Which inputs share each recent-value pool, and which datalist they point at.
 const RECENT_FIELDS = {
-  road:   { list: 'dl_road',   ids: ['g_road','av_road','avr_road','s_road'] },
-  suburb: { list: 'dl_suburb', ids: ['g_suburb','av_suburb','avr_suburb','s_suburb'] },
+  road:   { list: 'dl_road',   ids: ['g_road','av_road','s_road'] },
+  suburb: { list: 'dl_suburb', ids: ['g_suburb','av_suburb','s_suburb'] },
   cross:  { list: 'dl_cross',  ids: ['g_cross','s_cross'] }
 };
 
@@ -11599,8 +11625,8 @@ function pushRecent(kind, val, quiet){
 // Capture the current form's road/suburb/cross into the recent pools (called on copy + save).
 function captureRecentsFromForm(){
   const g = id => { const e = document.getElementById(id); return e ? e.value : ''; };
-  ['g_road','av_road','avr_road','s_road'].forEach(id=> pushRecent('road', g(id), true));
-  ['g_suburb','av_suburb','avr_suburb','s_suburb'].forEach(id=> pushRecent('suburb', g(id), true));
+  ['g_road','av_road','s_road'].forEach(id=> pushRecent('road', g(id), true));
+  ['g_suburb','av_suburb','s_suburb'].forEach(id=> pushRecent('suburb', g(id), true));
   ['g_cross','s_cross'].forEach(id=> pushRecent('cross', g(id), true));
   persistRecents();
   renderDatalists();
@@ -11636,7 +11662,6 @@ function setupAutocomplete(){
 function activeRoadSuburbIds(){
   const t = activeTemplate();
   if (t === 'av')  return { road:'av_road',  suburb:'av_suburb'  };
-  if (t === 'avr') return { road:'avr_road', suburb:'avr_suburb' };
   if (t === 'ino') return { road:'s_road',   suburb:'s_suburb'   };
   return { road:'g_road', suburb:'g_suburb' }; // generic / default
 }
@@ -11688,7 +11713,6 @@ function renderFreqChips(){
 /* init */
 buildGeneric();
 buildAV();
-buildAVR();
 buildINO();
 buildBCC();
 // Main-Lanes position count boxes start disabled until their checkbox is ticked.
@@ -11731,7 +11755,7 @@ document.addEventListener('blur', function(e){
   if (!capsToTitleOn) return;
   const el = e.target;
   if (el.tagName !== 'INPUT' || el.type !== 'text') return;
-  const skip = ['av_road','avr_road','avr_exit'];
+  const skip = ['av_road'];
   if (skip.includes(el.id)) return;
   const v = el.value;
   if (!v) return;
