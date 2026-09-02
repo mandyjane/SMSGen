@@ -1488,7 +1488,7 @@
   .bcc-unit { position:relative; flex:1 1 0; }
   .bcc-unit input { width:100%; padding-right:44px; }
   .bcc-unit span { position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:11px; color:var(--muted); pointer-events:none; }
-  .preview-actions { display: flex; gap: 8px; margin-top: 8px; }
+  .preview-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
   .preview-actions.hide { display: none; }
   .step-btn {
     flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -1653,25 +1653,25 @@
   .av-step-node.av-step-done .av-step-label { color: var(--ink-soft); }
   .av-step-connector { width: 20px; height: 2px; background: var(--line); flex-shrink: 0; }
   /* AV step-specific preview buttons */
-  .av-step-btns { display: flex; gap: 8px; margin-top: 8px; flex-wrap: nowrap; }
-  .av-step-btns .av-step-btn { flex: 1 1 0; min-width: 0; padding: 10px 8px; border: 1.5px solid var(--line); border-radius: var(--radius); background: var(--card); font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; text-align: center; transition: all 0.12s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .av-step-btns { display: flex; gap: 8px; margin-top: 0; flex: 1 0 100%; }
+  .av-step-btns .av-step-btn { flex: 1 1 auto; min-width: 0; padding: 9px 10px; border: 1.5px solid var(--line); border-radius: var(--radius); background: var(--card); font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; text-align: center; transition: all 0.12s; white-space: nowrap; }
   .av-step-btns .av-step-btn:hover { border-color: var(--purple); color: var(--purple); background: var(--purple-soft-2); }
   .av-step-btns .av-step-btn.primary { background: var(--purple-soft-2); border-color: var(--purple-soft); color: var(--purple-deep); }
   .av-step-btns .av-step-btn.primary:hover { background: var(--purple-soft); }
-  #avOutlookBtn { display: none; width: 100%; padding: 13px; border: none; border-radius: var(--radius); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; background: var(--purple); color: #fff; text-decoration: none; transition: background 0.12s; /* flex for vertical centering */ align-items: center; justify-content: center; gap: 6px; }
-  #avOutlookBtn.show { display: flex; }
+  #avOutlookBtn { display: none; flex: 1 1 0; min-width: 0; padding: 9px 10px; border: none; border-radius: var(--radius-sm); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--purple); color: #fff; align-items: center; justify-content: center; gap: 6px; text-decoration: none; transition: background 0.12s; white-space: nowrap; }
+  #avOutlookBtn.show { display: inline-flex; }
   #avOutlookBtn:hover { background: var(--purple-deep); }
   /* Towing email preview */
-  .av-tow-preview { font-size: 13px; line-height: 1.5; }
-  .av-tow-preview .tow-meta { font-size: 12px; color: var(--muted); margin-bottom: 1px; }
+  .av-tow-preview { font-size: 13px; line-height: 1.45; }
+  .av-tow-preview .tow-meta { font-size: 12px; color: var(--muted); margin-bottom: 0; line-height: 1.4; }
   .av-tow-preview .tow-meta b { color: var(--ink-soft); font-weight: 600; }
-  .av-tow-preview .tow-divider { border: none; border-top: 1px solid var(--line); margin: 6px 0; }
-  .av-tow-preview .tow-section { font-weight: 700; margin: 8px 0 1px; }
-  .av-tow-preview .tow-legal { font-size: 12px; color: var(--ink-soft); line-height: 1.45; }
-  .av-tow-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
-  .av-tow-table td { padding: 2px 8px; vertical-align: top; border-bottom: 1px solid var(--line); }
-  .av-tow-table td:first-child { width: 230px; color: var(--muted); font-weight: 500; }
-  .av-tow-loc { font-size: 12px; white-space: pre-wrap; background: var(--paper); padding: 8px; border-radius: 6px; border: 1px solid var(--line); margin-top: 3px; }
+  .av-tow-preview .tow-divider { border: none; border-top: 1px solid var(--line); margin: 4px 0; }
+  .av-tow-preview .tow-section { font-weight: 700; margin: 5px 0 0; font-size: 12.5px; }
+  .av-tow-preview .tow-legal { font-size: 11.5px; color: var(--ink-soft); line-height: 1.4; }
+  .av-tow-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 2px; }
+  .av-tow-table td { padding: 1px 6px; vertical-align: top; border-bottom: 1px solid var(--line); }
+  .av-tow-table td:first-child { width: 200px; color: var(--muted); font-weight: 500; }
+  .av-tow-loc { font-size: 11.5px; white-space: pre-wrap; background: var(--paper); padding: 6px 8px; border-radius: 5px; border: 1px solid var(--line); margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -8588,7 +8588,7 @@ function renderAvTowingEmail(){
     <div>To Clayton\u2019s Towing,</div>
     <div class="tow-section">Authorisation</div>
     <div class="tow-legal">I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton\u2019s Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.</div>
-    <div style="margin-top:4px;font-size:13px;"><b>Authorised by:</b> Amanda Tomlinson</div>
+    <div style="margin-top:2px;font-size:12.5px;"><b>Authorised by:</b> Amanda Tomlinson</div>
     <div class="tow-section">Towing and Vehicle Details</div>
     <table class="av-tow-table">
       <tr><td>STREAMS COV DM ID:</td><td>${esc(covRaw || '[COV DM ID]')}</td></tr>
