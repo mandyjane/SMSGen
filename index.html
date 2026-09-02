@@ -9616,7 +9616,7 @@ function deriveDraftName(state){
   if (state.tmpl === 'av' || state.tmpl === 'avr'){
     const a = state.av || state.avr || {};
     let colour = a.colour === '__other' ? a.colourOther : a.colour;
-    const stepLabel = (a.step === 3 || state.tmpl === 'avr') ? 'AV Removal' : a.step === 2 ? 'AV Towing' : 'AV Initial';
+    const stepLabel = (a.step === 3 || state.tmpl === 'avr') ? 'AV Removed SMS' : a.step === 2 ? 'AV Removal Authority email' : 'Initial notice';
     const bits = [stepLabel, colour, a.make, a.model, a.plate].filter(Boolean);
     return bits.length > 1 ? bits.join(' · ') : `${stepLabel} ${draftSeq}`;
   }
@@ -10423,7 +10423,7 @@ function draftFamily(tmpl){
   tmpl = tmpl || 'generic';
   if (tmpl === 'ino') return 'ino';
   if (tmpl === 'av') return 'av';
-  if (tmpl === 'avr') return 'avr';
+  if (tmpl === 'avr') return 'av'; // legacy — merged into AV wizard v197
   if (tmpl === 'bcc') return 'bcc';
   return 'generic';
 }
@@ -10470,7 +10470,12 @@ function incidentKey(state){
     const id = url.replace(/\D/g,'');
     return id ? `ino|${id}` : null;
   }
-  return null;   // AV/AVR: no escalation series
+  if (tmpl === 'av' || tmpl === 'avr'){
+    const a = (tmpl === 'avr') ? (state.avr || {}) : (state.av || {});
+    const key = [norm(a.plate), norm(a.road), norm(a.suburb)].filter(Boolean).join('|');
+    return key ? `av|${key}` : null;
+  }
+  return null;
 }
 
 /* Recency of a draft, newest = largest. Derived from the Date.now() baked into the
@@ -10520,10 +10525,13 @@ function inoIncidentHadClosure(state){
 }
 
 function displayDraftName(name, tmpl){
-  // The badge already shows the type, so drop a leading "INO ·", "AV ·",
-  // "AV Removal ·" prefix from the name to avoid repeating it.
+  // The badge already shows the type, so drop leading step/type prefixes
+  // from the name to avoid repeating it.
   return String(name)
+    .replace(/^AV Removed SMS\s·\s/, '')
+    .replace(/^AV Removal Authority email\s·\s/, '')
     .replace(/^AV Removal\s·\s/, '')
+    .replace(/^Initial notice\s·\s/, '')
     .replace(/^(INO|AV)\s·\s/, '')
     .trim();
 }
@@ -10952,8 +10960,13 @@ function deriveSeqLabel(draft, tmpl){
     if (s.final && seq) seq += ' FINAL';
     return seq;
   }
-  if (tmpl === 'av')  return 'Initial notice';
-  if (tmpl === 'avr') return 'Removal';
+  if (tmpl === 'av' || tmpl === 'avr'){
+    const a = s.av || s.avr || {};
+    const step = (tmpl === 'avr') ? 3 : (a.step || 1);
+    if (step === 3) return 'AV Removed SMS';
+    if (step === 2) return 'AV Removal Authority email';
+    return 'Initial notice';
+  }
   return '';
 }
 
@@ -10968,8 +10981,7 @@ function renderDraftsList(){
   const groups = [
     { fam: 'ino',     label: 'SEQ OPS · INO' },
     { fam: 'generic', label: 'Generic Disruption' },
-    { fam: 'av',      label: 'AV Initial' },
-    { fam: 'avr',     label: 'AV Removal' },
+    { fam: 'av',      label: 'Abandoned Vehicles' },
     { fam: 'bcc',     label: 'BCC · SLAM Escalation Email' }
   ];
   let html = '';
