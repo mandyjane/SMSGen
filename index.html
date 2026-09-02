@@ -1675,6 +1675,44 @@
 </style>
 </head>
 <body>
+
+<!-- Password gate (v197) -->
+<div id="authGate" style="display:none; position:fixed; inset:0; z-index:99999; background:var(--paper); display:flex; align-items:center; justify-content:center;">
+  <div style="text-align:center; max-width:320px; padding:24px;">
+    <div style="font-family:var(--display); font-size:20px; font-weight:700; color:var(--teal-header); margin-bottom:6px;">Escalation SMS Generator</div>
+    <div style="font-family:var(--mono); font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:24px;">BMTMC · Traffic Operations</div>
+    <input type="password" id="authInput" placeholder="Enter password" autocomplete="off"
+      style="width:100%; padding:11px 14px; border:1.5px solid var(--line-strong); border-radius:var(--radius-sm); font:inherit; font-size:14px; text-align:center; background:var(--card); color:var(--ink);"
+      onkeydown="if(event.key==='Enter')authCheck()">
+    <button type="button" onclick="authCheck()"
+      style="width:100%; margin-top:10px; padding:11px; border:none; border-radius:var(--radius-sm); font:inherit; font-size:14px; font-weight:600; cursor:pointer; background:var(--teal); color:#fff;">
+      Unlock
+    </button>
+    <div id="authError" style="color:#b5371f; font-size:13px; margin-top:10px; display:none;">Incorrect password</div>
+  </div>
+</div>
+<script>
+(function(){
+  const AUTH_KEY = 'bmtmc_auth_v1';
+  const gate = document.getElementById('authGate');
+  if (window.localStorage && window.localStorage.getItem(AUTH_KEY) === '1'){
+    gate.style.display = 'none';
+  } else {
+    gate.style.display = 'flex';
+  }
+  window.authCheck = function(){
+    const inp = document.getElementById('authInput');
+    if ((inp.value||'').trim().toLowerCase() === 'bmtmc'){
+      gate.style.display = 'none';
+      try { window.localStorage.setItem(AUTH_KEY, '1'); } catch(e){}
+    } else {
+      document.getElementById('authError').style.display = 'block';
+      inp.value = '';
+      inp.focus();
+    }
+  };
+})();
+</script>
 <div class="top-mask"></div>
 <div class="shell">
   <div class="topbar">
