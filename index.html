@@ -1653,24 +1653,25 @@
   .av-step-node.av-step-done .av-step-label { color: var(--ink-soft); }
   .av-step-connector { width: 20px; height: 2px; background: var(--line); flex-shrink: 0; }
   /* AV step-specific preview buttons */
-  .av-step-btns { display: flex; gap: 8px; margin-top: 8px; }
-  .av-step-btns .av-step-btn { flex: 1; padding: 10px; border: 1.5px solid var(--line); border-radius: var(--radius); background: var(--card); font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; text-align: center; transition: all 0.12s; }
+  .av-step-btns { display: flex; gap: 8px; margin-top: 8px; flex-wrap: nowrap; }
+  .av-step-btns .av-step-btn { flex: 1 1 0; min-width: 0; padding: 10px 8px; border: 1.5px solid var(--line); border-radius: var(--radius); background: var(--card); font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; text-align: center; transition: all 0.12s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .av-step-btns .av-step-btn:hover { border-color: var(--purple); color: var(--purple); background: var(--purple-soft-2); }
   .av-step-btns .av-step-btn.primary { background: var(--purple-soft-2); border-color: var(--purple-soft); color: var(--purple-deep); }
   .av-step-btns .av-step-btn.primary:hover { background: var(--purple-soft); }
-  #avOutlookBtn { display: none; width: 100%; padding: 13px; border: none; border-radius: var(--radius); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; background: var(--purple); color: #fff; text-align: center; text-decoration: none; transition: background 0.12s; }
+  #avOutlookBtn { display: none; width: 100%; padding: 13px; border: none; border-radius: var(--radius); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; background: var(--purple); color: #fff; text-decoration: none; transition: background 0.12s; /* flex for vertical centering */ align-items: center; justify-content: center; gap: 6px; }
+  #avOutlookBtn.show { display: flex; }
   #avOutlookBtn:hover { background: var(--purple-deep); }
   /* Towing email preview */
-  .av-tow-preview { font-size: 13px; line-height: 1.6; }
-  .av-tow-preview .tow-meta { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+  .av-tow-preview { font-size: 13px; line-height: 1.5; }
+  .av-tow-preview .tow-meta { font-size: 12px; color: var(--muted); margin-bottom: 1px; }
   .av-tow-preview .tow-meta b { color: var(--ink-soft); font-weight: 600; }
-  .av-tow-preview .tow-divider { border: none; border-top: 1px solid var(--line); margin: 10px 0; }
-  .av-tow-preview .tow-section { font-weight: 700; margin: 14px 0 2px; }
-  .av-tow-preview .tow-legal { font-size: 12px; color: var(--ink-soft); line-height: 1.55; }
-  .av-tow-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
-  .av-tow-table td { padding: 3px 8px; vertical-align: top; border-bottom: 1px solid var(--line); }
+  .av-tow-preview .tow-divider { border: none; border-top: 1px solid var(--line); margin: 6px 0; }
+  .av-tow-preview .tow-section { font-weight: 700; margin: 8px 0 1px; }
+  .av-tow-preview .tow-legal { font-size: 12px; color: var(--ink-soft); line-height: 1.45; }
+  .av-tow-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
+  .av-tow-table td { padding: 2px 8px; vertical-align: top; border-bottom: 1px solid var(--line); }
   .av-tow-table td:first-child { width: 230px; color: var(--muted); font-weight: 500; }
-  .av-tow-loc { font-size: 12px; white-space: pre-wrap; background: var(--paper); padding: 10px; border-radius: 6px; border: 1px solid var(--line); margin-top: 4px; }
+  .av-tow-loc { font-size: 12px; white-space: pre-wrap; background: var(--paper); padding: 8px; border-radius: 6px; border: 1px solid var(--line); margin-top: 3px; }
 </style>
 </head>
 <body>
@@ -1871,7 +1872,7 @@
           <button type="button" class="step-btn bcc-xs" id="bccCopyTableBtn" onclick="bccCopyTable()" style="display:none;" title="Copy the formatted table for pasting into Outlook">Copy as table</button>
           <button type="button" class="step-btn bcc-xs" id="bccCopyPlainBtn" onclick="bccCopyPlain()" style="display:none;" title="Copy the whole email as plain text">Copy plain text</button>
           <!-- AV wizard step navigation (v197) -->
-          <a id="avOutlookBtn" href="#" target="_blank" style="display:none;">✉️ Open in Outlook</a>
+          <a id="avOutlookBtn" href="#" target="_blank" onclick="saveDraft({auto:true})">✉️ Open in Outlook</a>
           <div class="av-step-btns" id="avStepBtns" style="display:none;">
             <button type="button" class="av-step-btn" id="avPrevBtn" style="display:none;" onclick="goAvStep(avStep-1)">← Back</button>
             <button type="button" class="av-step-btn primary" id="avNextBtn" onclick="goAvStep(avStep+1)">→ Next: Towing email</button>
@@ -2416,7 +2417,7 @@ function buildAV(){
     </div>
 
     <!-- Shared: Reference -->
-    <div class="seg-head">REFERENCE</div>
+    <div class="seg-head" style="margin-top:36px;">REFERENCE</div>
     <div class="field">
       <span class="field-label">Date located</span>
       <input type="date" id="av_date" value="${today}">
@@ -2430,7 +2431,7 @@ function buildAV(){
 
     <!-- Step 2 only: Towing email details -->
     <div id="av_step2_fields" style="display:none;">
-      <div class="seg-head">TOWING EMAIL DETAILS</div>
+      <div class="seg-head" style="margin-top:36px;">TOWING EMAIL DETAILS</div>
       <div class="field">
         <span class="field-label">STREAMS COV DM Title</span>
         <input type="text" id="av_cov_title" placeholder="e.g. Abandoned vehicle — Pacific Mwy EMP">
@@ -8175,7 +8176,7 @@ function refreshPreviewActions(){
   const avStepBtns = document.getElementById('avStepBtns');
   const avOutBtn = document.getElementById('avOutlookBtn');
   if (avStepBtns) avStepBtns.style.display = isAv ? 'flex' : 'none';
-  if (avOutBtn) avOutBtn.style.display = (isAv && avStep === 2) ? 'block' : 'none';
+  if (avOutBtn) avOutBtn.classList.toggle('show', isAv && avStep === 2);
   // Hide SMS copy button on AV step 2 (email step).
   if (copyBtn && isAv) copyBtn.style.display = avStep === 2 ? 'none' : '';
   // Hide character counts on step 2
@@ -8587,7 +8588,7 @@ function renderAvTowingEmail(){
     <div>To Clayton\u2019s Towing,</div>
     <div class="tow-section">Authorisation</div>
     <div class="tow-legal">I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton\u2019s Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.</div>
-    <div style="margin-top:8px;font-size:13px;"><b>Authorised by:</b> Amanda Tomlinson</div>
+    <div style="margin-top:4px;font-size:13px;"><b>Authorised by:</b> Amanda Tomlinson</div>
     <div class="tow-section">Towing and Vehicle Details</div>
     <table class="av-tow-table">
       <tr><td>STREAMS COV DM ID:</td><td>${esc(covRaw || '[COV DM ID]')}</td></tr>
@@ -10303,35 +10304,36 @@ function updateDraftById(id){
 
 /* AV Initial → AV Removal: open a fresh AV Removal form pre-filled with the initial
    notice's vehicle + location details, so the operator only adds removal-specific info. */
+/* Advance an AV draft to the next wizard step (v197). */
 function escalateAvToRemoval(id){
   const draft = drafts.find(d => d.id === id);
-  if (!draft || (draft.state.tmpl !== 'av')) return;
-  const a = draft.state.av || {};
-  openTemplateCard('avr');
-  // Rebuild the AVR form fresh, then populate from the initial notice.
-  // clearFormAVR removed v197 — use clearFormAV
+  if (!draft) return;
+  const s = draft.state;
+  const a = s.av || s.avr || {};
+  openTemplateCard('av');
+  buildAV();
   const set = (fid, val) => { const el = document.getElementById(fid); if (el && val != null) el.value = val; };
-  // colour: carry the dropdown value, and the "other" text if it was custom
-  const colEl = document.getElementById('avr_colour');
+  const colEl = document.getElementById('av_colour');
   if (colEl){
     const opts = Array.from(colEl.options).map(o=>o.value);
     if (a.colour && opts.includes(a.colour)){ colEl.value = a.colour; }
     else if (a.colour){ colEl.value = '__other'; }
-    if (typeof onAvrColourChange === 'function') onAvrColourChange();
-    if (a.colour === '__other' || !opts.includes(a.colour || '')){ set('avr_colour_other', a.colourOther || a.colour || ''); }
+    onAvColourChange();
+    if (a.colour === '__other' || !opts.includes(a.colour || '')){ set('av_colour_other', a.colourOther || a.colour || ''); }
   }
-  set('avr_make', a.make);
-  set('avr_model', a.model);
-  set('avr_plate', a.plate);
-  set( titleCaseProperNoun(a.road || ''));
-  set( titleCaseProperNoun(a.suburb || ''));
-  // Carry the COV number across from the initial notice (both forms store it in *_sims).
-  set('avr_sims', a.sims || '');
+  set('av_make', a.make); set('av_model', a.model); set('av_plate', a.plate);
+  set('av_road', a.road); set('av_suburb', a.suburb);
+  set('av_sims', a.sims); set('av_date', a.date);
+  set('av_exit', a.exit); set('av_cov_title', a.covTitle); set('av_loc_detail', a.locDetail);
+  const currentStep = a.step || 1;
+  avStep = Math.min(currentStep + 1, 3);
+  applyAvStepVisibility();
   renderPreview();
   scheduleWorkingSave();
   closeDraftsPanel();
-  const note = document.getElementById('avr_draft_note');
-  if (note){ note.classList.remove('warn'); note.textContent = `Started removal from “${draft.name}” ✓`; }
+  const note = document.getElementById('av_draft_note');
+  const stepNames = { 2:'towing email', 3:'removal SMS' };
+  if (note){ note.classList.remove('warn'); note.textContent = `Advanced to ${stepNames[avStep] || 'next step'} from "${draft.name}" \u2713`; }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -10725,6 +10727,9 @@ function renderIncidentSummary(cluster, expanded){
   const count = cluster.length;
   const canUpdate = ['generic','ino'].includes(tmpl);
   const isAvInitial = (tmpl === 'av');
+  const avDraftStep = isAvInitial ? ((newest.state.av || {}).step || 1) : 0;
+  const avCanAdvance = isAvInitial && avDraftStep < 3;
+  const avAdvanceLabel = avDraftStep === 1 ? 'To AV Email' : avDraftStep === 2 ? 'To AV Removed SMS' : '';
   const newestId = newest.id;
 
   // Line 1: type/vehicle chip BEFORE the location, then the sequence label.
@@ -10782,9 +10787,9 @@ function renderIncidentSummary(cluster, expanded){
               ${ESC_ICON_SVG}
               ${tmpl === 'ino' ? 'Next escalation' : 'Update'}
             </button>` : ''}
-            ${isAvInitial ? `<button type="button" class="draft-update" onclick="escalateAvToRemoval('${newestId}')" title="Start an AV Removal message from this initial notice">
+            ${avCanAdvance ? `<button type="button" class="draft-update" onclick="escalateAvToRemoval('${newestId}')" title="Advance to the next step in the AV workflow">
               ${ESC_ICON_SVG}
-              To removal
+              ${avAdvanceLabel}
             </button>` : ''}
             <button type="button" class="draft-del icon-only" data-ids="${cluster.map(d=>d.id).join(',')}" onclick="deleteIncident(this.dataset.ids)" title="Delete ${count === 1 ? 'this message' : `all ${count} messages in this incident`}" aria-label="Delete this incident">
               ${DEL_ICON_SVG}
