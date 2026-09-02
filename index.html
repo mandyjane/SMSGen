@@ -1922,8 +1922,6 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18v12H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 7l9 6 9-6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
             Open Outlook
           </button>
-          <button type="button" class="step-btn bcc-xs" id="bccCopyTableBtn" onclick="bccCopyTable()" style="display:none;" title="Copy the formatted table for pasting into Outlook">Copy as table</button>
-          <button type="button" class="step-btn bcc-xs" id="bccCopyPlainBtn" onclick="bccCopyPlain()" style="display:none;" title="Copy the whole email as plain text">Copy plain text</button>
           <!-- AV wizard step navigation (v197) -->
           <a id="ttsOutlookBtn" href="#" target="_blank" onclick="saveDraft({auto:true})">✉️ Send in Outlook</a>
           <a id="avOutlookBtn" href="#" target="_blank" onclick="saveDraft({auto:true})">✉️ Send in Outlook</a>
@@ -1939,7 +1937,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span style="display:block;font-size:10px;opacity:0.6;margin-top:2px;">Version 201.1</span>
+    <span style="display:block;font-size:10px;opacity:0.6;margin-top:2px;">Version 201.2</span>
   </footer>
 </div>
 
@@ -3198,9 +3196,33 @@ async function bccCopyPlain(){
     ta.remove();
   }
 }
-/* Opens the default mail client with To + Subject pre-filled and an empty body,
-   so the operator can paste the formatted table. mailto: cannot carry HTML. */
-function bccOpenOutlook(){
+/* Opens the default mail client with To + Subject pre-filled,
+   and copies the formatted HTML table to clipboard for pasting. */
+async function bccOpenOutlook(){
+  // Copy table to clipboard first
+  const html = bccHtml();
+  const text = bccPlainText();
+  try {
+    if (navigator.clipboard && window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/html': new Blob([html], {type:'text/html'}),
+        'text/plain': new Blob([text], {type:'text/plain'})
+      })]);
+    }
+  } catch(e){
+    // Fallback: selection-based copy
+    const holder = document.createElement('div');
+    holder.innerHTML = html;
+    holder.setAttribute('contenteditable','true');
+    holder.style.position = 'fixed'; holder.style.left = '-9999px';
+    document.body.appendChild(holder);
+    const range = document.createRange(); range.selectNodeContents(holder);
+    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    try { document.execCommand('copy'); } catch(_){}
+    sel.removeAllRanges(); holder.remove();
+  }
+  flashCopied('Table copied — paste into Outlook');
+  // Open mailto
   const url = `mailto:${encodeURIComponent(BCC_TO_EMAIL)}?subject=${encodeURIComponent(bccSubject())}`;
   window.location.href = url;
 }
@@ -8300,7 +8322,7 @@ function refreshPreviewActions(){
   // BCC preview is a rendered HTML table — hide the plain-text inline Edit pill.
   const editToggle = document.getElementById('editPreviewToggle');
   if (editToggle) editToggle.style.display = isBcc ? 'none' : '';
-  ['bccOutlookBtn','bccCopyTableBtn','bccCopyPlainBtn','bccBtnSpacer'].forEach(id=>{
+  ['bccOutlookBtn','bccBtnSpacer'].forEach(id=>{
     const el = document.getElementById(id);
     if (el) el.style.display = isBcc ? '' : 'none';
   });
