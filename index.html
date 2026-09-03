@@ -1970,7 +1970,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 201.6</span>
+    <span class="app-version">Version 201.7</span>
   </footer>
 </div>
 
@@ -8783,10 +8783,13 @@ function renderAV(){
    so the output matches the STREAMS layout with spacing between sections. */
 function formatLocationDetail(raw){
   if (!raw) return raw;
-  return raw.replace(/\n(Location Description)\b/g, '\n\n$1')
-            .replace(/\n(Address)\b/g, '\n\n$1')
-            .replace(/\n(-?\d+\.\d+,\s*-?\d+\.\d+)/g, '\n\n$1')
-            .replace(/\n{3,}/g, '\n\n');  // cap at double blank
+  // 1. Normalise line endings and collapse all runs of blank lines to single newlines
+  let s = raw.replace(/\r\n/g, '\n').replace(/\n{2,}/g, '\n');
+  // 2. Insert one blank line BEFORE section labels (not after)
+  s = s.replace(/\n(Location Description)\b/g, '\n\n$1');
+  s = s.replace(/\n(Address)\b/g, '\n\n$1');
+  // No blank line before coordinates — they sit directly under the address
+  return s;
 }
 
 function renderAvTowingEmail(){
@@ -8835,10 +8838,10 @@ function renderAvTowingEmail(){
     + "I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton's Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.\n\n"
     + "Authorised by: " + (authName || '[name]') + "\n\n"
     + "Towing and Vehicle Details\n"
-    + "STREAMS COV DM ID:\t\t" + (covRaw || '[COV DM ID]') + "\n"
-    + "STREAMS COV DM Title:\t" + (covTitle || '[STREAMS COV DM Title]') + "\n"
-    + "Vehicle Registration:\t\t" + (plate || '[plate]') + "\n"
-    + "Tow Service Type:\t\t" + "Clayton's - Abandoned\n\n"
+    + "STREAMS COV DM ID:\t\t\t" + (covRaw || '[COV DM ID]') + "\n"
+    + "STREAMS COV DM Title:\t\t" + (covTitle || '[STREAMS COV DM Title]') + "\n"
+    + "Vehicle Registration:\t\t\t" + (plate || '[plate]') + "\n"
+    + "Tow Service Type:\t\t\t" + "Clayton's - Abandoned\n\n"
     + "Locations Details\n"
     + (locDetail || '[Location Details]') + "\n\n\n"
     + "Response Details\n"
@@ -8904,10 +8907,10 @@ function renderTTS(){
     + "I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton's Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.\n\n"
     + "Authorised by: " + (authName || '[name]') + "\n\n"
     + "Towing and Vehicle Details\n"
-    + "STREAMS COV DM ID:\t\t" + (covRaw || '[COV DM ID]') + "\n"
-    + "STREAMS COV DM Title:\t" + (covTitle || '[STREAMS COV DM Title]') + "\n"
-    + "Vehicle Registration:\t\t" + (plate || '[plate]') + "\n"
-    + "Tow Service Type:\t\t" + "Clayton's - Abandoned\n\n"
+    + "STREAMS COV DM ID:\t\t\t" + (covRaw || '[COV DM ID]') + "\n"
+    + "STREAMS COV DM Title:\t\t" + (covTitle || '[STREAMS COV DM Title]') + "\n"
+    + "Vehicle Registration:\t\t\t" + (plate || '[plate]') + "\n"
+    + "Tow Service Type:\t\t\t" + "Clayton's - Abandoned\n\n"
     + "Locations Details\n"
     + (locDetail || '[Location Details]') + "\n\n\n"
     + "Response Details\n"
