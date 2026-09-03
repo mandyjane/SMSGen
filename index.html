@@ -867,7 +867,7 @@
   .seg-head {
     font-family: var(--mono); font-size: 11px;
     letter-spacing: 0.07em; text-transform: uppercase;
-    color: var(--ink); font-weight: 800;
+    color: var(--ink); font-weight: 900;
     margin: 28px 0 14px; padding-bottom: 6px;
     border-bottom: 1.5px solid var(--line);
   }
@@ -1490,9 +1490,9 @@
   .bcc-pv-hdr > div { padding: 1px 0; }
   .bcc-pv-lbl { font-weight: 700; }
   .bcc-pv-msg { margin: 0 0 10px; }
-  .bcc-pv-tbl { border-collapse: collapse; width: 100%; }
+  .bcc-pv-tbl { border-collapse: collapse; }
   .bcc-pv-tbl td { border: 1px solid #000; padding: 4px 8px; vertical-align: top; }
-  .bcc-pv-key { font-weight: 700; width: 38%; }
+  .bcc-pv-key { font-weight: 700; white-space: nowrap; }
   .bcc-pv-foot { margin: 12px 0 0; }
   /* BCC email template — button row treatment */
   .bcc-btn-spacer { flex: 1 1 auto; }
@@ -1950,8 +1950,8 @@
             <span class="step-label">Next escalation</span>
           </button>
           <!-- AV wizard step navigation (v197) -->
-          <a id="ttsOutlookBtn" href="#" target="_blank" onclick="saveDraft({auto:true})">✉️ Send in Outlook</a>
-          <a id="avOutlookBtn" href="#" target="_blank" onclick="saveDraft({auto:true})">✉️ Send in Outlook</a>
+          <a id="ttsOutlookBtn" href="#" onclick="ttsSendInOutlook(event)">✉️ Send in Outlook</a>
+          <a id="avOutlookBtn" href="#" onclick="avSendInOutlook(event)">✉️ Send in Outlook</a>
           <div class="av-step-btns" id="avStepBtns" style="display:none;">
             <button type="button" class="av-step-btn" id="avPrevBtn" style="display:none;" onclick="goAvStep(avStep-1)">← Back</button>
             <button type="button" class="av-step-btn primary" id="avNextBtn" onclick="goAvStep(avStep+1)">→ Next: Towing email</button>
@@ -1970,7 +1970,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 201.5</span>
+    <span class="app-version">Version 201.6</span>
   </footer>
 </div>
 
@@ -2425,6 +2425,19 @@ function persistAuthName(el){
 }
 function getSavedAuthName(){
   try { return window.localStorage.getItem(AUTH_NAME_KEY) || ''; } catch(e){ return ''; }
+}
+
+function ttsSendInOutlook(e){
+  if (e) e.preventDefault();
+  saveDraft({auto:true});
+  const btn = document.getElementById('ttsOutlookBtn');
+  if (btn && btn.href && btn.href !== '#') window.location.href = btn.href;
+}
+function avSendInOutlook(e){
+  if (e) e.preventDefault();
+  saveDraft({auto:true});
+  const btn = document.getElementById('avOutlookBtn');
+  if (btn && btn.href && btn.href !== '#') window.location.href = btn.href;
 }
 
 function goAvStep(n){
@@ -3149,11 +3162,11 @@ function bccPlainText(){
 /* HTML table for a formatted paste into Outlook. */
 function bccHtml(){
   const rows = bccRows().map(([k,v])=>
-    `<tr><td style="border:1px solid #000;padding:4px 7px;font-weight:bold;width:38%;">${escapeHtml(k)}</td>`
+    `<tr><td style="border:1px solid #000;padding:4px 7px;font-weight:bold;white-space:nowrap;">${escapeHtml(k)}</td>`
     + `<td style="border:1px solid #000;padding:4px 7px;">${escapeHtml(v)}</td></tr>`).join('');
   return `<div style="font-family:'Times New Roman',serif;font-size:14px;">`
     + `<p>Message:<br>BMTMC advises the following:</p>`
-    + `<table style="border-collapse:collapse;width:100%;font-family:'Times New Roman',serif;font-size:14px;">${rows}</table>`
+    + `<table style="border-collapse:collapse;font-family:'Times New Roman',serif;font-size:14px;">${rows}</table>`
     + `<p><strong>Please do not reply to this email.</strong> For further information on this event, please contact the `
     + `Shift Leader Operations, Traffic Management Centre on 1800 13 19 40 and quote the abovementioned BMTMC reference.</p>`
     + `<p>${escapeHtml(BCC_FOOTER_2)}</p></div>`;
@@ -8822,10 +8835,10 @@ function renderAvTowingEmail(){
     + "I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton's Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.\n\n"
     + "Authorised by: " + (authName || '[name]') + "\n\n"
     + "Towing and Vehicle Details\n"
-    + "STREAMS COV DM ID:           " + (covRaw || '[COV DM ID]') + "\n"
-    + "STREAMS COV DM Title:         " + (covTitle || '[STREAMS COV DM Title]') + "\n"
-    + "Vehicle Registration:         " + (plate || '[plate]') + "\n"
-    + "Tow Service Type:             Clayton's - Abandoned\n\n"
+    + "STREAMS COV DM ID:\t\t" + (covRaw || '[COV DM ID]') + "\n"
+    + "STREAMS COV DM Title:\t" + (covTitle || '[STREAMS COV DM Title]') + "\n"
+    + "Vehicle Registration:\t\t" + (plate || '[plate]') + "\n"
+    + "Tow Service Type:\t\t" + "Clayton's - Abandoned\n\n"
     + "Locations Details\n"
     + (locDetail || '[Location Details]') + "\n\n\n"
     + "Response Details\n"
@@ -8891,10 +8904,10 @@ function renderTTS(){
     + "I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton's Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.\n\n"
     + "Authorised by: " + (authName || '[name]') + "\n\n"
     + "Towing and Vehicle Details\n"
-    + "STREAMS COV DM ID:           " + (covRaw || '[COV DM ID]') + "\n"
-    + "STREAMS COV DM Title:         " + (covTitle || '[STREAMS COV DM Title]') + "\n"
-    + "Vehicle Registration:         " + (plate || '[plate]') + "\n"
-    + "Tow Service Type:             Clayton's - Abandoned\n\n"
+    + "STREAMS COV DM ID:\t\t" + (covRaw || '[COV DM ID]') + "\n"
+    + "STREAMS COV DM Title:\t" + (covTitle || '[STREAMS COV DM Title]') + "\n"
+    + "Vehicle Registration:\t\t" + (plate || '[plate]') + "\n"
+    + "Tow Service Type:\t\t" + "Clayton's - Abandoned\n\n"
     + "Locations Details\n"
     + (locDetail || '[Location Details]') + "\n\n\n"
     + "Response Details\n"
