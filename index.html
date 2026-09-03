@@ -863,6 +863,14 @@
     letter-spacing: 0.07em; text-transform: uppercase;
     color: var(--ink-soft); margin-bottom: 6px; font-weight: 600;
   }
+  /* Section dividers inside AV / TTS forms — same font as field-label but heavier */
+  .seg-head {
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--ink); font-weight: 800;
+    margin: 28px 0 14px; padding-bottom: 6px;
+    border-bottom: 1.5px solid var(--line);
+  }
 
   input[type="text"], input[type="number"], input[type="date"], select, textarea {
     font-family: var(--sans); font-size: 14.5px; color: var(--ink);
@@ -1962,7 +1970,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 201.4</span>
+    <span class="app-version">Version 201.5</span>
   </footer>
 </div>
 
@@ -8757,6 +8765,17 @@ function renderAV(){
 
 /* Towing Authority Email preview (step 2). Renders an HTML preview in g_output_text
    and builds a mailto: link for the "Send in Outlook" button. */
+/* Auto-format pasted location details: insert blank lines before key section
+   labels ("Location Description", "Address") and before coordinate lines
+   so the output matches the STREAMS layout with spacing between sections. */
+function formatLocationDetail(raw){
+  if (!raw) return raw;
+  return raw.replace(/\n(Location Description)\b/g, '\n\n$1')
+            .replace(/\n(Address)\b/g, '\n\n$1')
+            .replace(/\n(-?\d+\.\d+,\s*-?\d+\.\d+)/g, '\n\n$1')
+            .replace(/\n{3,}/g, '\n\n');  // cap at double blank
+}
+
 function renderAvTowingEmail(){
   const get = id => (document.getElementById(id)||{value:''}).value.trim();
   let colour = document.getElementById('av_colour').value;
@@ -8765,7 +8784,7 @@ function renderAvTowingEmail(){
   const plate = get('av_plate');
   const covRaw = get('av_sims');
   const covTitle = get('av_cov_title');
-  const locDetail = get('av_loc_detail');
+  const locDetail = formatLocationDetail(get('av_loc_detail'));
   const authName = get('av_auth_name') || getSavedAuthName();
 
   const out = document.getElementById('g_output_text');
@@ -8803,10 +8822,10 @@ function renderAvTowingEmail(){
     + "I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton's Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.\n\n"
     + "Authorised by: " + (authName || '[name]') + "\n\n"
     + "Towing and Vehicle Details\n"
-    + "STREAMS COV DM ID:\t\t" + (covRaw || '[COV DM ID]') + "\n"
-    + "STREAMS COV DM Title:\t\t" + (covTitle || '[STREAMS COV DM Title]') + "\n"
-    + "Vehicle Registration:\t\t" + (plate || '[plate]') + "\n"
-    + "Tow Service Type:\t\t\tClayton's - Abandoned\n\n"
+    + "STREAMS COV DM ID:           " + (covRaw || '[COV DM ID]') + "\n"
+    + "STREAMS COV DM Title:         " + (covTitle || '[STREAMS COV DM Title]') + "\n"
+    + "Vehicle Registration:         " + (plate || '[plate]') + "\n"
+    + "Tow Service Type:             Clayton's - Abandoned\n\n"
     + "Locations Details\n"
     + (locDetail || '[Location Details]') + "\n\n\n"
     + "Response Details\n"
@@ -8835,7 +8854,7 @@ function renderTTS(){
   const covRaw = get('tts_cov_id');
   const covTitle = get('tts_cov_title');
   const plate = get('tts_plate');
-  const locDetail = get('tts_loc_detail');
+  const locDetail = formatLocationDetail(get('tts_loc_detail'));
   const authName = get('tts_auth_name') || getSavedAuthName();
 
   const out = document.getElementById('g_output_text');
@@ -8872,10 +8891,10 @@ function renderTTS(){
     + "I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton's Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.\n\n"
     + "Authorised by: " + (authName || '[name]') + "\n\n"
     + "Towing and Vehicle Details\n"
-    + "STREAMS COV DM ID:\t\t" + (covRaw || '[COV DM ID]') + "\n"
-    + "STREAMS COV DM Title:\t\t" + (covTitle || '[STREAMS COV DM Title]') + "\n"
-    + "Vehicle Registration:\t\t" + (plate || '[plate]') + "\n"
-    + "Tow Service Type:\t\t\tClayton's - Abandoned\n\n"
+    + "STREAMS COV DM ID:           " + (covRaw || '[COV DM ID]') + "\n"
+    + "STREAMS COV DM Title:         " + (covTitle || '[STREAMS COV DM Title]') + "\n"
+    + "Vehicle Registration:         " + (plate || '[plate]') + "\n"
+    + "Tow Service Type:             Clayton's - Abandoned\n\n"
     + "Locations Details\n"
     + (locDetail || '[Location Details]') + "\n\n\n"
     + "Response Details\n"
