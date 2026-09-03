@@ -1970,7 +1970,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 201.8</span>
+    <span class="app-version">Version 202.0</span>
   </footer>
 </div>
 
@@ -3339,6 +3339,11 @@ function buildTTS(){
     <div class="field">
       <span class="field-label">Vehicle Registration</span>
       <input type="text" id="tts_plate" placeholder="e.g. 123ABC">
+    </div>
+    <div class="field">
+      <span class="field-label">Tow Service Type</span>
+      <label class="inline-check"><input type="radio" name="tts_tow_type" value="Clayton's TTS - Light" checked onchange="renderPreview()"> Light</label>
+      <label class="inline-check"><input type="radio" name="tts_tow_type" value="Clayton's TTS - Heavy" onchange="renderPreview()"> Heavy</label>
     </div>
 
     <div class="seg-head" style="margin-top:36px;">LOCATION DETAILS</div>
@@ -8838,10 +8843,10 @@ function renderAvTowingEmail(){
     + "I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton's Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.\n\n"
     + "Authorised by: " + (authName || '[name]') + "\n\n"
     + "Towing and Vehicle Details\n"
-    + "STREAMS COV DM ID:  \t\t" + (covRaw || '[COV DM ID]') + "\n"
-    + "STREAMS COV DM Title:\t\t" + (covTitle || '[STREAMS COV DM Title]') + "\n"
-    + "Vehicle Registration:  \t\t" + (plate || '[plate]') + "\n"
-    + "Tow Service Type:      \t\t\t" + "Clayton's - Abandoned\n\n"
+    + "STREAMS COV DM ID:               " + (covRaw || '[COV DM ID]') + "\n"
+    + "STREAMS COV DM Title:           " + (covTitle || '[STREAMS COV DM Title]') + "\n"
+    + "Vehicle Registration:                  " + (plate || '[plate]') + "\n"
+    + "Tow Service Type:                        " + "Clayton's - Abandoned\n\n"
     + "Locations Details\n"
     + (locDetail || '[Location Details]') + "\n\n\n"
     + "Response Details\n"
@@ -8872,6 +8877,8 @@ function renderTTS(){
   const plate = get('tts_plate');
   const locDetail = formatLocationDetail(get('tts_loc_detail'));
   const authName = get('tts_auth_name') || getSavedAuthName();
+  const towTypeEl = document.querySelector('input[name="tts_tow_type"]:checked');
+  const towType = towTypeEl ? towTypeEl.value : "Clayton's TTS - Light";
 
   const out = document.getElementById('g_output_text');
   out.classList.remove('empty');
@@ -8890,7 +8897,7 @@ function renderTTS(){
     + '<table class="av-tow-table"><tr><td>STREAMS COV DM ID:</td><td>' + esc(covRaw || '[COV DM ID]') + '</td></tr>'
     + '<tr><td>STREAMS COV DM Title:</td><td>' + esc(covTitle || '[enter in form]') + '</td></tr>'
     + '<tr><td>Vehicle Registration:</td><td>' + esc(plate || '[plate]') + '</td></tr>'
-    + '<tr><td>Tow Service Type:</td><td>Clayton\u2019s - Abandoned</td></tr></table>'
+    + '<tr><td>Tow Service Type:</td><td>' + esc(towType) + '</td></tr></table>'
     + '<div class="tow-section">Location Details</div>'
     + '<div class="av-tow-loc">' + esc(locDetail || '[paste location details]') + '</div>'
     + '<div class="tow-section">Response Details</div>'
@@ -8907,10 +8914,10 @@ function renderTTS(){
     + "I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton's Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.\n\n"
     + "Authorised by: " + (authName || '[name]') + "\n\n"
     + "Towing and Vehicle Details\n"
-    + "STREAMS COV DM ID:  \t\t" + (covRaw || '[COV DM ID]') + "\n"
-    + "STREAMS COV DM Title:\t\t" + (covTitle || '[STREAMS COV DM Title]') + "\n"
-    + "Vehicle Registration:  \t\t" + (plate || '[plate]') + "\n"
-    + "Tow Service Type:      \t\t\t" + "Clayton's - Abandoned\n\n"
+    + "STREAMS COV DM ID:               " + (covRaw || '[COV DM ID]') + "\n"
+    + "STREAMS COV DM Title:           " + (covTitle || '[STREAMS COV DM Title]') + "\n"
+    + "Vehicle Registration:                  " + (plate || '[plate]') + "\n"
+    + "Tow Service Type:                        " + towType + "\n\n"
     + "Locations Details\n"
     + (locDetail || '[Location Details]') + "\n\n\n"
     + "Response Details\n"
@@ -9690,7 +9697,8 @@ function collectFormState(){
       tts: {
         authName: gv('tts_auth_name'),
         covId: gv('tts_cov_id'), covTitle: gv('tts_cov_title'),
-        plate: gv('tts_plate'), locDetail: gv('tts_loc_detail')
+        plate: gv('tts_plate'), locDetail: gv('tts_loc_detail'),
+        towType: (document.querySelector('input[name="tts_tow_type"]:checked')||{}).value || "Clayton's TTS - Light"
       }
     };
   }
@@ -11471,6 +11479,7 @@ function applyDraft(s){
     set('tts_auth_name', a.authName);
     set('tts_cov_id', a.covId); set('tts_cov_title', a.covTitle);
     set('tts_plate', a.plate); set('tts_loc_detail', a.locDetail);
+    if (a.towType){ const r = document.querySelector('input[name="tts_tow_type"][value="'+a.towType+'"]'); if(r) r.checked = true; }
     renderPreview();
     return;
   }
