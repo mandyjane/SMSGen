@@ -39,6 +39,7 @@
     --coral-deep: #993c1d;
     --coral-soft: #f5c4b3;
     --coral-soft-2: #faece7;
+    --copper: #a0522d; --copper-deep: #6b3720; --copper-soft: #efd4c4; --copper-soft-2: #f9ede5;
     /* BCC — slate group accent */
     --slate: #4a5b6b;
     --slate-deep: #2f3d4a;
@@ -460,6 +461,9 @@
   .incident-summary.bcc .incident-count { color: var(--slate-deep); background: var(--slate-soft); }
   .incident-summary.bcc .draft-load { color: var(--slate); }
   .draft-group-head.bcc    { color: var(--slate-deep); background: var(--slate-soft-2); }
+  .incident-summary.bcc .incident-cap { background: var(--slate); }
+  .incident-summary.bcc .incident-famchip { color: var(--slate-deep); background: var(--slate-soft); }
+  .incident-summary.bcc .incident-count-chip { color: var(--slate-deep); background: var(--slate-soft); }
   .draft-row.bcc     { border-left: 3px solid var(--slate); }
   .draft-type.bcc    { color: var(--slate-deep); background: var(--slate-soft); }
   .draft-row.bcc .draft-load { color: var(--slate); }
@@ -471,6 +475,22 @@
   .incident-summary.generic .draft-update:hover { background: var(--teal-deep); border-color: var(--teal-deep); }
   .incident-summary.av .draft-update { background: var(--purple); border-color: var(--purple); }
   .incident-summary.av .draft-update:hover { background: var(--purple-deep); border-color: var(--purple-deep); }
+
+  /* TTS — Copper palette (v201) */
+  .draft-group-head.tts    { color: var(--copper-deep); background: var(--copper-soft-2); }
+  .draft-row.tts     { border-left: 3px solid var(--copper); }
+  .draft-row.tts .draft-load { color: var(--copper); }
+  .draft-row.tts .draft-load:hover { border-color: var(--copper); background: var(--copper-soft-2); }
+  .draft-row.tts .draft-tag { color: var(--copper-deep); background: var(--copper-soft); }
+  .draft-row.tts .draft-copy:hover { border-color: var(--copper); color: var(--copper); background: var(--copper-soft-2); }
+  .incident-rows .draft-row.tts .draft-copy:hover { border-color: var(--copper); color: var(--copper); background: var(--copper-soft-2); }
+  .incident-summary.tts    { border-left: 5px solid var(--copper); }
+  .incident-summary.tts .incident-count { color: var(--copper-deep); background: var(--copper-soft); }
+  .incident-summary.tts .incident-expand-btn { color: var(--copper-deep); }
+  .incident-summary.tts .draft-load { color: var(--copper); }
+  .incident-summary.tts .incident-cap { background: var(--copper); }
+  .incident-summary.tts .incident-famchip { color: var(--copper-deep); background: var(--copper-soft); }
+  .incident-summary.tts .incident-count-chip { color: var(--copper-deep); background: var(--copper-soft); }
 
   /* Two-line summary header: bold-ish location line + quiet meta line + type chip */
   .incident-loc { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -1942,7 +1962,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 201.3</span>
+    <span class="app-version">Version 201.4</span>
   </footer>
 </div>
 
