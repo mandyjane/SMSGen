@@ -1184,8 +1184,10 @@
     display: flex; align-items: center; justify-content: center; gap: 6px;
     margin: 30px 0 6px; padding-top: 4px;
     font-size: 11.5px; color: #8a938e; letter-spacing: 0.03em;
+    flex-wrap: wrap;
   }
   .app-credit svg { opacity: 0.6; flex: none; }
+  .app-credit .app-version { flex: 1 0 100%; text-align: center; font-size: 10px; opacity: 0.6; margin-top: 0; }
 
   /* ---- Conditional sub blocks ---- */
   .sub-block {
@@ -1491,6 +1493,8 @@
   .bcc-unit input { width:100%; padding-right:44px; }
   .bcc-unit span { position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:11px; color:var(--muted); pointer-events:none; }
   .preview-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .new-msg-area { margin-top: 80px; display: flex; justify-content: flex-end; }
+  .new-msg-isolated { flex: none !important; font-size: 12px !important; font-weight: 500 !important; padding: 7px 14px !important; }
   .preview-actions.hide { display: none; }
   .step-btn {
     flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -1909,18 +1913,13 @@
           Copy message
         </button>
         <div class="preview-actions" id="previewActions">
+          <button type="button" class="step-btn bcc-primary" id="bccOutlookBtn" onclick="bccOpenOutlook()" style="display:none;" title="Open your mail client with To and Subject pre-filled, table copied to clipboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18v12H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 7l9 6 9-6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            Open Outlook
+          </button>
           <button type="button" class="step-btn" id="nextEscBtn" onclick="nextEscalation()" title="Advance this message to the next escalation in the series">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="step-label">Next escalation</span>
-          </button>
-          <button type="button" class="step-btn ghost" id="newMsgBtn" onclick="newMessage()" title="Clear the form and start a new message in this template">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            New message
-          </button>
-          <span class="bcc-btn-spacer" id="bccBtnSpacer" style="display:none;"></span>
-          <button type="button" class="step-btn bcc-primary" id="bccOutlookBtn" onclick="bccOpenOutlook()" style="display:none;" title="Open your mail client with To and Subject pre-filled">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18v12H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 7l9 6 9-6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-            Open Outlook
           </button>
           <!-- AV wizard step navigation (v197) -->
           <a id="ttsOutlookBtn" href="#" target="_blank" onclick="saveDraft({auto:true})">✉️ Send in Outlook</a>
@@ -1930,6 +1929,12 @@
             <button type="button" class="av-step-btn primary" id="avNextBtn" onclick="goAvStep(avStep+1)">→ Next: Towing email</button>
           </div>
         </div>
+        <div class="new-msg-area" id="newMsgArea">
+          <button type="button" class="step-btn ghost new-msg-isolated" id="newMsgBtn" onclick="newMessage()" title="Clear the form and start a new message in this template">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            New message
+          </button>
+        </div>
         <span class="copied-note" id="g_copied">Copied to clipboard ✓</span>
       </div>
     </div>
@@ -1937,7 +1942,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span style="display:block;font-size:10px;opacity:0.6;margin-top:2px;">Version 201.2</span>
+    <span class="app-version">Version 201.3</span>
   </footer>
 </div>
 
@@ -3199,6 +3204,8 @@ async function bccCopyPlain(){
 /* Opens the default mail client with To + Subject pre-filled,
    and copies the formatted HTML table to clipboard for pasting. */
 async function bccOpenOutlook(){
+  // Auto-save draft
+  saveDraft({auto:true});
   // Copy table to clipboard first
   const html = bccHtml();
   const text = bccPlainText();
@@ -8322,7 +8329,7 @@ function refreshPreviewActions(){
   // BCC preview is a rendered HTML table — hide the plain-text inline Edit pill.
   const editToggle = document.getElementById('editPreviewToggle');
   if (editToggle) editToggle.style.display = isBcc ? 'none' : '';
-  ['bccOutlookBtn','bccBtnSpacer'].forEach(id=>{
+  ['bccOutlookBtn'].forEach(id=>{
     const el = document.getElementById(id);
     if (el) el.style.display = isBcc ? '' : 'none';
   });
