@@ -1970,7 +1970,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 202.0</span>
+    <span class="app-version">Version 202.1</span>
   </footer>
 </div>
 
@@ -2415,6 +2415,68 @@ const AV_TOW_BCC = 'SNO_MetroRTNM@tmr.qld.gov.au,BMTMC_Traffic@brisbane.qld.gov.
 const AV_TOW_SUBJ_BASE = 'QLD GOV - DTMR - METRO - Stationary (Abandoned / Broken-down) Vehicle Removal Authority - Service Order - COV DM ID: ';
 
 const AUTH_NAME_KEY = 'bmtmc_auth_name_v1';
+const TOWING_RICH_KEY = 'bmtmc_towing_rich_v1';
+let towingRichEmail = false;
+try { towingRichEmail = window.localStorage.getItem(TOWING_RICH_KEY) === '1'; } catch(e){}
+function setTowingRichEmail(on){
+  towingRichEmail = on;
+  try { window.localStorage.setItem(TOWING_RICH_KEY, on ? '1' : '0'); } catch(e){}
+  renderChipSettings();
+}
+
+/* Build a formatted HTML email body for the towing authority email.
+   Used by both AV (step 2) and TTS when the rich-email setting is on. */
+function buildTowingRichHtml(authName, covRaw, covTitle, plate, towType, locDetail){
+  const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const locFormatted = esc(locDetail||'').replace(/\n/g,'<br>');
+  return `<div style="font-family:Aptos,Calibri,Arial,sans-serif;font-size:12pt;">
+<p>To Clayton\u2019s Towing,</p>
+<p><b>Authorisation</b><br>
+I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton\u2019s Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.</p>
+<p><b>Authorised by:</b> ${esc(authName||'[name]')}</p>
+<p><b>Towing and Vehicle Details</b><br>
+<b>STREAMS COV DM ID:</b> ${esc(covRaw||'[COV DM ID]')}<br>
+<b>STREAMS COV DM Title:</b> ${esc(covTitle||'[title]')}<br>
+<b>Vehicle Registration:</b> ${esc(plate||'[plate]')}<br>
+<b>Tow Service Type:</b> ${esc(towType)}</p>
+<p><b>Locations Details</b><br>
+${locFormatted||'[Location Details]'}</p>
+<p><b>Response Details</b><br>
+Service Order is confirmed received on receipt of the Service Order by phone, as per conditions of contract.<br>
+Contractor shall provide estimate of arrival time within fifteen (15) minutes of receipt of Service Order.</p>
+<p><b>Set Down Location</b><br>
+SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.<br>
+Abandoned vehicles \u2013 light &amp; heavy \u2013 Vehicle shall be set down at Contractors storage facility.</p>
+<p><b>Key Performance Indicators</b><br>
+SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.<br>
+SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.<br>
+Abandoned vehicles \u2013 light &amp; heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.</p>
+</div>`;
+}
+
+async function copyRichHtml(html){
+  const text = html.replace(/<br\s*\/?>/gi,'\\n').replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+  try {
+    if (navigator.clipboard && window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/html': new Blob([html], {type:'text/html'}),
+        'text/plain': new Blob([text], {type:'text/plain'})
+      })]);
+      return true;
+    }
+  } catch(e){}
+  // Fallback
+  const holder = document.createElement('div');
+  holder.innerHTML = html;
+  holder.setAttribute('contenteditable','true');
+  holder.style.position = 'fixed'; holder.style.left = '-9999px';
+  document.body.appendChild(holder);
+  const range = document.createRange(); range.selectNodeContents(holder);
+  const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+  try { document.execCommand('copy'); } catch(_){}
+  sel.removeAllRanges(); holder.remove();
+  return true;
+}
 function loadSavedAuthName(el){
   if (el.value) return;
   try { const n = window.localStorage.getItem(AUTH_NAME_KEY); if (n) el.value = n; renderPreview(); } catch(e){}
@@ -2427,17 +2489,45 @@ function getSavedAuthName(){
   try { return window.localStorage.getItem(AUTH_NAME_KEY) || ''; } catch(e){ return ''; }
 }
 
-function ttsSendInOutlook(e){
+async function ttsSendInOutlook(e){
   if (e) e.preventDefault();
   saveDraft({auto:true});
-  const btn = document.getElementById('ttsOutlookBtn');
-  if (btn && btn.href && btn.href !== '#') window.location.href = btn.href;
+  if (towingRichEmail){
+    const get = id => (document.getElementById(id)||{value:''}).value.trim();
+    const towTypeEl = document.querySelector('input[name="tts_tow_type"]:checked');
+    const towType = towTypeEl ? towTypeEl.value : "Clayton's TTS - Light";
+    const html = buildTowingRichHtml(
+      get('tts_auth_name') || getSavedAuthName(),
+      get('tts_cov_id'), get('tts_cov_title'), get('tts_plate'),
+      towType, formatLocationDetail(get('tts_loc_detail'))
+    );
+    await copyRichHtml(html);
+    flashCopied('Formatted email copied — paste into Outlook');
+    const subj = AV_TOW_SUBJ_BASE + (get('tts_cov_id') || 'XXXXXXXX');
+    window.location.href = 'mailto:' + AV_TOW_TO + '?bcc=' + encodeURIComponent(AV_TOW_BCC) + '&subject=' + encodeURIComponent(subj);
+  } else {
+    const btn = document.getElementById('ttsOutlookBtn');
+    if (btn && btn.href && btn.href !== '#') window.location.href = btn.href;
+  }
 }
-function avSendInOutlook(e){
+async function avSendInOutlook(e){
   if (e) e.preventDefault();
   saveDraft({auto:true});
-  const btn = document.getElementById('avOutlookBtn');
-  if (btn && btn.href && btn.href !== '#') window.location.href = btn.href;
+  if (towingRichEmail){
+    const get = id => (document.getElementById(id)||{value:''}).value.trim();
+    const html = buildTowingRichHtml(
+      get('av_auth_name') || getSavedAuthName(),
+      get('av_sims'), get('av_cov_title'), get('av_plate'),
+      "Clayton's - Abandoned", formatLocationDetail(get('av_loc_detail'))
+    );
+    await copyRichHtml(html);
+    flashCopied('Formatted email copied — paste into Outlook');
+    const subj = AV_TOW_SUBJ_BASE + (get('av_sims') || 'XXXXXXXX');
+    window.location.href = 'mailto:' + AV_TOW_TO + '?bcc=' + encodeURIComponent(AV_TOW_BCC) + '&subject=' + encodeURIComponent(subj);
+  } else {
+    const btn = document.getElementById('avOutlookBtn');
+    if (btn && btn.href && btn.href !== '#') window.location.href = btn.href;
+  }
 }
 
 function goAvStep(n){
@@ -10338,6 +10428,13 @@ function renderChipSettings(){
       <span class="disp-name">Warn about un-carried edits while editing<span class="disp-info" tabindex="0" role="img" aria-label="ON: while a preview edit is held, show the carried-over text panel straight away so you can move text into a field before it's at risk. OFF: the panel appears only after the message rebuilds (FINAL, Cleared or Next escalation), listing what was set aside." title="ON: while a preview edit is held, show the carried-over text panel straight away so you can move text into a field before it's at risk. OFF: the panel appears only after the message rebuilds (FINAL, Cleared or Next escalation), listing what was set aside.">i</span></span>
       <label class="disp-switch">
         <input type="checkbox" ${carryoverMode === 'held' ? 'checked' : ''} onchange="setCarryoverMode(this.checked)" aria-label="Warn about un-carried edits while editing">
+        <span class="disp-track"><span class="disp-knob"></span></span>
+      </label>
+    </div>
+    <div class="disp-row">
+      <span class="disp-name">Send formatted email (AV &amp; TTS)<span class="disp-info" tabindex="0" role="img" aria-label="ON: Send in Outlook copies a formatted (bold headings, table) email body to your clipboard and opens Outlook with an empty body — paste to send a formatted email. OFF: Opens Outlook with the full email pre-filled as plain text." title="ON: Send in Outlook copies a formatted (bold headings, table) email body to your clipboard and opens Outlook with an empty body — paste to send a formatted email. OFF: Opens Outlook with the full email pre-filled as plain text.">i</span></span>
+      <label class="disp-switch">
+        <input type="checkbox" ${towingRichEmail ? 'checked' : ''} onchange="setTowingRichEmail(this.checked)" aria-label="Send formatted email for AV and TTS">
         <span class="disp-track"><span class="disp-knob"></span></span>
       </label>
     </div>
