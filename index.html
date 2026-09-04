@@ -1970,7 +1970,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 202.2</span>
+    <span class="app-version">Version 202.3</span>
   </footer>
 </div>
 
@@ -2429,20 +2429,20 @@ function setTowingRichEmail(on){
 function buildTowingRichHtml(authName, covRaw, covTitle, plate, towType, locDetail){
   const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const locFormatted = esc(locDetail||'[Location Details]').replace(/\n/g,'<br>');
-  // Use 15/11/18/24 non-breaking spaces for towing detail alignment
-  const sp = n => '\u00a0'.repeat(n);
   return `<div style="font-family:Aptos,Calibri,Arial,sans-serif;font-size:12pt;">`
     + `To Clayton\u2019s Towing,<br><br>`
     + `<b>Authorisation</b><br>`
     + `I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton\u2019s Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.<br><br>`
     + `<b>Authorised by:</b> ${esc(authName||'[name]')}<br><br>`
     + `<b>Towing and Vehicle Details</b><br>`
-    + `STREAMS COV DM ID:${sp(15)}${esc(covRaw||'[COV DM ID]')}<br>`
-    + `STREAMS COV DM Title:${sp(11)}${esc(covTitle||'[title]')}<br>`
-    + `Vehicle Registration:${sp(18)}${esc(plate||'[plate]')}<br>`
-    + `Tow Service Type:${sp(24)}${esc(towType)}<br><br>`
-    + `<b>Locations Details</b><br>`
-    + `${locFormatted}<br><br>`
+    + `<table style="border-collapse:collapse;font-family:Aptos,Calibri,Arial,sans-serif;font-size:12pt;margin:4px 0 12px;">`
+    + `<tr><td style="padding:3px 8px 3px 0;border-bottom:1px solid #ccc;">STREAMS COV DM ID:</td><td style="padding:3px 8px;border-bottom:1px solid #ccc;">${esc(covRaw||'[COV DM ID]')}</td></tr>`
+    + `<tr><td style="padding:3px 8px 3px 0;border-bottom:1px solid #ccc;">STREAMS COV DM Title:</td><td style="padding:3px 8px;border-bottom:1px solid #ccc;">${esc(covTitle||'[title]')}</td></tr>`
+    + `<tr><td style="padding:3px 8px 3px 0;border-bottom:1px solid #ccc;">Vehicle Registration:</td><td style="padding:3px 8px;border-bottom:1px solid #ccc;">${esc(plate||'[plate]')}</td></tr>`
+    + `<tr><td style="padding:3px 8px 3px 0;">Tow Service Type:</td><td style="padding:3px 8px;">${esc(towType)}</td></tr>`
+    + `</table>`
+    + `<b>Location Details</b><br>`
+    + `<div style="background:#f0f0ee;border:1px solid #ccc;padding:8px 12px;margin:4px 0 12px;font-size:11pt;">${locFormatted}</div>`
     + `<b>Response Details</b><br>`
     + `Service Order is confirmed received on receipt of the Service Order by phone, as per conditions of contract.<br>`
     + `Contractor shall provide estimate of arrival time within fifteen (15) minutes of receipt of Service Order.<br><br>`
