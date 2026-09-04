@@ -1970,7 +1970,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 202.4</span>
+    <span class="app-version">Version 202.7</span>
   </footer>
 </div>
 
@@ -2248,7 +2248,7 @@ function buildGeneric(){
           `<label class="inline-check"><input type="checkbox" class="g_dir" value="${d}"> ${d}</label>`).join('')}
       </div>
       <div class="check-grid" style="margin-top:8px;">
-        ${["Inbound","Outbound"].map(d=>
+        ${["Both directions","All directions"].map(d=>
           `<label class="inline-check"><input type="checkbox" class="g_dir" value="${d}"> ${d}</label>`).join('')}
       </div>
       </div>
@@ -2794,7 +2794,7 @@ function buildBCC(){
         ${["North","South","East","West"].map(d=>`<label class="inline-check"><input type="checkbox" class="b_dir" value="${d}" onchange="renderPreview()"> ${d}</label>`).join('')}
         <button type="button" class="moreless-btn" id="b_dir_more_btn" aria-expanded="false" onclick="toggleMoreless('b_dir')"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button>
         <span class="moreless-extra" id="b_dir_extra" style="display:none;">
-          ${["Inbound","Outbound"].map(d=>`<label class="inline-check"><input type="checkbox" class="b_dir" value="${d}" onchange="renderPreview()"> ${d}</label>`).join('')}
+          ${["Both directions","All directions"].map(d=>`<label class="inline-check"><input type="checkbox" class="b_dir" value="${d}" onchange="renderPreview()"> ${d}</label>`).join('')}
         </span>
       </div>
       <p class="hint">Combine e.g. North + East → “northeastbound”. Same as INO.</p>
@@ -3982,23 +3982,23 @@ function directionPhrase(checked, abbrev){
     const raw = ew[1].toLowerCase() + 'bound';
     compassTokens.push(abbrev ? (GEN_DIR_ABBREV_MAP[raw] || raw) : raw);
   }
-  // Inbound / Outbound: individual tokens, in checkbox order.
-  const inoutTokens = [];
-  ["Inbound","Outbound"].forEach(d=>{
+  // Both directions / All directions: individual tokens, in checkbox order.
+  const extraTokens = [];
+  ["Both directions","All directions"].forEach(d=>{
     if (checked.includes(d)){
       const raw = d.toLowerCase();
-      inoutTokens.push(abbrev ? (GEN_DIR_ABBREV_MAP[raw] || raw) : raw);
+      extraTokens.push(abbrev ? raw : raw);
     }
   });
   // When abbreviated: all tokens join with the &/and toggle (laneJoin), no " / " separator.
   // Normal mode: within each group join with " and "; groups join with " / ".
   if (abbrev){
-    const allTokens = [...compassTokens, ...inoutTokens];
+    const allTokens = [...compassTokens, ...extraTokens];
     return laneJoin(allTokens);
   }
   const groups = [];
   if (compassTokens.length) groups.push(compassTokens.join(' and '));
-  if (inoutTokens.length) groups.push(inoutTokens.join(' and '));
+  if (extraTokens.length) groups.push(extraTokens.join(' and '));
   return groups.join(' / ');
 }
 function buildDirection(){
@@ -4163,7 +4163,7 @@ function laneJoin(arr){
    the end of a lane clause, joined by the same &/and toggle: "1 x left lane blocked
    northbound", "left & right lanes blocked northbound & southbound".
    `scope` is a CSS class selecting the checkbox set, e.g. '.s_lane_dir', '.g_reopen_dir'. */
-const LANE_DIRECTIONS = ['Northbound','Southbound','Eastbound','Westbound','Inbound','Outbound','Both'];
+const LANE_DIRECTIONS = ['Northbound','Southbound','Eastbound','Westbound','Both directions','All directions','Both'];
 function readLaneDirections(scope){
   return Array.from(document.querySelectorAll(`${scope}:checked`)).map(c => c.value.toLowerCase());
 }
@@ -4287,7 +4287,7 @@ function capitalizeSentences(text){
   // ".", ":" or ";" that is followed by whitespace. The "followed by whitespace"
   // guard keeps in-word URL punctuation intact (e.g. the ":" in "https://").
   // A URL that follows a label (e.g. "QLDTraffic: https://…") is left untouched.
-  return text.replace(/(^|[.:;]\s+|\n\s*)([a-z])/g, (m, pre, ch, offset, full) => {
+  return text.replace(/(^|[.:]\s+|\n\s*)([a-z])/g, (m, pre, ch, offset, full) => {
     const rest = full.slice(offset + pre.length);
     if (/^https?:\/\//i.test(rest) || /^www\./i.test(rest)) return m;  // don't touch URLs
     return pre + ch.toUpperCase();
@@ -6088,7 +6088,7 @@ function buildINO(){
         ${["North","South","East","West"].map(d=>`<label class="inline-check"><input type="checkbox" class="s_dir" value="${d}"> ${d}</label>`).join('')}
         <button type="button" class="moreless-btn" id="s_dir_more_btn" aria-expanded="false" onclick="toggleMoreless('s_dir')"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button>
         <span class="moreless-extra" id="s_dir_extra" style="display:none;">
-          ${["Inbound","Outbound"].map(d=>`<label class="inline-check"><input type="checkbox" class="s_dir" value="${d}"> ${d}</label>`).join('')}
+          ${["Both directions","All directions"].map(d=>`<label class="inline-check"><input type="checkbox" class="s_dir" value="${d}"> ${d}</label>`).join('')}
         </span>
       </div>
     </div>
@@ -6096,11 +6096,11 @@ function buildINO(){
     <div class="field">
       <span class="field-label">Intersecting road / street</span>
       <div class="check-grid" style="margin-bottom:8px;align-items:center;">
-        ${["before","after","at","near","on"].map(p=>`<label class="inline-check"><input type="radio" name="s_cross_pos" value="${p}" onchange="onCrossPosChange('s')"> ${p}</label>`).join('')}
+        ${["before","after","near","exit"].map(p=>`<label class="inline-check"><input type="radio" name="s_cross_pos" value="${p}" onchange="onCrossPosChange('s')"> ${p}</label>`).join('')}
         <button type="button" class="moreless-btn" id="s_cross_pos_more_btn" aria-expanded="false" onclick="toggleMoreless('s_cross_pos')"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button>
       </div>
       <div class="check-grid moreless-extra" id="s_cross_pos_extra" data-open-display="flex" style="display:none; margin-bottom:8px;">
-        ${["between","adjacent to","intersection of"].map(p=>`<label class="inline-check"><input type="radio" name="s_cross_pos" value="${p}" onchange="onCrossPosChange('s')"> ${p}</label>`).join('')}<span style="display:inline-flex;flex-wrap:nowrap;gap:6px;">${["north of","south of","east of","west of"].map(p=>`<label class="inline-check"><input type="radio" name="s_cross_pos" value="${p}" onchange="onCrossPosChange('s')"> ${p}</label>`).join('')}</span>
+        ${["between","intersection of"].map(p=>`<label class="inline-check"><input type="radio" name="s_cross_pos" value="${p}" onchange="onCrossPosChange('s')"> ${p}</label>`).join('')}
       </div>
       <input type="text" id="s_cross" placeholder="e.g. Smith St">
       <input type="text" id="s_cross2" placeholder="and… (second road / street)" style="display:none; margin-top:6px;" oninput="renderPreview()">
@@ -6531,11 +6531,11 @@ function toggleMoreless(prefix, force){
    draft (or restored working copy) never hides an active choice. */
 function applyMorelessAutoExpand(){
   // Direction: Inbound / Outbound are the hidden ones.
-  const dirHidden = ['Inbound','Outbound'].some(v =>
+  const dirHidden = ['Both directions','All directions'].some(v =>
     !!document.querySelector(`.s_dir[value="${v}"]:checked`));
   if (dirHidden) toggleMoreless('s_dir', true);
   // Intersecting road/street: near / adjacent to / intersection of are hidden.
-  const crossHidden = ['adjacent to','between','intersection of','north of','south of','east of','west of'].some(v =>
+  const crossHidden = ['between','intersection of'].some(v =>
     !!document.querySelector(`input[name="s_cross_pos"][value="${v}"]:checked`));
   if (crossHidden) toggleMoreless('s_cross_pos', true);
   // v165: reveal the INO lane More panel if Unknown is ticked.
