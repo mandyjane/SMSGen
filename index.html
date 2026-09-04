@@ -1970,7 +1970,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 202.7</span>
+    <span class="app-version">Version 202.8</span>
   </footer>
 </div>
 
@@ -3140,7 +3140,7 @@ function bccLanes(){
   const posBits = [];
   document.querySelectorAll('.b_lane_pos:checked').forEach(c=>{
     const n = (document.getElementById(`b_lane_pos_num_${c.value}`)||{}).value || '';
-    posBits.push(n ? `${n} x ${c.value.toLowerCase()}` : c.value.toLowerCase());
+    posBits.push(n ? `${n}x ${c.value.toLowerCase()}` : c.value.toLowerCase());
   });
   let subject = '';
   if (all) subject = 'All lanes';
@@ -4020,7 +4020,7 @@ function buildEventType(){
       const n = parseInt(inp.value,10);
       if (n && n>0){
         const noun = (n===1) ? inp.dataset.singular : inp.dataset.plural;
-        parts.push(`${n} x ${noun}`);
+        parts.push(`${n}x ${noun.toLowerCase()}`);
       }
     });
     document.querySelectorAll('.g_crash_others').forEach(()=>{});
@@ -4028,7 +4028,7 @@ function buildEventType(){
       const name = row.querySelector('.g_crash_other_name').value.trim();
       const n = parseInt(row.querySelector('.g_crash_other_num').value,10);
       if (name && n && n>0){
-        parts.push(`${n} x ${pluralise(name, n)}`);
+        parts.push(`${n}x ${pluralise(name, n).toLowerCase()}`);
       }
     });
     return parts.length ? `Crash; ${parts.join(', ')}` : 'Crash';
@@ -4720,12 +4720,12 @@ function buildEventTypeP(prefix){
     const parts = [];
     document.querySelectorAll(`.${prefix}_crash`).forEach(inp=>{
       const n = parseInt(inp.value,10);
-      if (n && n>0){ const noun = (n===1)?inp.dataset.singular:inp.dataset.plural; parts.push(`${n} x ${noun}`); }
+      if (n && n>0){ const noun = (n===1)?inp.dataset.singular:inp.dataset.plural; parts.push(`${n}x ${noun.toLowerCase()}`); }
     });
     document.querySelectorAll(`#${prefix}_crash_others .other-row`).forEach(row=>{
       const name = row.querySelector(`.${prefix}_crash_other_name`).value.trim();
       const n = parseInt(row.querySelector(`.${prefix}_crash_other_num`).value,10);
-      if (name && n && n>0){ parts.push(`${n} x ${pluralise(name, n)}`); }
+      if (name && n && n>0){ parts.push(`${n}x ${pluralise(name, n).toLowerCase()}`); }
     });
     // INO: the leading word reflects how many vehicles are involved.
     const label = (prefix === 's') ? inoCrashLabel(prefix) : 'Crash';
@@ -4747,7 +4747,7 @@ function buildEventTypeP(prefix){
     const kind = (typeof stationaryVehicleWord === 'function') ? stationaryVehicleWord(prefix) : '';
     if (!kind) return head;
     const headCased = head.charAt(0).toUpperCase() + head.slice(1).toLowerCase();
-    return `${headCased}; 1 x ${kind}`;
+    return `${headCased}; 1x ${kind.toLowerCase()}`;
   }
   const hazText = (document.getElementById(`${prefix}_hazard_text`)||{value:''}).value;
   const special = specialEventLabel(v, sub, hazText);
@@ -7270,7 +7270,7 @@ function renderINO(){
   const regSeg = (str, flashId) => { if (str && flashId) inoSegStrings.push({ str: String(str), flashId }); };
   lines.push(`TMR INO Incident Escalation (${seqLabel})`);
 
-  const locBits = [road, dir, cross, suburb].filter(Boolean).join('; ');
+  const locBits = [road, dir, cross, suburb].filter(Boolean).join(', ');
   lines.push(`Location: ${locBits || '[location]'}.`);
   regSeg(dir, 's_dir_field');
 
