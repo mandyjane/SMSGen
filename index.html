@@ -1970,7 +1970,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 202.8</span>
+    <span class="app-version">Version 203.1</span>
   </footer>
 </div>
 
@@ -2127,18 +2127,24 @@ function specialEventLabel(event, sub, hazardText){
 
 const CRASH_ITEMS = [
   {key:"cars", singular:"Car", plural:"Cars"},
-  {key:"trucks", singular:"Truck", plural:"Trucks"},
+  {key:"vehicles", singular:"Vehicle", plural:"Vehicles"},
+  {key:"heavyvehicles", singular:"Heavy vehicle", plural:"Heavy vehicles"},
   {key:"motorcycles", singular:"Motorcycle", plural:"Motorcycles"},
-  {key:"vans", singular:"Van", plural:"Vans"},
   {key:"buses", singular:"Bus", plural:"Buses"},
-  {key:"utes", singular:"Ute", plural:"Utes"},
   {key:"pedestrians", singular:"Pedestrian", plural:"Pedestrians"},
+  {key:"cyclists", singular:"Cyclist", plural:"Cyclists"},
   {key:"escooters", singular:"E-Scooter", plural:"E-Scooters"},
   {key:"ebicycles", singular:"E-Bicycle", plural:"E-Bicycles"}
 ];
+const CRASH_ITEMS_MORE = [
+  {key:"animals", singular:"Animal / livestock", plural:"Animal / livestock"},
+  {key:"tma", singular:"TMA", plural:"TMA"},
+  {key:"trains", singular:"Train", plural:"Trains"},
+  {key:"trams", singular:"Tram", plural:"Trams"}
+];
 // Named vehicle types that count toward the INO "Singular/Multi-vehicle" label.
-// (Pedestrian is deliberately excluded; it forces plain "Crash".)
-const CRASH_VEHICLE_KEYS = ["cars","trucks","vans","utes","buses","motorcycles","escooters","ebicycles"];
+// (Pedestrian and Cyclist deliberately excluded; they force plain "crash".)
+const CRASH_VEHICLE_KEYS = ["cars","vehicles","heavyvehicles","buses","motorcycles","escooters","ebicycles","animals","tma","trains","trams"];
 
 const RESPONDERS = ["TRU","TMA","Towing","QPS","QAS","QFD","TQ","Maintenance","FCU","Heavy haulage"];
 const RESPONDER_LOWER = {"Towing":"towing","Maintenance":"maintenance","Heavy haulage":"heavy haulage"};
@@ -3892,8 +3898,12 @@ function onEventChange(){
     wrap.innerHTML = `<div class="sub-block">
       <span class="field-label" style="margin-bottom:10px;">Vehicles / parties involved</span>
       <div class="count-grid">
-        ${CRASH_ITEMS.map(it=>`<div class="count-cell"><label>${it.singular}</label><input type="number" min="0" class="g_crash" data-singular="${it.singular}" data-plural="${it.plural}" id="g_crash_${it.key}"></div>`).join('')}
+        ${CRASH_ITEMS.map(it=>`<div class="count-cell"><label>${it.singular}</label><input type="number" min="0" class="g_crash" data-singular="${it.singular}" data-plural="${it.plural}" data-key="${it.key}" id="g_crash_${it.key}" onchange="onCrashCountChange('g','${it.key}')"></div>`).join('')}
       </div>
+      <div class="field" id="g_bus_pax_wrap" style="display:none;margin-top:8px;"><span class="field-label">Bus passengers</span><input type="number" min="0" id="g_bus_pax" placeholder="Number of pax" style="max-width:160px;" oninput="renderPreview()"><p class="hint">Generates: [n]x bus carrying [pax] pax</p></div>
+      <div class="moreless-wrap"><button type="button" class="moreless-btn" id="g_crash_more_btn" aria-expanded="false" onclick="toggleMoreless('g_crash_more')"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button><div class="count-grid moreless-extra" id="g_crash_more_extra" data-open-display="grid" style="display:none;">
+        ${CRASH_ITEMS_MORE.map(it=>`<div class="count-cell"><label>${it.singular}</label><input type="number" min="0" class="g_crash" data-singular="${it.singular}" data-plural="${it.plural}" data-key="${it.key}" id="g_crash_${it.key}"></div>`).join('')}
+      </div></div>
       <div id="g_crash_others"></div>
       <button type="button" class="link-btn" onclick="addCrashOther()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg> Add other</button>
     </div>`;
@@ -4019,8 +4029,20 @@ function buildEventType(){
     document.querySelectorAll('.g_crash').forEach(inp=>{
       const n = parseInt(inp.value,10);
       if (n && n>0){
-        const noun = (n===1) ? inp.dataset.singular : inp.dataset.plural;
-        parts.push(`${n}x ${noun.toLowerCase()}`);
+        const key = inp.dataset.key;
+        if (key === 'buses'){
+          const paxEl = document.getElementById('g_bus_pax');
+          const pax = paxEl ? parseInt(paxEl.value, 10) : 0;
+          if (pax > 0){
+            parts.push(`${n}x bus carrying ${pax} pax`);
+          } else {
+            const noun = (n===1) ? inp.dataset.singular : inp.dataset.plural;
+            parts.push(`${n}x ${noun.toLowerCase()}`);
+          }
+        } else {
+          const noun = (n===1) ? inp.dataset.singular : inp.dataset.plural;
+          parts.push(`${n}x ${noun.toLowerCase()}`);
+        }
       }
     });
     document.querySelectorAll('.g_crash_others').forEach(()=>{});
@@ -4031,7 +4053,7 @@ function buildEventType(){
         parts.push(`${n}x ${pluralise(name, n).toLowerCase()}`);
       }
     });
-    return parts.length ? `Crash; ${parts.join(', ')}` : 'Crash';
+    return parts.length ? `crash; ${parts.join(', ')}` : 'crash';
   }
   if (v === 'Stationary vehicle') return sub || 'Stationary vehicle';
   const hazText = (document.getElementById('g_hazard_text')||{value:''}).value;
@@ -4039,11 +4061,11 @@ function buildEventType(){
   if (special !== null) return special;
   if (v === 'Hazard') return sub || 'Hazard';
   if (v === 'Flooding') return sub ? `Flooding - ${sub}` : 'Flooding';
-  if (v === 'Police Incident') return txt ? `Police Incident - ${txt}` : 'Police Incident';
+  if (v === 'Police Incident') return txt ? `Police incident - ${txt}` : 'Police incident';
   if (v === 'Procession') return sub || 'Procession';
   if (v === 'Congestion') return sub ? `Congestion - ${sub}` : 'Congestion';
-  if (v === 'Roadworks') return sub ? `${sub} Roadworks` : 'Roadworks';
-  if (v === 'General Disruption') return txt || 'General Disruption';
+  if (v === 'Roadworks') return sub ? `${sub} roadworks` : 'Roadworks';
+  if (v === 'General Disruption') return txt || 'General disruption';
   if (v === 'Other') return txt || '';
   return v;
 }
@@ -4481,9 +4503,11 @@ function onEventChangeP(prefix){
   const dd = (id, list) => `<select id="${id}" class="sub-select"><option value="">— select —</option>${list.map(o=>`<option value="${o}">${o}</option>`).join('')}</select>`;
 
   if (v === 'Crash'){
-    const crashCells = CRASH_ITEMS.map(it=>`<div class="count-cell"><label>${it.singular}</label><input type="number" min="0" class="${prefix}_crash" data-singular="${it.singular}" data-plural="${it.plural}" data-key="${it.key}" id="${prefix}_crash_${it.key}"></div>`).join('');
+    const crashCells = CRASH_ITEMS.map(it=>`<div class="count-cell"><label>${it.singular}</label><input type="number" min="0" class="${prefix}_crash" data-singular="${it.singular}" data-plural="${it.plural}" data-key="${it.key}" id="${prefix}_crash_${it.key}" onchange="onCrashCountChange('${prefix}','${it.key}')"></div>`).join('');
+    const moreCells = CRASH_ITEMS_MORE.map(it=>`<div class="count-cell"><label>${it.singular}</label><input type="number" min="0" class="${prefix}_crash" data-singular="${it.singular}" data-plural="${it.plural}" data-key="${it.key}" id="${prefix}_crash_${it.key}"></div>`).join('');
     const addBtn = `<button type="button" class="link-btn" onclick="addCrashOtherP('${prefix}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg> Add other</button>`;
-    const crashInner = `<div class="count-grid">${crashCells}</div><div id="${prefix}_crash_others"></div>${addBtn}`;
+    const busPaxField = `<div class="field" id="${prefix}_bus_pax_wrap" style="display:none;margin-top:8px;"><span class="field-label">Bus passengers</span><input type="number" min="0" id="${prefix}_bus_pax" placeholder="Number of pax" style="max-width:160px;" oninput="renderPreview()"><p class="hint">Generates: [n]x bus carrying [pax] pax</p></div>`;
+    const crashInner = `<div class="count-grid">${crashCells}</div>${busPaxField}<div class="moreless-wrap"><button type="button" class="moreless-btn" id="${prefix}_crash_more_btn" aria-expanded="false" onclick="toggleMoreless('${prefix}_crash_more')"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button><div class="count-grid moreless-extra" id="${prefix}_crash_more_extra" data-open-display="grid" style="display:none;">${moreCells}</div></div><div id="${prefix}_crash_others"></div>${addBtn}`;
     let otherLabelBlock = '';
     if (prefix === 's'){
       otherLabelBlock = '<div id="s_crash_otherlabel" style="display:none;margin-top:12px;">'
@@ -4672,14 +4696,13 @@ function applyInoCrashOtherLabelVisibility(){
    via the radios. Otherwise the named-vehicle total decides: 1 → Single-vehicle,
    2+ → Multi-vehicle, 0 → Crash. */
 function inoCrashLabel(prefix){
-  const lowercaseOn = (document.getElementById('s_lowercase')||{}).checked;
-  const crashWord = lowercaseOn ? 'crash' : 'Crash';
+  const crashWord = 'crash';
   const single = `Single-vehicle ${crashWord}`;
   const multi  = `Multi-vehicle ${crashWord}`;
   // pedestrian overrides everything
   const pedEl = document.getElementById(`${prefix}_crash_pedestrians`);
   const peds = pedEl ? parseInt(pedEl.value,10) : 0;
-  if (peds && peds > 0) return 'Crash';
+  if (peds && peds > 0) return 'crash';
 
   // total of the named vehicle types (excludes pedestrian)
   let vehTotal = 0;
@@ -4702,12 +4725,29 @@ function inoCrashLabel(prefix){
     const opt = (document.querySelector(`input[name="${prefix}_crash_otherlabel_opt"]:checked`)||{}).value;
     if (opt === 'singular') return single;
     if (opt === 'multi') return multi;
-    return 'Crash';
+    return 'crash';
   }
 
   if (vehTotal === 1) return single;
   if (vehTotal >= 2) return multi;
-  return 'Crash';
+  return 'crash';
+}
+
+function onCrashCountChange(prefix, key){
+  // Show bus pax field when bus count >= 1
+  if (key === 'buses'){
+    const busEl = document.getElementById(`${prefix}_crash_buses`);
+    const paxWrap = document.getElementById(`${prefix}_bus_pax_wrap`);
+    if (busEl && paxWrap){
+      const n = parseInt(busEl.value, 10) || 0;
+      paxWrap.style.display = n >= 1 ? 'block' : 'none';
+      if (n < 1){
+        const paxEl = document.getElementById(`${prefix}_bus_pax`);
+        if (paxEl) paxEl.value = '';
+      }
+    }
+  }
+  renderPreview();
 }
 
 function buildEventTypeP(prefix){
@@ -4720,7 +4760,23 @@ function buildEventTypeP(prefix){
     const parts = [];
     document.querySelectorAll(`.${prefix}_crash`).forEach(inp=>{
       const n = parseInt(inp.value,10);
-      if (n && n>0){ const noun = (n===1)?inp.dataset.singular:inp.dataset.plural; parts.push(`${n}x ${noun.toLowerCase()}`); }
+      if (n && n>0){
+        const key = inp.dataset.key;
+        // Bus with pax count gets special format
+        if (key === 'buses'){
+          const paxEl = document.getElementById(`${prefix}_bus_pax`);
+          const pax = paxEl ? parseInt(paxEl.value, 10) : 0;
+          if (pax > 0){
+            parts.push(`${n}x bus carrying ${pax} pax`);
+          } else {
+            const noun = (n===1)?inp.dataset.singular:inp.dataset.plural;
+            parts.push(`${n}x ${noun.toLowerCase()}`);
+          }
+        } else {
+          const noun = (n===1)?inp.dataset.singular:inp.dataset.plural;
+          parts.push(`${n}x ${noun.toLowerCase()}`);
+        }
+      }
     });
     document.querySelectorAll(`#${prefix}_crash_others .other-row`).forEach(row=>{
       const name = row.querySelector(`.${prefix}_crash_other_name`).value.trim();
@@ -4728,7 +4784,7 @@ function buildEventTypeP(prefix){
       if (name && n && n>0){ parts.push(`${n}x ${pluralise(name, n).toLowerCase()}`); }
     });
     // INO: the leading word reflects how many vehicles are involved.
-    const label = (prefix === 's') ? inoCrashLabel(prefix) : 'Crash';
+    const label = (prefix === 's') ? inoCrashLabel(prefix) : 'crash';
     const sep = (prefix === 's') ? '; ' : ', ';
     return parts.length ? `${label}${sep}${parts.join('; ')}` : label;
   }
@@ -4736,7 +4792,7 @@ function buildEventTypeP(prefix){
     // Leading word: Broken-down Vehicle can optionally read "Stationary vehicle" instead.
     // Default keeps the raw subtype string, preserving pre-v186 output exactly.
     let head = sub || 'Stationary vehicle';
-    if (sub === 'Broken-down Vehicle'){
+    if (sub === 'Broken-down Vehicle' || sub === 'Broken-down vehicle'){
       const wEl = document.querySelector(`input[name="${prefix}_stat_word"]:checked`);
       if (wEl && wEl.value === 'stationary') head = 'Stationary vehicle';
     }
@@ -4745,7 +4801,7 @@ function buildEventTypeP(prefix){
     // per the BCC templates. With no vehicle the raw subtype casing is kept so pre-v186
     // INO output is unchanged.
     const kind = (typeof stationaryVehicleWord === 'function') ? stationaryVehicleWord(prefix) : '';
-    if (!kind) return head;
+    if (!kind) return head.charAt(0).toUpperCase() + head.slice(1).toLowerCase();
     const headCased = head.charAt(0).toUpperCase() + head.slice(1).toLowerCase();
     return `${headCased}; 1x ${kind.toLowerCase()}`;
   }
@@ -4754,11 +4810,11 @@ function buildEventTypeP(prefix){
   if (special !== null) return special;
   if (v === 'Hazard') return sub || 'Hazard';
   if (v === 'Flooding') return sub ? `Flooding - ${sub}` : 'Flooding';
-  if (v === 'Police Incident') return txt ? `Police Incident - ${txt}` : 'Police Incident';
+  if (v === 'Police Incident') return txt ? `Police incident - ${txt}` : 'Police incident';
   if (v === 'Procession') return sub || 'Procession';
   if (v === 'Congestion') return sub ? `Congestion - ${sub}` : 'Congestion';
-  if (v === 'Roadworks') return sub ? `${sub} Roadworks` : 'Roadworks';
-  if (v === 'General Disruption') return txt || 'General Disruption';
+  if (v === 'Roadworks') return sub ? `${sub} roadworks` : 'Roadworks';
+  if (v === 'General Disruption') return txt || 'General disruption';
   if (v === 'Other') return txt || '';
   return v || '';
 }
@@ -11316,12 +11372,12 @@ function inoEventDetailFromState(a){
   CRASH_VEHICLE_KEYS.forEach(key=>{ const n = parseInt(counts['s_crash_' + key], 10); if (n && n > 0) vehTotal += n; });
   let label = 'Crash';
   if (!peds){
-    if (vehTotal === 1) label = 'Single-vehicle Crash';
-    else if (vehTotal >= 2) label = 'Multi-vehicle Crash';
+    if (vehTotal === 1) label = 'Single-vehicle crash';
+    else if (vehTotal >= 2) label = 'Multi-vehicle crash';
     else {
       const opt = a.crashOtherLabel;
-      if (opt === 'singular') label = 'Single-vehicle Crash';
-      else if (opt === 'multi') label = 'Multi-vehicle Crash';
+      if (opt === 'singular') label = 'Single-vehicle crash';
+      else if (opt === 'multi') label = 'Multi-vehicle crash';
     }
   }
   return parts.length ? `${label}; ${parts.join(', ')}` : label;
