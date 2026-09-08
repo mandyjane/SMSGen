@@ -1236,6 +1236,9 @@
   @media (max-width: 560px){ .count-grid { grid-template-columns: repeat(2, 1fr); } }
 
   /* Specify / + reveal links for incident sub-options (v203) */
+  .unknown-note { font-size: 10px; color: var(--muted); font-style: italic; margin-left: 4px; display: none; }
+  .unknown-note.show { display: inline; }
+
   .specify-link {
     display: inline-block; margin-top: 3px;
     font-size: 10.5px; color: var(--blue); cursor: pointer;
@@ -1980,7 +1983,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 203.4</span>
+    <span class="app-version">Version 203.5</span>
   </footer>
 </div>
 
@@ -2033,6 +2036,8 @@ const EVENT_TYPES = ["Crash","Stationary vehicle","Hazard","Flooding","Police In
 
 const STATIONARY = ["Broken-down Vehicle","Abandoned Vehicle","Medical Episode"];
 const HAZARD = ["Obstruction","Debris","Spill","Fire","Animal","Person","Poor visibility","Signal fault","Road damage","Bridge damage","Culvert damage","Unauthorised access"];
+const INFRA_OPTIONS = ["Guard rail damage","Pole knockdown","Traffic signal knockdown","Streetlight knockdown","Bridge strike","Road surface damage","Infrastructure damage subject to inspection","Rail crossing / boom gate"];
+
 const FLOODING = ["Water over road","Road closed","Long-term flooding","Flash flooding"];
 const PROCESSION = ["Authorised procession","Unauthorised procession"];
 const CONGESTION = ["Incident related","Earlier incident related","Event related","Recurring","Non-recurring"];
@@ -5144,6 +5149,8 @@ function onInoTrafficSignalsChange(){
 function onInoInfraChange(){
   const v = (document.querySelector('input[name="s_infra"]:checked')||{}).value;
   document.getElementById('s_infra_field').style.display = (v==='yes') ? 'block' : 'none';
+  const note = document.getElementById('s_infra_unknown_note');
+  if (note) note.classList.toggle('show', v === 'unknown');
   renderPreview();
 }
 function onInoGroupsOtherChange(){
@@ -6239,9 +6246,9 @@ function buildINO(){
 
     <div class="field" id="s_infra_wrap">
       <span class="field-label">Infrastructure damage</span>
-      <div class="check-grid">${ynuDesel('s_infra','onInoInfraChange')}</div>
+      <div class="check-grid">${ynuDesel('s_infra','onInoInfraChange')}<span class="unknown-note" id="s_infra_unknown_note">will not generate text</span></div>
       <div id="s_infra_field" style="display:none;margin-top:10px;">
-        <input type="text" id="s_infra_text" placeholder="Describe infrastructure damage">
+        <select id="s_infra_text" onchange="renderPreview()"><option value="">— select type —</option><option value="Guard rail damage">Guard rail damage</option><option value="Pole knockdown">Pole knockdown</option><option value="Traffic signal knockdown">Traffic signal knockdown</option><option value="Streetlight knockdown">Streetlight knockdown</option><option value="Bridge strike">Bridge strike</option><option value="Road surface damage">Road surface damage</option><option value="Infrastructure damage subject to inspection">Infrastructure damage subject to inspection</option><option value="Rail crossing / boom gate">Rail crossing / boom gate</option></select>
       </div>
     </div>
 
@@ -6806,7 +6813,7 @@ function inoIncidentSummary(){
   const injVal = (document.querySelector('input[name="s_inj"]:checked')||{}).value;
   let injBit = '';
   if (injVal === 'no') injBit = 'Nil injuries';
-  else if (injVal === 'unknown') injBit = 'Unknown injuries';
+  else if (injVal === 'unknown') injBit = '';
   else if (injVal === 'yes') injBit = 'Injuries';
   const fatVal = (document.querySelector('input[name="s_fat"]:checked')||{}).value;
   let fatBit = '';
@@ -7233,8 +7240,8 @@ function renderINO(){
   const eventType = buildEventTypeP('s');
   const infraVal = (document.querySelector('input[name="s_infra"]:checked')||{}).value;
   let infra = '';
-  if (infraVal === 'yes'){ const t = get('s_infra_text'); infra = t ? `Infrastructure damage to ${t}` : 'Infrastructure damage'; }
-  else if (infraVal === 'unknown') infra = 'Unknown infrastructure damage';
+  if (infraVal === 'yes'){ const t = get('s_infra_text'); infra = t || 'Infrastructure damage'; }
+  else if (infraVal === 'unknown') infra = '';
   else if (infraVal === 'no') infra = 'Nil infrastructure damage';
 
   // injuries — aggregate by severity: "2 x moderate injuries, 1 x minor injuries"
@@ -7367,7 +7374,7 @@ function renderINO(){
   let fatBit = '';
   {
     if (injVal === 'yes' && injuriesStr) injBit = injuriesStr;
-    else if (injVal === 'unknown') injBit = 'Unknown injuries';
+    else if (injVal === 'unknown') injBit = '';
     else if (injVal === 'no') injBit = 'Nil injuries';
     if (fatYes){ const fc = fatCount || '0'; fatBit = `${fc} x fatalities`; }
     else if (fatVal === 'unknown') fatBit = '';   // Unknown fatalities are omitted from the SMS
@@ -7613,7 +7620,7 @@ function renderINO(){
     // injuries / fatalities / infrastructure-damage detail would otherwise be lost. Fold
     // it into the Update line, positioned after the lane clause but before congestion and
     // diversion. Ordering: infra -> injuries -> fatalities. Injuries and infrastructure show
-    // even when Unknown ("Unknown injuries" / "Unknown infrastructure damage"); only Unknown
+    // Unknown injuries and infrastructure now generate nothing (v203);
     // fatalities is dropped (fatBit already resolves to '' in that case).
     const updDetailBits = isUpdateContext ? [infra, injBit, fatBit].filter(Boolean) : [];
     const netBits = [laneClause, oppStr, ...updDetailBits, lengthCong, nilCong2, diversion].filter(Boolean);
