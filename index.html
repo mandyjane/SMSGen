@@ -1229,7 +1229,7 @@
   .sub-block .field-label { color: var(--teal-deep); }
   .sub-block select { background-color: #fff; }
 
-  .count-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; align-items: end; }
+  .count-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; align-items: end; }
   .count-cell { display: flex; flex-direction: column; }
   .count-grid label { font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 3px; }
   .count-grid input { width: 100%; }
@@ -1983,7 +1983,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 203.7</span>
+    <span class="app-version">Version 203.9</span>
   </footer>
 </div>
 
@@ -2142,9 +2142,8 @@ function specialEventLabel(event, sub, hazardText){
 
 const CRASH_ITEMS = [
   {key:"cars", singular:"Car", plural:"Cars"},
-  {key:"vehicles", singular:"Vehicle", plural:"Vehicles"},
-  {key:"heavyvehicles", singular:"Heavy vehicle", plural:"Heavy vehicles"},
   {key:"motorcycles", singular:"Motorcycle", plural:"Motorcycles"},
+  {key:"heavyvehicles", singular:"Heavy vehicle", plural:"Heavy vehicles"},
   {key:"buses", singular:"Bus", plural:"Buses"},
   {key:"pedestrians", singular:"Pedestrian", plural:"Pedestrians"},
   {key:"cyclists", singular:"Cyclist", plural:"Cyclists"},
@@ -2152,6 +2151,7 @@ const CRASH_ITEMS = [
   {key:"ebicycles", singular:"E-Bicycle", plural:"E-Bicycles"}
 ];
 const CRASH_ITEMS_MORE = [
+  {key:"vehicles", singular:"Vehicle", plural:"Vehicles"},
   {key:"animals", singular:"Animal / livestock", plural:"Animal / livestock"},
   {key:"tma", singular:"TMA", plural:"TMA"},
   {key:"trains", singular:"Train", plural:"Trains"},
@@ -6071,6 +6071,8 @@ function onInoInjCountChange(){
 function onInoFatalChange(){
   const v = (document.querySelector('input[name="s_fat"]:checked')||{}).value;
   document.getElementById('s_fat_field').style.display = (v==='yes') ? 'block' : 'none';
+  const fatNote = document.getElementById('s_fat_unknown_note');
+  if (fatNote) fatNote.classList.toggle('show', v === 'unknown');
   renderPreview();
 }
 function onInoCctvChange(){
@@ -6264,7 +6266,7 @@ function buildINO(){
 
     <div class="field" id="s_fat_wrap">
       <span class="field-label">Fatalities</span>
-      <div class="check-grid">${ynuDesel('s_fat','onInoFatalChange')}</div>
+      <div class="check-grid">${ynuDesel('s_fat','onInoFatalChange')}<span class="unknown-note" id="s_fat_unknown_note">will not generate text</span></div>
       <div id="s_fat_field" style="display:none;margin-top:10px;">
         <input type="number" min="0" max="999" id="s_fat_count" class="shrink" placeholder="0" style="max-width:110px;">
       </div>
