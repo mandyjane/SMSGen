@@ -1235,6 +1235,16 @@
   .count-grid input { width: 100%; }
   @media (max-width: 560px){ .count-grid { grid-template-columns: repeat(2, 1fr); } }
 
+  /* Specify / + reveal links for incident sub-options (v203) */
+  .specify-link {
+    display: inline-block; margin-top: 3px;
+    font-size: 10.5px; color: var(--blue); cursor: pointer;
+    text-decoration: none; font-weight: 500; font-family: var(--sans);
+  }
+  .specify-link:hover { text-decoration: underline; color: var(--blue-deep); }
+  .sub-reveal { display: none; }
+  .sub-reveal.open { display: block; }
+
   .link-btn {
     background: none; border: none; color: var(--teal);
     font-family: var(--sans); font-size: 13.5px; font-weight: 600;
@@ -1970,7 +1980,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 203.1</span>
+    <span class="app-version">Version 203.4</span>
   </footer>
 </div>
 
@@ -2019,7 +2029,7 @@ const CAR_COLOURS = ["White","Black","Silver","Grey","Blue","Red","Green","Yello
 /* ---------- Reference data ---------- */
 const SEQUENCE = ["First","Second","Third","Fourth","Fifth","Sixth","Seventh","Eighth","Ninth","Tenth","Eleventh","Twelfth","Thirteenth","Fourteenth","Fifteenth"];
 
-const EVENT_TYPES = ["Crash","Stationary vehicle","Hazard","Flooding","Police Incident","Procession","Congestion","Roadworks","General Disruption","Other"];
+const EVENT_TYPES = ["Crash","Stationary vehicle","Hazard","Flooding","Police Incident","procession on road","Congestion","Unapproved roadworks","Weather alert","General Disruption","Other"];
 
 const STATIONARY = ["Broken-down Vehicle","Abandoned Vehicle","Medical Episode"];
 const HAZARD = ["Obstruction","Debris","Spill","Fire","Animal","Person","Poor visibility","Signal fault","Road damage","Bridge damage","Culvert damage","Unauthorised access"];
@@ -3901,7 +3911,7 @@ function onEventChange(){
         ${CRASH_ITEMS.map(it=>`<div class="count-cell"><label>${it.singular}</label><input type="number" min="0" class="g_crash" data-singular="${it.singular}" data-plural="${it.plural}" data-key="${it.key}" id="g_crash_${it.key}" onchange="onCrashCountChange('g','${it.key}')"></div>`).join('')}
       </div>
       <div class="field" id="g_bus_pax_wrap" style="display:none;margin-top:8px;"><span class="field-label">Bus passengers</span><input type="number" min="0" id="g_bus_pax" placeholder="Number of pax" style="max-width:160px;" oninput="renderPreview()"><p class="hint">Generates: [n]x bus carrying [pax] pax</p></div>
-      <div class="moreless-wrap"><button type="button" class="moreless-btn" id="g_crash_more_btn" aria-expanded="false" onclick="toggleMoreless('g_crash_more')"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button><div class="count-grid moreless-extra" id="g_crash_more_extra" data-open-display="grid" style="display:none;">
+      <div class="moreless-wrap"><button type="button" class="moreless-btn" id="g_crashveh_more_btn" aria-expanded="false" onclick="toggleMoreless('g_crashveh')"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button><div class="count-grid moreless-extra" id="g_crashveh_extra" data-open-display="grid" style="display:none;">
         ${CRASH_ITEMS_MORE.map(it=>`<div class="count-cell"><label>${it.singular}</label><input type="number" min="0" class="g_crash" data-singular="${it.singular}" data-plural="${it.plural}" data-key="${it.key}" id="g_crash_${it.key}"></div>`).join('')}
       </div></div>
       <div id="g_crash_others"></div>
@@ -3923,6 +3933,7 @@ function onEventChange(){
   else if (v === 'Procession'){
     wrap.innerHTML = `<div class="sub-block">${dd('g_event_sub', PROCESSION)}<p class="hint">Outputs standalone, e.g. “Authorised Procession”.</p></div>`;
   }
+  else if (v === 'Weather alert'){ wrap.innerHTML = ''; }
   else if (v === 'Congestion'){
     wrap.innerHTML = `<div class="sub-block">${dd('g_event_sub', CONGESTION)}<p class="hint">Outputs as “[choice] Congestion”, e.g. “Incident Related Congestion”.</p></div>`;
   }
@@ -4062,9 +4073,11 @@ function buildEventType(){
   if (v === 'Hazard') return sub || 'Hazard';
   if (v === 'Flooding') return sub ? `Flooding - ${sub}` : 'Flooding';
   if (v === 'Police Incident') return txt ? `Police incident - ${txt}` : 'Police incident';
-  if (v === 'Procession') return sub || 'Procession';
+  if (v === 'procession on road') return 'Procession on road';
   if (v === 'Congestion') return sub ? `Congestion - ${sub}` : 'Congestion';
-  if (v === 'Roadworks') return sub ? `${sub} roadworks` : 'Roadworks';
+  if (v === 'Unapproved roadworks') return 'Unapproved roadworks';
+  if (v === 'Weather alert') return 'Weather alert';
+  if (v === 'Weather alert') return 'Weather alert';
   if (v === 'General Disruption') return txt || 'General disruption';
   if (v === 'Other') return txt || '';
   return v;
@@ -4507,7 +4520,7 @@ function onEventChangeP(prefix){
     const moreCells = CRASH_ITEMS_MORE.map(it=>`<div class="count-cell"><label>${it.singular}</label><input type="number" min="0" class="${prefix}_crash" data-singular="${it.singular}" data-plural="${it.plural}" data-key="${it.key}" id="${prefix}_crash_${it.key}"></div>`).join('');
     const addBtn = `<button type="button" class="link-btn" onclick="addCrashOtherP('${prefix}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg> Add other</button>`;
     const busPaxField = `<div class="field" id="${prefix}_bus_pax_wrap" style="display:none;margin-top:8px;"><span class="field-label">Bus passengers</span><input type="number" min="0" id="${prefix}_bus_pax" placeholder="Number of pax" style="max-width:160px;" oninput="renderPreview()"><p class="hint">Generates: [n]x bus carrying [pax] pax</p></div>`;
-    const crashInner = `<div class="count-grid">${crashCells}</div>${busPaxField}<div class="moreless-wrap"><button type="button" class="moreless-btn" id="${prefix}_crash_more_btn" aria-expanded="false" onclick="toggleMoreless('${prefix}_crash_more')"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button><div class="count-grid moreless-extra" id="${prefix}_crash_more_extra" data-open-display="grid" style="display:none;">${moreCells}</div></div><div id="${prefix}_crash_others"></div>${addBtn}`;
+    const crashInner = `<div class="count-grid">${crashCells}</div>${busPaxField}<div class="moreless-wrap"><button type="button" class="moreless-btn" id="${prefix}_crashveh_more_btn" aria-expanded="false" onclick="toggleMoreless('${prefix}_crashveh')"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button><div class="count-grid moreless-extra" id="${prefix}_crashveh_extra" data-open-display="grid" style="display:none;">${moreCells}</div></div><div id="${prefix}_crash_others"></div>${addBtn}`;
     let otherLabelBlock = '';
     if (prefix === 's'){
       otherLabelBlock = '<div id="s_crash_otherlabel" style="display:none;margin-top:12px;">'
@@ -4733,6 +4746,16 @@ function inoCrashLabel(prefix){
   return 'crash';
 }
 
+function toggleSpecify(linkEl){
+  const panel = linkEl.nextElementSibling;
+  if (!panel) return;
+  const opening = !panel.classList.contains('open');
+  panel.classList.toggle('open', opening);
+  // Update link text
+  const defaultText = linkEl.getAttribute('data-label') || 'Specify';
+  linkEl.textContent = opening ? (defaultText === '+' ? '−' : 'Hide') : defaultText;
+}
+
 function onCrashCountChange(prefix, key){
   // Show bus pax field when bus count >= 1
   if (key === 'buses'){
@@ -4811,9 +4834,9 @@ function buildEventTypeP(prefix){
   if (v === 'Hazard') return sub || 'Hazard';
   if (v === 'Flooding') return sub ? `Flooding - ${sub}` : 'Flooding';
   if (v === 'Police Incident') return txt ? `Police incident - ${txt}` : 'Police incident';
-  if (v === 'Procession') return sub || 'Procession';
+  if (v === 'procession on road') return 'Procession on road';
   if (v === 'Congestion') return sub ? `Congestion - ${sub}` : 'Congestion';
-  if (v === 'Roadworks') return sub ? `${sub} roadworks` : 'Roadworks';
+  if (v === 'Unapproved roadworks') return 'Unapproved roadworks';
   if (v === 'General Disruption') return txt || 'General disruption';
   if (v === 'Other') return txt || '';
   return v || '';
@@ -10153,7 +10176,7 @@ function buildEventTypeLabelFor(tmpl, a){
   if (v === 'Hazard') return a.eventSub || 'Hazard';
   if (v === 'Flooding') return 'Flooding';
   if (v === 'Police Incident') return 'Police Incident';
-  if (v === 'Procession') return a.eventSub || 'Procession';
+  if (v === 'procession on road') return 'Procession on road';
   if (v === 'Congestion') return 'Congestion';
   if (v === 'Roadworks') return 'Roadworks';
   return v;
@@ -10177,7 +10200,7 @@ const CHIP_TYPE_DEFAULTS = [
   { type:'Hazard',             def:'amber'  },
   { type:'Flooding',           def:'blue'   },
   { type:'Police Incident',    def:'blue'   },
-  { type:'Procession',         def:'purple' },
+  { type:'procession on road', def:'purple' },
   { type:'Congestion',         def:'orange' },
   { type:'Roadworks',          def:'green'  },
   { type:'General Disruption', def:'grey'   },
@@ -10402,7 +10425,7 @@ function chipStyleForType(typeLabel, tmpl){
     else if (/police/i.test(typeLabel)) base = { type:'Police Incident' };
     else if (/congestion/i.test(typeLabel)) base = { type:'Congestion' };
     else if (/roadwork/i.test(typeLabel)) base = { type:'Roadworks' };
-    else if (/procession/i.test(typeLabel)) base = { type:'Procession' };
+    else if (/procession/i.test(typeLabel)) base = { type:'procession on road' };
     else base = { type:'Hazard' };   // most sub-typed values are hazards
   }
   const key = chipColourMap[base.type] || 'grey';
