@@ -1983,7 +1983,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 203.5</span>
+    <span class="app-version">Version 203.7</span>
   </footer>
 </div>
 
@@ -2032,7 +2032,7 @@ const CAR_COLOURS = ["White","Black","Silver","Grey","Blue","Red","Green","Yello
 /* ---------- Reference data ---------- */
 const SEQUENCE = ["First","Second","Third","Fourth","Fifth","Sixth","Seventh","Eighth","Ninth","Tenth","Eleventh","Twelfth","Thirteenth","Fourteenth","Fifteenth"];
 
-const EVENT_TYPES = ["Crash","Stationary vehicle","Hazard","Flooding","Police Incident","procession on road","Congestion","Unapproved roadworks","Weather alert","General Disruption","Other"];
+const EVENT_TYPES = ["Crash","Stationary vehicle","Hazard","Flooding","Police Incident","procession on road","Congestion","Unapproved roadworks","Weather alert","Other"];
 
 const STATIONARY = ["Broken-down Vehicle","Abandoned Vehicle","Medical Episode"];
 const HAZARD = ["Obstruction","Debris","Spill","Fire","Animal","Person","Poor visibility","Signal fault","Road damage","Bridge damage","Culvert damage","Unauthorised access"];
@@ -4083,7 +4083,6 @@ function buildEventType(){
   if (v === 'Unapproved roadworks') return 'Unapproved roadworks';
   if (v === 'Weather alert') return 'Weather alert';
   if (v === 'Weather alert') return 'Weather alert';
-  if (v === 'General Disruption') return txt || 'General disruption';
   if (v === 'Other') return txt || '';
   return v;
 }
@@ -4842,7 +4841,6 @@ function buildEventTypeP(prefix){
   if (v === 'procession on road') return 'Procession on road';
   if (v === 'Congestion') return sub ? `Congestion - ${sub}` : 'Congestion';
   if (v === 'Unapproved roadworks') return 'Unapproved roadworks';
-  if (v === 'General Disruption') return txt || 'General disruption';
   if (v === 'Other') return txt || '';
   return v || '';
 }
@@ -6173,9 +6171,9 @@ function buildINO(){
       <div class="check-grid" style="align-items:center;">
         ${["North","South","East","West"].map(d=>`<label class="inline-check"><input type="checkbox" class="s_dir" value="${d}"> ${d}</label>`).join('')}
         <button type="button" class="moreless-btn" id="s_dir_more_btn" aria-expanded="false" onclick="toggleMoreless('s_dir')"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button>
-        <span class="moreless-extra" id="s_dir_extra" style="display:none;">
+      </div>
+      <div class="check-grid moreless-extra" id="s_dir_extra" data-open-display="flex" style="display:none;margin-top:6px;">
           ${["Both directions","All directions"].map(d=>`<label class="inline-check"><input type="checkbox" class="s_dir" value="${d}"> ${d}</label>`).join('')}
-        </span>
       </div>
     </div>
 
@@ -6813,7 +6811,7 @@ function inoIncidentSummary(){
   const injVal = (document.querySelector('input[name="s_inj"]:checked')||{}).value;
   let injBit = '';
   if (injVal === 'no') injBit = 'Nil injuries';
-  else if (injVal === 'unknown') injBit = '';
+  else if (injVal === 'unknown') injBit = 'awaiting QAS assessment to confirm injuries';
   else if (injVal === 'yes') injBit = 'Injuries';
   const fatVal = (document.querySelector('input[name="s_fat"]:checked')||{}).value;
   let fatBit = '';
@@ -7374,7 +7372,7 @@ function renderINO(){
   let fatBit = '';
   {
     if (injVal === 'yes' && injuriesStr) injBit = injuriesStr;
-    else if (injVal === 'unknown') injBit = '';
+    else if (injVal === 'unknown') injBit = 'awaiting QAS assessment to confirm injuries';
     else if (injVal === 'no') injBit = 'Nil injuries';
     if (fatYes){ const fc = fatCount || '0'; fatBit = `${fc} x fatalities`; }
     else if (fatVal === 'unknown') fatBit = '';   // Unknown fatalities are omitted from the SMS
