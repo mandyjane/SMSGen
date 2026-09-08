@@ -1983,7 +1983,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 203.9</span>
+    <span class="app-version">Version 204.1</span>
   </footer>
 </div>
 
@@ -2166,7 +2166,7 @@ const RESPONDER_LOWER = {"Towing":"towing","Maintenance":"maintenance","Heavy ha
 
 /* ---------- SEQ OPS / INO reference data ---------- */
 const INO_SEQ = ["No.1","No.2","No.3","No.4","No.5","No.6","No.7","No.8","No.9","No.10","No.11","No.12","No.13","No.14","No.15"];
-const INJURY_SEVERITY = ["Observation","Minor","Moderate","Major","Severe","Life Threatening"];
+const INJURY_SEVERITY = ["Minor","Moderate","Serious","Critical","Life threatening","Medical episode"];
 
 /* ---- INO Incident Type dropdown display casing ----
    The option VALUE never changes (all output logic keys off it); only the
@@ -2948,7 +2948,7 @@ function buildBCC(){
 
 /* ---------- BCC: responder list (INO order, FCU moved above Maintenance) ---------- */
 const BCC_RESPONDERS = ["TRU","TMA","Towing","QPS","QAS","QFD","TQ","FCU","Maintenance","Heavy haulage","Road Steward"];
-const BCC_SEVERITY = ["Observation","Minor","Moderate","Major","Severe","Life Threatening","Fatality"];
+const BCC_SEVERITY = ["Minor","Moderate","Serious","Critical","Life threatening","Medical episode","Fatality"];
 
 /* Stage drives subject suffix, Advice Number, and the Next Update default. */
 function onBccStageChange(){
@@ -3229,7 +3229,7 @@ function bccInjury(){
   // Fatality is NOT an injury severity — it reads "N x fatality/fatalities" and is listed LAST,
   // after all injuries (per the INO convention and Mandy's ordering call).
   const injuryOrder = BCC_SEVERITY.filter(k => k !== 'Fatality').slice().reverse();
-  const bits = injuryOrder.filter(k=>counts[k]).map(k=>`${counts[k]} x ${k.toLowerCase()} injuries`);
+  const bits = injuryOrder.filter(k=>counts[k]).map(k=>{ const n = counts[k]; return `${n}x ${k.toLowerCase()} ${n === 1 ? 'injury' : 'injuries'}`; });
   if (counts['Fatality']){
     const n = counts['Fatality'];
     bits.push(`${n} x ${n === 1 ? 'fatality' : 'fatalities'}`);
@@ -7193,6 +7193,12 @@ function renderINO(){
   applyInoLaneAllGrey();    // and the whole-carriageway lane "All" grey
   applyInoLaneNilGrey();    // and the "Nil" (no lanes impacted) grey
 
+  // Sync "will not generate text" notes for Unknown states
+  const infraNote = document.getElementById('s_infra_unknown_note');
+  if (infraNote) infraNote.classList.toggle('show', (document.querySelector('input[name="s_infra"]:checked')||{}).value === 'unknown');
+  const fatNote = document.getElementById('s_fat_unknown_note');
+  if (fatNote) fatNote.classList.toggle('show', (document.querySelector('input[name="s_fat"]:checked')||{}).value === 'unknown');
+
   // Sequence
   let seq = document.getElementById('s_seq').value;
   if (seq === '__other') seq = get('s_seq_other') || 'No.1';
@@ -7257,9 +7263,8 @@ function renderINO(){
       counts[sev]++;
     });
     injuriesStr = order.map(sev => {
-      // "Observation" is not phrased as an injury; it reads as a QAS transport for observation.
-      if (sev === 'observation') return `${counts[sev]} x transported by QAS for observation`;
-      return `${counts[sev]} x ${lowercaseOn ? sev : capFirstLetter(sev)} injuries`;
+      const n = counts[sev];
+      return `${n}x ${sev} ${n === 1 ? 'injury' : 'injuries'}`;
     }).join(', ');
   } else if (injVal === 'unknown'){
     injuriesStr = 'unknown';
