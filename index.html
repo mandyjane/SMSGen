@@ -1239,6 +1239,11 @@
   .unknown-note { font-size: 10px; color: var(--muted); font-style: italic; margin-left: 4px; display: none; }
   .unknown-note.show { display: inline; }
 
+  /* km/m unit toggle */
+  .unit-toggle { display: inline-flex; border: 1.5px solid var(--line-strong); border-radius: var(--radius-sm); overflow: hidden; }
+  .unit-btn { padding: 4px 10px; font: inherit; font-size: 12px; font-weight: 600; border: none; cursor: pointer; background: var(--card); color: var(--muted); transition: all .1s; }
+  .unit-btn.active { background: var(--blue); color: #fff; }
+
   .specify-link {
     display: inline-block; margin-top: 3px;
     font-size: 10.5px; color: var(--blue); cursor: pointer;
@@ -1983,7 +1988,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 204.1</span>
+    <span class="app-version">Version 204.2</span>
   </footer>
 </div>
 
@@ -4142,7 +4147,7 @@ function buildLanes(){
     });
     const anyCount = spec.some(p => p.n !== null);
     if (anyCount){
-      idParts.push(laneJoin(spec.map(p => p.n ? `${p.n} x ${p.pos} lane${p.n>1?'s':''}` : `${p.pos} lane`)));
+      idParts.push(laneJoin(spec.map(p => p.n ? `${capNumWord(p.n)} ${p.pos} lane${p.n>1?'s':''}` : `${p.pos} lane`)));
     } else {
       idParts.push(laneJoin(spec.map(p=>p.pos)) + ' lane' + (spec.length>1?'s':''));
     }
@@ -4202,7 +4207,7 @@ function laneJoin(arr){
    the end of a lane clause, joined by the same &/and toggle: "1 x left lane blocked
    northbound", "left & right lanes blocked northbound & southbound".
    `scope` is a CSS class selecting the checkbox set, e.g. '.s_lane_dir', '.g_reopen_dir'. */
-const LANE_DIRECTIONS = ['Northbound','Southbound','Eastbound','Westbound','Both directions','All directions','Both'];
+const LANE_DIRECTIONS = ['Northbound','Southbound','Eastbound','Westbound','Both directions','All directions'];
 function readLaneDirections(scope){
   return Array.from(document.querySelectorAll(`${scope}:checked`)).map(c => c.value.toLowerCase());
 }
@@ -4760,6 +4765,36 @@ function toggleSpecify(linkEl){
   linkEl.textContent = opening ? (defaultText === '+' ? '−' : 'Hide') : defaultText;
 }
 
+let inoLengthUnit = 'km';
+
+/* Sync lane direction from incident direction (s_dir → s_lane_dir).
+   Called when direction incident occurred changes. Does not overwrite
+   manual edits — only syncs when lane dir is untouched. */
+function syncLaneDirFromIncidentDir(){
+  const incDirs = Array.from(document.querySelectorAll('.s_dir:checked')).map(c => c.value);
+  document.querySelectorAll('.s_lane_dir').forEach(cb => {
+    // Map: incident "North" → lane "Northbound"
+    const match = incDirs.some(d => cb.value.toLowerCase().startsWith(d.toLowerCase()));
+    // Also handle "Both directions" / "All directions" directly
+    const directMatch = incDirs.includes(cb.value);
+    cb.checked = match || directMatch;
+  });
+}
+
+function setLengthUnit(unit){
+  const inp = document.getElementById('s_length');
+  const oldVal = parseFloat(inp.value);
+  if (!isNaN(oldVal) && oldVal > 0){
+    if (inoLengthUnit === 'km' && unit === 'm') inp.value = Math.round(oldVal * 1000);
+    else if (inoLengthUnit === 'm' && unit === 'km') inp.value = (oldVal / 1000);
+  }
+  inoLengthUnit = unit;
+  document.querySelectorAll('#s_unit_toggle .unit-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.unit === unit);
+  });
+  renderPreview();
+}
+
 function onCrashCountChange(prefix, key){
   // Show bus pax field when bus count >= 1
   if (key === 'buses'){
@@ -4848,6 +4883,10 @@ function buildDirectionP(prefix){
   const checked = Array.from(document.querySelectorAll(`.${prefix}_dir:checked`)).map(c=>c.value);
   return directionPhrase(checked);
 }
+const NUM_WORDS = ['','one','two','three','four','five','six','seven','eight','nine','ten'];
+function numToWord(n){ return (n >= 1 && n <= 10) ? NUM_WORDS[n] : String(n); }
+function capNumWord(n){ const w = numToWord(n); return w.charAt(0).toUpperCase() + w.slice(1); }
+
 function buildLanesP(prefix){
   const state = document.querySelector(`input[name="${prefix}_lane_state"]:checked`);
   const stateStr = state ? state.value.toLowerCase() : '';
@@ -4860,9 +4899,9 @@ function buildLanesP(prefix){
   // NOT at whether any earlier ancestor was closed — a not-closed message between two closed
   // ones still re-reads "are now closed".
   if (prefix === 's' && stateStr === 'closed'){
-    if (!isInoUpdateContext()) return withLaneDirection('All lanes closed', '.s_lane_dir');
+    if (!isInoUpdateContext()) return 'Road closed';
     const prevClosed = !!(inoPrevLaneInfo && inoPrevLaneInfo.state === 'Closed');
-    return withLaneDirection(prevClosed ? 'All lanes remain closed' : 'All lanes are now closed', '.s_lane_dir');
+    return prevClosed ? 'Road remains closed' : 'Road is now closed';
   }
 
   // INO "Nil" (whole-road, no lanes impacted): "Nil lanes blocked"/"Nil lanes affected",
@@ -5021,7 +5060,7 @@ function buildInoReinstateImpact(){
   let laneStr;
   if (anyCount){
     laneStr = laneJoin(LANE_ORDER.filter(l=>pos.includes(l)).map(p => { const n = parseInt(counts[p],10);
-      return (!isNaN(n)&&n>0) ? `${n} x ${p.toLowerCase()} lane${n>1?'s':''}` : `${p.toLowerCase()} lane`;
+      return (!isNaN(n)&&n>0) ? `${capNumWord(n)} ${p.toLowerCase()} lane${n>1?'s':''}` : `${p.toLowerCase()} lane`;
     }));
   } else {
     laneStr = laneJoin(distinct.map(p=>p.toLowerCase())) + ' lane' + (distinct.length>1?'s':'');
@@ -5059,7 +5098,7 @@ function buildInoLanesPast(lanesSpec){
   const verb = totalLanes > 1 ? 'were' : 'was';
   let laneStr;
   if (anyCount){
-    laneStr = laneJoin(spec.map(p => p.n ? `${p.n} x ${p.pos} lane${p.n>1?'s':''}` : `${p.pos} lane`));
+    laneStr = laneJoin(spec.map(p => p.n ? `${capNumWord(p.n)} ${p.pos} lane${p.n>1?'s':''}` : `${p.pos} lane`));
   } else {
     const names = spec.map(p => p.pos);
     laneStr = laneJoin(names) + ' lane' + (names.length>1?'s':'');
@@ -5098,7 +5137,7 @@ function buildInoNo1FinalPastImpact(){
   const verb = totalLanes > 1 ? 'were' : 'was';
   let laneStr;
   if (anyCount){
-    laneStr = laneJoin(spec.map(p => p.n ? `${p.n} x ${p.pos} lane${p.n>1?'s':''}` : `${p.pos} lane`));
+    laneStr = laneJoin(spec.map(p => p.n ? `${capNumWord(p.n)} ${p.pos} lane${p.n>1?'s':''}` : `${p.pos} lane`));
   } else {
     const names = spec.map(p => p.pos);
     laneStr = laneJoin(names) + ' lane' + (names.length>1?'s':'');
@@ -6289,7 +6328,23 @@ function buildINO(){
         <span class="impact-type-divider" aria-hidden="true"></span>
         <label class="inline-check impact-closed"><input type="radio" class="desel-radio" name="s_lane_state" value="Closed" onclick="toggleDeselectableRadio(this)" onchange="onInoLaneStateChange()"><i class="ti ti-ban impact-closed-ico" aria-hidden="true"></i> Closed</label>
       </div>
-      <p class="hint" id="s_closed_note" style="display:none;">Closed selected — individual lanes are omitted from the message.</p>
+      <p class="hint" id="s_closed_note" style="display:none;">Closed selected — generates "Road closed".</p>
+    </div>
+
+    <hr style="border:none;border-top:1px dashed var(--line);margin:10px 0 14px;">
+    <div class="field" id="s_impact_dir_field">
+      <span class="field-label">Direction</span>
+      <p class="hint" style="margin-bottom:6px;margin-top:-2px;">Auto-selected from "Direction incident occurred" — editable independently.</p>
+      <div class="check-grid" style="margin-bottom:4px;">
+        ${['Northbound','Southbound','Eastbound','Westbound'].map(d =>
+          `<label class="inline-check"><input type="checkbox" class="s_lane_dir" value="${d}" onchange="renderPreview(); scheduleWorkingSave();"> ${d}</label>`
+        ).join('')}
+      </div>
+      <div class="check-grid">
+        ${['Both directions','All directions'].map(d =>
+          `<label class="inline-check"><input type="checkbox" class="s_lane_dir" value="${d}" onchange="renderPreview(); scheduleWorkingSave();"> ${d}</label>`
+        ).join('')}
+      </div>
     </div>
 
     <div class="field" id="s_lanes_field">
@@ -6310,7 +6365,6 @@ function buildINO(){
           <label class="inline-check"><input type="checkbox" id="s_lane_unknown" onchange="onInoLaneUnknownChange()"> Unknown</label>
         </span>
       </div>
-      ${laneDirectionRow('s_lane_dir','s_lanedir')}
       <div id="s_reopen_wrap" style="display:none; margin-top:10px;">
         <button type="button" class="reopen-toggle" id="s_reopen_btn" aria-expanded="false" onclick="toggleReopenPanel()">
           <i class="ti ti-arrows-diagonal" style="font-size:14px;" aria-hidden="true"></i>
@@ -7574,7 +7628,7 @@ function renderINO(){
         if (!(inoAllOpenAnnounced)) regSeg(laneRegStr, 's_lanes_field');
       }
       regSeg(oppStr, 's_opp_text');
-      const lengthPortionF = length ? `${length}km of congestion` : '';
+      const lengthPortionF = lengthStr ? `${lengthStr} of${congTypeWord} congestion${peakSuffix}` : '';
       regSeg((lengthPortionF && lengthCong.indexOf(lengthPortionF) !== -1) ? lengthPortionF : lengthCong, 's_length');
       // On a FINAL the congestion reads "Residual congestion of 1.3km from Sandgate" — the
       // "Xkm of congestion" form above never appears, so also register the bare "Xkm" token
@@ -9215,7 +9269,7 @@ function renderGeneric(){
           });
           const anyCount = spec.some(p => p.n !== null);
           if (anyCount){
-            idParts.push(laneJoin(spec.map(p => p.n ? `${p.n} x ${p.pos} lane${p.n>1?'s':''}` : `${p.pos} lane`)));
+            idParts.push(laneJoin(spec.map(p => p.n ? `${capNumWord(p.n)} ${p.pos} lane${p.n>1?'s':''}` : `${p.pos} lane`)));
           } else {
             idParts.push(laneJoin(spec.map(p=>p.pos)) + ' lane' + (spec.length>1?'s':''));
           }
@@ -9949,7 +10003,8 @@ function collectFormState(){
         laneNil: (document.getElementById('s_lane_nil')||{}).checked,
         oppText: gv('s_opp_text'),
         congestionYN: rb('s_congestion_yn'),
-        length: gv('s_length'), congestion: gv('s_congestion'),
+        length: gv('s_length'), lengthUnit: (typeof inoLengthUnit !== 'undefined') ? inoLengthUnit : 'km',
+        congType: (document.querySelector('input[name="s_cong_type"]:checked')||{}).value || '', congPeak: !!(document.getElementById('s_cong_peak')&&document.getElementById('s_cong_peak').checked), congestion: gv('s_congestion'),
         diversion: rb('s_diversion'), diversionText: gv('s_diversion_text'),
         lowercase: (document.getElementById('s_lowercase')||{}).checked,
         actQld: rb('s_act_qld'), vision6: rb('s_vision6'), publicSms: rb('s_publicsms'),
@@ -11366,7 +11421,7 @@ function genericLaneWording(state){
     const spec = pos.map(p => { const n = parseInt(texts['g_lane_pos_num_'+p],10); return { pos:p.toLowerCase(), n:(!isNaN(n)&&n>0)?n:null }; });
     const anyCount = spec.some(p => p.n !== null);
     if (anyCount){
-      idParts.push(laneJoin(spec.map(p => p.n ? `${p.n} x ${p.pos} lane${p.n>1?'s':''}` : `${p.pos} lane`)));
+      idParts.push(laneJoin(spec.map(p => p.n ? `${capNumWord(p.n)} ${p.pos} lane${p.n>1?'s':''}` : `${p.pos} lane`)));
     } else {
       idParts.push(laneJoin(spec.map(p=>p.pos)) + ' lane' + (spec.length>1?'s':''));
     }
