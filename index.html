@@ -1988,7 +1988,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 204.2</span>
+    <span class="app-version">Version 204.3</span>
   </footer>
 </div>
 
@@ -4227,7 +4227,8 @@ function withLaneDirection(clause, scope){
   if (!clause) return clause;
   const dirs = readLaneDirections(scope);
   if (!dirs.length) return clause;
-  if (dirs.includes('both')) return `${clause} in both directions`;
+  if (dirs.includes('both') || dirs.includes('both directions')) return `${clause} in both directions`;
+  if (dirs.includes('all directions')) return `${clause} in all directions`;
   const useAbbrev = (typeof genDirAbbrev !== 'undefined') && genDirAbbrev && GEN_DIR_SCOPES.includes(scope);
   const rendered = useAbbrev
     ? dirs.map(d => GEN_DIR_ABBREV_MAP[d] || d)
@@ -6403,8 +6404,23 @@ function buildINO(){
       <p class="hint">No → “Nil congestion” before the diversion detail. Yes → enter the length and location below.</p>
       <div id="s_congestion_fields" style="display:none;margin-top:10px;">
         <div class="field" style="margin-bottom:12px;">
-          <span class="field-label">Length (km)</span>
-          <input type="text" id="s_length" class="shrink" placeholder="e.g. 3" style="max-width:140px;">
+          <span class="field-label">Length</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="text" id="s_length" class="shrink" placeholder="e.g. 7.6" style="max-width:110px;">
+            <div class="unit-toggle" id="s_unit_toggle">
+              <button type="button" class="unit-btn active" data-unit="km" onclick="setLengthUnit('km')">km</button>
+              <button type="button" class="unit-btn" data-unit="m" onclick="setLengthUnit('m')">m</button>
+            </div>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:12px;">
+          <div class="check-grid">
+            <label class="inline-check"><input type="radio" class="desel-radio" name="s_cong_type" value="localised" onclick="toggleDeselectableRadio(this)" onchange="renderPreview()"> Localised</label>
+            <label class="inline-check"><input type="radio" class="desel-radio" name="s_cong_type" value="residual" onclick="toggleDeselectableRadio(this)" onchange="renderPreview()"> Residual</label>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:12px;">
+          <label class="inline-check"><input type="checkbox" id="s_cong_peak" onchange="renderPreview(); scheduleWorkingSave();"> Including AM/PM peak</label>
         </div>
         <div class="field" style="margin-bottom:0;">
           <span class="field-label">Location of congestion</span>
@@ -7554,12 +7570,25 @@ function renderINO(){
   // between them). On a FINAL, remaining congestion is phrased "Residual congestion 3km
   // of congestion from Exit 20"; if "Congestion clear" is ticked it becomes "Nil
   // congestion" instead.
-  const lengthCongPlain = length
-    ? [ `${length}km of congestion`, congestion ].filter(Boolean).join(' ')
+  // Congestion type (localised/residual) and peak modifiers
+  const congTypeEl = document.querySelector('input[name="s_cong_type"]:checked');
+  let congType = congTypeEl ? congTypeEl.value : '';
+  const congPeak = document.getElementById('s_cong_peak') && document.getElementById('s_cong_peak').checked;
+  // FINAL auto-selects residual
+  if (finalOn && !congestionClear && !congType){
+    congType = 'residual';
+    const resRadio = document.querySelector('input[name="s_cong_type"][value="residual"]');
+    if (resRadio){ resRadio.checked = true; resRadio._wasChecked = true; }
+  }
+  const unitLabel = (typeof inoLengthUnit !== 'undefined' && inoLengthUnit === 'm') ? 'm' : 'km';
+  const lengthStr = length ? `${length} ${unitLabel}` : '';
+  const congTypeWord = congType ? ` ${congType}` : '';
+  const peakSuffix = congPeak ? ' including AM/PM peak' : '';
+  const lengthCongPlain = lengthStr
+    ? [ `${lengthStr} of${congTypeWord} congestion${peakSuffix}`, congestion ].filter(Boolean).join(' ')
     : congestion;
   let lengthCong;
   if (finalOn && congestionClear) lengthCong = 'Nil congestion';
-  else if (finalOn && lengthCongPlain) lengthCong = `Residual congestion of ${lengthCongPlain.replace(' of congestion', '')}`;
   else lengthCong = lengthCongPlain;
 
   const isUpdateContext = inoUpdate.on || seqNum >= 2;
