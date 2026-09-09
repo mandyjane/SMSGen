@@ -1988,7 +1988,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 204.5</span>
+    <span class="app-version">Version 204.7</span>
   </footer>
 </div>
 
@@ -2284,7 +2284,7 @@ function buildGeneric(){
     <div class="field" id="g_impact_type_field">
       <span class="field-label">Impact type</span>
       <div class="check-grid impact-type-row">
-        ${["Blocked","Affected"].map(l=>`<label class="inline-check"><input type="radio" class="desel-radio" name="g_lane_state" value="${l}" onclick="toggleImpactRadio(this)" onchange="onGenericLaneStateChange()"> ${l}</label>`).join('')}
+        ${["Blocked","Impacted"].map(l=>`<label class="inline-check"><input type="radio" class="desel-radio" name="g_lane_state" value="${l}" onclick="toggleImpactRadio(this)" onchange="onGenericLaneStateChange()"> ${l}</label>`).join('')}
         <span class="impact-type-divider" aria-hidden="true"></span>
         <label class="inline-check impact-closed"><input type="radio" class="desel-radio" name="g_lane_state" value="Closed" onclick="toggleImpactRadio(this)" onchange="onGenericLaneStateChange()"><i class="ti ti-ban impact-closed-ico" aria-hidden="true"></i> Closed</label>
       </div>
@@ -2826,13 +2826,13 @@ function buildBCC(){
       <p class="hint">Combine e.g. North + East → “northeastbound”. Same as INO.</p>
     </div>
 
-    <!-- Lanes Affected -->
+    <!-- Lanes Impacted -->
     <div class="field">
-      <span class="field-label">Lanes Affected</span>
+      <span class="field-label">Lanes Impacted</span>
 
       <span class="field-label" style="margin-top:4px;">Impact type</span>
       <div class="check-grid impact-type-row">
-        ${["Blocked","Affected"].map(x=>`<label class="inline-check"><input type="radio" class="desel-radio" name="b_lane_state" value="${x}" onclick="toggleImpactRadio(this)" onchange="onBccLaneStateChange()"> ${x}</label>`).join('')}
+        ${["Blocked","Impacted"].map(x=>`<label class="inline-check"><input type="radio" class="desel-radio" name="b_lane_state" value="${x}" onclick="toggleImpactRadio(this)" onchange="onBccLaneStateChange()"> ${x}</label>`).join('')}
         <span class="impact-type-divider" aria-hidden="true"></span>
         <label class="inline-check impact-closed"><input type="radio" class="desel-radio" name="b_lane_state" value="Closed" onclick="toggleImpactRadio(this)" onchange="onBccLaneStateChange()"><i class="ti ti-ban impact-closed-ico" aria-hidden="true"></i> Closed</label>
       </div>
@@ -3250,7 +3250,7 @@ function bccRows(){
     ['Incident Type',          buildEventTypeP('b')],
     ['Location of Incident',   bccLocation()],
     ['Direction of Travel',    bccDirection()],
-    ['Lanes Affected',         bccLanes()],
+    ['Lanes Impacted',         bccLanes()],
     ['Action Taken/Responders', bccActionResponders()],
     ['Impact',                 bccImpact()],
     ['Injury Details',         bccInjury()],
@@ -3692,7 +3692,7 @@ let inoClosedEverSelected = false;
    holds the UNION of just the tied messages. State ranks Closed > Blocked > Affected; the
    stored state is the worst seen among the contributing (peak/tied) messages. Consumed only
    when the operator ticks "Summarise impact" on a No.2+ FINAL. Reset on a fresh message.
-   Shape: { pos:[], counts:{pos:n}, state:'Blocked'|'Affected'|'', total:Number } | null.
+   Shape: { pos:[], counts:{pos:n}, state:'Blocked'|'Impacted'|'', total:Number } | null.
    (A Closed anywhere is handled separately by inoClosedEverSelected, which outranks this.) */
 let inoPeakLaneInfo = null;
 /* Accumulated responder groups (scene + en route, incl. "Other" free-text) from every prior
@@ -3759,7 +3759,7 @@ function laneTotal(info){
   return t;
 }
 /* Rank the two non-closed impact states (Closed is handled elsewhere, outranking both). */
-function laneStateRank(s){ return s === 'Blocked' ? 2 : (s === 'Affected' ? 1 : 0); }
+function laneStateRank(s){ return s === 'Blocked' ? 2 : (s === 'Impacted' ? 1 : 0); }
 /* Union two lane records: merge positions, take the LARGER per-lane count for any shared
    position, and keep the worse state (Blocked > Affected). */
 function unionLaneInfo(a, b){
@@ -5031,11 +5031,11 @@ function buildInoReinstateImpact(){
   let pos, counts, stateWord, unioned = false;
   if (peak && peak.pos.length){
     pos = peak.pos.slice(); counts = peak.counts || {};
-    stateWord = peak.state === 'Affected' ? 'affected' : 'blocked';
+    stateWord = peak.state === 'Impacted' ? 'affected' : 'blocked';
     unioned = !!peak.unioned;
   } else if (inoPrevLaneInfo && Array.isArray(inoPrevLaneInfo.pos) && inoPrevLaneInfo.pos.length){
     pos = inoPrevLaneInfo.pos.slice(); counts = inoPrevLaneInfo.counts || {};
-    stateWord = inoPrevLaneInfo.state === 'Affected' ? 'affected' : 'blocked';
+    stateWord = inoPrevLaneInfo.state === 'Impacted' ? 'affected' : 'blocked';
   } else if (Array.isArray(inoPrevLanes) && inoPrevLanes.length){
     pos = inoPrevLanes.slice(); counts = {}; stateWord = 'blocked';
   } else {
@@ -5872,7 +5872,7 @@ function onGenericLaneChange(){
   const anyLaneChecked = !!document.querySelector('.g_lane_num:checked, .g_lane_pos:checked') || genLaneAllOn() || genLaneUnknownOn();
   if (!anyLaneChecked){
     const st = document.querySelector('input[name="g_lane_state"]:checked');
-    if (st && (st.value === 'Blocked' || st.value === 'Affected')){
+    if (st && (st.value === 'Blocked' || st.value === 'Impacted')){
       st.checked = false;
       st._wasChecked = false;
       onGenericLaneStateChange();   // keeps reopen/preview in sync
@@ -6325,7 +6325,7 @@ function buildINO(){
     <div class="field" id="s_impacttype_field">
       <span class="field-label">Impact type</span>
       <div class="check-grid impact-type-row">
-        ${["Blocked","Affected"].map(l=>`<label class="inline-check"><input type="radio" class="desel-radio" name="s_lane_state" value="${l}" onclick="toggleDeselectableRadio(this)" onchange="onInoLaneStateChange()"> ${l}</label>`).join('')}
+        ${["Blocked","Impacted"].map(l=>`<label class="inline-check"><input type="radio" class="desel-radio" name="s_lane_state" value="${l}" onclick="toggleDeselectableRadio(this)" onchange="onInoLaneStateChange()"> ${l}</label>`).join('')}
         <span class="impact-type-divider" aria-hidden="true"></span>
         <label class="inline-check impact-closed"><input type="radio" class="desel-radio" name="s_lane_state" value="Closed" onclick="toggleDeselectableRadio(this)" onchange="onInoLaneStateChange()"><i class="ti ti-ban impact-closed-ico" aria-hidden="true"></i> Closed</label>
       </div>
@@ -6335,14 +6335,9 @@ function buildINO(){
     <div class="field" id="s_impact_dir_field" style="margin-top:14px;">
       <span class="field-label">Direction</span>
       <p class="hint" style="margin-bottom:6px;margin-top:-2px;">Auto-selected from "Direction incident occurred" — editable independently.</p>
-      <div class="check-grid" style="margin-bottom:4px;">
-        ${['Northbound','Southbound','Eastbound','Westbound'].map(d =>
-          `<label class="inline-check"><input type="checkbox" class="s_lane_dir" value="${d}" onchange="renderPreview(); scheduleWorkingSave();"> ${d}</label>`
-        ).join('')}
-      </div>
       <div class="check-grid">
-        ${['Both directions','All directions'].map(d =>
-          `<label class="inline-check"><input type="checkbox" class="s_lane_dir" value="${d}" onchange="renderPreview(); scheduleWorkingSave();"> ${d}</label>`
+        ${['Northbound','Southbound','Eastbound','Westbound','Both directions','All directions'].map(d =>
+          `<label class="inline-check"><input type="radio" name="s_lane_dir_radio" class="s_lane_dir desel-radio" value="${d}" onclick="toggleDeselectableRadio(this)" onchange="renderPreview(); scheduleWorkingSave();"> ${d}</label>`
         ).join('')}
       </div>
     </div>
@@ -6362,7 +6357,6 @@ function buildINO(){
         <label class="inline-check lane-nil"><input type="checkbox" id="s_lane_nil" onchange="onInoLaneNilChange()"><i class="ti ti-circle-off lane-nil-ico" aria-hidden="true"></i> Nil</label>
         <button type="button" class="moreless-btn" id="s_lane_more_btn" aria-expanded="false" onclick="toggleInoLaneMore()"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button>
         <span class="moreless-extra" id="s_lane_more" style="display:none;">
-          <label class="inline-check"><input type="checkbox" id="s_lane_unknown" onchange="onInoLaneUnknownChange()"> Unknown</label>
         </span>
       </div>
       <div id="s_reopen_wrap" style="display:none; margin-top:10px;">
@@ -6413,13 +6407,12 @@ function buildINO(){
           </div>
         </div>
         <div class="field" style="margin-bottom:12px;">
-          <div class="check-grid">
+          <div class="check-grid" style="align-items:center;">
             <label class="inline-check"><input type="radio" class="desel-radio" name="s_cong_type" value="localised" onclick="toggleDeselectableRadio(this)" onchange="renderPreview()"> Localised</label>
             <label class="inline-check"><input type="radio" class="desel-radio" name="s_cong_type" value="residual" onclick="toggleDeselectableRadio(this)" onchange="renderPreview()"> Residual</label>
+            <span style="width:1px;height:18px;background:var(--line-strong);margin:0 4px;"></span>
+            <label class="inline-check"><input type="checkbox" id="s_cong_peak" onchange="renderPreview(); scheduleWorkingSave();"> AM/PM peak</label>
           </div>
-        </div>
-        <div class="field" style="margin-bottom:12px;">
-          <label class="inline-check"><input type="checkbox" id="s_cong_peak" onchange="renderPreview(); scheduleWorkingSave();"> Including AM/PM peak</label>
         </div>
         <div class="field" style="margin-bottom:0;">
           <span class="field-label">Location of congestion</span>
@@ -6434,8 +6427,16 @@ function buildINO(){
         <label class="inline-check"><input type="radio" class="desel-radio" name="s_diversion" value="yes" onclick="toggleDeselectableRadio(this)" onchange="onInoDiversionChange()"> Yes</label>
         <label class="inline-check"><input type="radio" class="desel-radio" name="s_diversion" value="no" onclick="toggleDeselectableRadio(this)" onchange="onInoDiversionChange()"> No</label>
       </div>
-      <input type="text" id="s_diversion_text" placeholder="Diversion detail" style="display:none;margin-top:8px;" oninput="renderPreview(); scheduleWorkingSave();">
-      <p class="hint">Yes reveals a free-text detail field.</p>
+      <div id="s_diversion_detail" style="display:none;margin-top:10px;">
+        <div class="field" style="margin-bottom:8px;">
+          <span class="field-label">Are diversions available?</span>
+          <div class="check-grid">
+            <label class="inline-check"><input type="radio" class="desel-radio" name="s_div_available" value="yes" onclick="toggleDeselectableRadio(this)" onchange="renderPreview(); scheduleWorkingSave();"> Yes</label>
+            <label class="inline-check"><input type="radio" class="desel-radio" name="s_div_available" value="no" onclick="toggleDeselectableRadio(this)" onchange="renderPreview(); scheduleWorkingSave();"> No</label>
+          </div>
+        </div>
+        <input type="text" id="s_diversion_text" placeholder="Diversion detail (e.g. via Smith St)" oninput="renderPreview(); scheduleWorkingSave();">
+      </div>
     </div>
 
     </div>
@@ -7254,6 +7255,12 @@ function clearFormINO(){
 }
 
 /* ---------- Render INO ---------- */
+function buildNetworkImpact(lanePart, congPart, divPart){
+  const mainBits = [lanePart, congPart].filter(Boolean).join('; ');
+  if (divPart) return mainBits ? `${mainBits}. ${divPart}.` : `${divPart}.`;
+  return mainBits;
+}
+
 function renderINO(){
   if (!document.getElementById('s_road')) return;
   const get = id => (document.getElementById(id)||{value:''}).value.trim();
@@ -7268,6 +7275,12 @@ function renderINO(){
   if (infraNote) infraNote.classList.toggle('show', infraVal2 === 'unknown');
   const infraField = document.getElementById('s_infra_field');
   if (infraField) infraField.style.display = (infraVal2 === 'yes') ? 'block' : 'none';
+  // Auto-select diversion Yes when Road closed
+  const isClosed = (document.querySelector('input[name="s_lane_state"]:checked')||{}).value === 'Closed';
+  if (isClosed){
+    const divYes = document.querySelector('input[name="s_diversion"][value="yes"]');
+    if (divYes && !divYes.checked){ divYes.checked = true; divYes._wasChecked = true; onInoDiversionChange(); }
+  }
   // Auto show/hide bus pax field based on bus count
   const busPaxWrap = document.getElementById('s_bus_pax_wrap');
   if (busPaxWrap){
@@ -7386,8 +7399,8 @@ function renderINO(){
       });
     }
     // No colon after "diversions in place" — keeps "via" lower case in both modes.
-    diversion = dt ? `diversions in place ${dt}` : 'diversions in place';
-  } else if (diversionVal === 'no') diversion = 'nil diversion';
+    diversion = dt ? `Diversions implemented ${dt}` : 'Diversions implemented';
+  } else if (diversionVal === 'no') diversion = 'No diversion available';
   // Congestion = No → explicit "Nil congestion" (sits before the diversion detail).
   const nilCongestion = congestionYN === 'no' ? 'Nil congestion' : '';
 
@@ -7660,7 +7673,8 @@ function renderINO(){
       // Guard against a doubled "Nil congestion": if lengthCong already resolved to it
       // (FINAL + Congestion clear), drop the radio-driven nilCongestion.
       const nilCong2 = (lengthCong === 'Nil congestion') ? '' : nilCongestion;
-      niBits = [laneBit, oppStr, lengthCong, nilCong2, diversion].filter(Boolean);
+      const preDivBits = [laneBit, oppStr, lengthCong, nilCong2].filter(Boolean);
+      niBits = preDivBits;  // diversion handled separately
       const reopenPair = [inoReopenedStr, inoStillStr].filter(Boolean).join(', ');
       if (reopenPair) niBits.unshift(reopenPair);
     }
@@ -7697,7 +7711,9 @@ function renderINO(){
     // free-text note is appended to the end of the Network Impact line instead. On a No.2+
     // FINAL the note stays on the Final Update line (handled below) — don't double it here.
     if (isNo1Final && finalNote) niBits.push(finalNote);
-    lines.push(`Network Impact: ${niBits.length ? niBits.join('; ') : '[impact]'}.`);
+    const mainImpact = niBits.length ? niBits.join('; ') : '[impact]';
+    const fullImpact = diversion ? `${mainImpact}. ${diversion}` : mainImpact;
+    lines.push(`Network Impact: ${fullImpact}.`);
 
     // ----- No.# FINAL only: a separate "Final Update:" line -----
     // Reports injuries/fatalities and infrastructure damage (length/congestion live only in
@@ -7733,7 +7749,9 @@ function renderINO(){
     // Unknown injuries and infrastructure now generate nothing (v203);
     // fatalities is dropped (fatBit already resolves to '' in that case).
     const updDetailBits = isUpdateContext ? [infra, injBit, fatBit].filter(Boolean) : [];
-    const netBits = [laneClause, oppStr, ...updDetailBits, lengthCong, nilCong2, diversion].filter(Boolean);
+    const netBits = [laneClause, oppStr, ...updDetailBits, lengthCong, nilCong2].filter(Boolean);
+    const netMain = netBits.join('; ');
+    const netFull = diversion ? `${netMain}. ${diversion}` : netMain;
     // Register clickable sub-parts of this line.
     regSeg(laneClause, 's_lanes_field');
     regSeg(inoReopenedStr, 's_reopen_wrap');
@@ -7758,7 +7776,7 @@ function renderINO(){
     const reopenPair = [inoReopenedStr, inoStillStr].filter(Boolean).join(', ');
     if (reopenPair) netBits.unshift(reopenPair);
     const netLabel = isUpdateContext ? 'Update' : 'Network Impact';
-    lines.push(`${netLabel}: ${netBits.length ? netBits.join('; ') : '[impact]'}.`);
+    lines.push(`${netLabel}: ${netFull || '[impact]'}.`);
   }
 
   if (!suppressActions){
