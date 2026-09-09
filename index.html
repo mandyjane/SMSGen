@@ -1988,7 +1988,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 204.4</span>
+    <span class="app-version">Version 204.5</span>
   </footer>
 </div>
 
@@ -4957,7 +4957,7 @@ function buildLanesP(prefix){
     let laneStr;
     if (anyCount){
       laneStr = laneJoin(withCount.map(p => p.n
-        ? `${p.n} x ${p.pos} lane${p.n > 1 ? 's' : ''}`
+        ? `${capNumWord(p.n)} ${p.pos} lane${p.n > 1 ? 's' : ''}`
         : `${p.pos} lane`
       ));
     } else {
@@ -7268,6 +7268,13 @@ function renderINO(){
   if (infraNote) infraNote.classList.toggle('show', infraVal2 === 'unknown');
   const infraField = document.getElementById('s_infra_field');
   if (infraField) infraField.style.display = (infraVal2 === 'yes') ? 'block' : 'none';
+  // Auto show/hide bus pax field based on bus count
+  const busPaxWrap = document.getElementById('s_bus_pax_wrap');
+  if (busPaxWrap){
+    const busEl = document.getElementById('s_crash_buses');
+    const busN = busEl ? (parseInt(busEl.value, 10) || 0) : 0;
+    busPaxWrap.style.display = busN >= 1 ? 'block' : 'none';
+  }
   // Sync injury/fatality field visibility on deselect
   const injVal2 = (document.querySelector('input[name="s_inj"]:checked')||{}).value;
   const injCountWrap = document.getElementById('s_inj_count_wrap');
@@ -7460,7 +7467,7 @@ function renderINO(){
     if (injVal === 'yes' && injuriesStr) injBit = injuriesStr;
     else if (injVal === 'unknown') injBit = 'awaiting QAS assessment to confirm injuries';
     else if (injVal === 'no') injBit = 'Nil injuries';
-    if (fatYes){ const fc = fatCount || '0'; fatBit = `${fc} x fatalities`; }
+    if (fatYes){ const fc = parseInt(fatCount,10) || 0; fatBit = fc === 1 ? '1x fatality' : `${fc}x fatalities`; }
     else if (fatVal === 'unknown') fatBit = '';   // Unknown fatalities are omitted from the SMS
     else if (fatVal === 'no') fatBit = 'Nil fatalities';
     const incBits = [eventType, infra, injBit, fatBit].filter(Boolean);
@@ -7476,7 +7483,13 @@ function renderINO(){
     // The Incident Type value leads its segment (after "Incident Type: " or, when folded,
     // "Update: "), so its first letter is always capitalised — even in lowercase mode —
     // for grammatical correctness (e.g. "Broken-down vehicle", "Police incident").
-    incidentTypeStr = capFirstLetter(incBits.join('; '));
+    // Join parts: first part capitalised, subsequent parts lowercased after '; '
+    const lcFirst = s => s ? s.charAt(0).toLowerCase() + s.slice(1) : s;
+    if (incBits.length > 1){
+      incidentTypeStr = capFirstLetter(incBits[0]) + '; ' + incBits.slice(1).map(lcFirst).join('; ');
+    } else {
+      incidentTypeStr = capFirstLetter(incBits.join('; '));
+    }
     // Separate "Incident Type:" line only outside an update context.
     if (!hideType){
       lines.push(`Incident Type: ${incBits.length ? incidentTypeStr : '[incident type]'}.`);
@@ -7518,7 +7531,7 @@ function renderINO(){
     const verb = total > 1 ? 'are' : 'is';
     let laneStr;
     if (anyCount){
-      laneStr = laneJoin(spec.map(p => p.n ? `${p.n} x ${p.pos} lane${p.n > 1 ? 's' : ''}` : `${p.pos} lane`));
+      laneStr = laneJoin(spec.map(p => p.n ? `${capNumWord(p.n)} ${p.pos} lane${p.n > 1 ? 's' : ''}` : `${p.pos} lane`));
     } else {
       laneStr = laneJoin(spec.map(p => p.pos)) + ' lane' + (spec.length > 1 ? 's' : '');
     }
@@ -7539,7 +7552,7 @@ function renderINO(){
     const verb = total > 1 ? 'remain' : 'remains';
     let laneStr;
     if (anyCount){
-      laneStr = laneJoin(spec.map(p => p.n ? `${p.n} x ${p.pos} lane${p.n > 1 ? 's' : ''}` : `${p.pos} lane`));
+      laneStr = laneJoin(spec.map(p => p.n ? `${capNumWord(p.n)} ${p.pos} lane${p.n > 1 ? 's' : ''}` : `${p.pos} lane`));
     } else {
       laneStr = laneJoin(spec.map(p => p.pos)) + ' lane' + (spec.length > 1 ? 's' : '');
     }
