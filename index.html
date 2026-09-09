@@ -1207,6 +1207,31 @@
   #body-ino .freqloc-add:hover { border-color: var(--blue); color: var(--blue); }
   #body-ino .freqloc-note { color: var(--blue); }
 
+  /* SCR road autocomplete dropdown */
+  .scr-ac-wrap { position: relative; }
+  .scr-ac-list {
+    position: absolute; top: calc(100% + 2px); left: 0; right: 0;
+    background: var(--card, #fff); border: 1px solid var(--line-strong, #d1d5db); border-radius: 8px;
+    max-height: 220px; overflow-y: auto; z-index: 60;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+    display: none;
+  }
+  .scr-ac-list.open { display: block; }
+  .scr-ac-group {
+    padding: 5px 12px; font-size: 11px; font-weight: 700; color: var(--muted, #6b7280);
+    text-transform: uppercase; letter-spacing: 0.4px; background: var(--bg, #f5f6f7);
+    border-bottom: 1px solid var(--line, #f0f0f0); user-select: none;
+  }
+  .scr-ac-item {
+    padding: 7px 12px; font-size: 13.5px; cursor: pointer;
+    border-bottom: 1px solid var(--line, #f0f0f0);
+  }
+  .scr-ac-item:last-child { border-bottom: none; }
+  .scr-ac-item:hover, .scr-ac-item.active { background: var(--teal-soft, #e6f5f1); color: var(--teal-deep, #0c4c3e); }
+  #body-ino .scr-ac-item:hover, #body-ino .scr-ac-item.active { background: var(--blue-soft, #e8f0fe); color: var(--blue-deep, #16407c); }
+  .scr-ac-item .scr-match { font-weight: 700; }
+  .scr-ac-empty { padding: 10px 12px; font-size: 13px; color: var(--muted, #6b7280); text-align: center; }
+
   /* Footer attribution — quiet, centred, with a faded signal mark. */
   .app-credit {
     display: flex; align-items: center; justify-content: center; gap: 6px;
@@ -1988,7 +2013,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 204.7</span>
+    <span class="app-version">Version 204.13</span>
   </footer>
 </div>
 
@@ -2261,7 +2286,10 @@ function buildGeneric(){
       <span class="field-label gcollapse-lbl">Road Name</span>
       <div class="gcollapse-inner">
       <div class="freqloc-bar"></div>
-      <input type="text" id="g_road" placeholder="e.g. Pacific Mwy">
+      <div class="scr-ac-wrap">
+      <input type="text" id="g_road" placeholder="e.g. Pacific Mwy" autocomplete="off">
+      <div class="scr-ac-list" id="scr_ac_g_road"></div>
+      </div>
       </div>
     </div>
 
@@ -2355,7 +2383,10 @@ function buildGeneric(){
     <div class="field gcollapse-field" id="gsec_suburb" data-gsec="Suburb">
       <span class="field-label gcollapse-lbl">Suburb</span>
       <div class="gcollapse-inner">
-      <input type="text" id="g_suburb" placeholder="e.g. Eight Mile Plains">
+      <div class="scr-ac-wrap">
+      <input type="text" id="g_suburb" placeholder="e.g. Eight Mile Plains" autocomplete="off">
+      <div class="scr-ac-list" id="scr_ac_g_suburb"></div>
+      </div>
       </div>
     </div>
 
@@ -2639,11 +2670,17 @@ function buildAV(){
     <div class="field">
       <span class="field-label">Road</span>
       <div class="freqloc-bar"></div>
-      <input type="text" id="av_road" placeholder="e.g. Pacific Mwy" onblur="onAvFieldBlur(this)">
+      <div class="scr-ac-wrap">
+      <input type="text" id="av_road" placeholder="e.g. Pacific Mwy" onblur="onAvFieldBlur(this)" autocomplete="off">
+      <div class="scr-ac-list" id="scr_ac_av_road"></div>
+      </div>
     </div>
     <div class="field">
       <span class="field-label">Suburb</span>
-      <input type="text" id="av_suburb" placeholder="e.g. Eight Mile Plains">
+      <div class="scr-ac-wrap">
+      <input type="text" id="av_suburb" placeholder="e.g. Eight Mile Plains" autocomplete="off">
+      <div class="scr-ac-list" id="scr_ac_av_suburb"></div>
+      </div>
     </div>
 
     <!-- Shared: Reference -->
@@ -6205,7 +6242,10 @@ function buildINO(){
     <div class="field">
       <span class="field-label">State-controlled road name</span>
       <div class="freqloc-bar"></div>
-      <input type="text" id="s_road" placeholder="e.g. Pacific Mwy">
+      <div class="scr-ac-wrap">
+      <input type="text" id="s_road" placeholder="e.g. Pacific Mwy" autocomplete="off">
+      <div class="scr-ac-list" id="scr_ac_s_road"></div>
+      </div>
     </div>
 
     <div class="field" id="s_dir_field">
@@ -6234,7 +6274,10 @@ function buildINO(){
 
     <div class="field">
       <span class="field-label">Suburb</span>
-      <input type="text" id="s_suburb" placeholder="e.g. Eight Mile Plains">
+      <div class="scr-ac-wrap">
+      <input type="text" id="s_suburb" placeholder="e.g. Eight Mile Plains" autocomplete="off">
+      <div class="scr-ac-list" id="scr_ac_s_suburb"></div>
+      </div>
     </div>
 
     <div class="field">
@@ -6528,11 +6571,6 @@ function buildINO(){
             <label class="inline-check"><input type="checkbox" id="s_road_steward_route" onchange="renderPreview(); scheduleWorkingSave();"> Road Steward</label>
           </div>
           <input type="text" id="s_route_other" placeholder="Other (en route)" style="display:none;margin-top:8px;">
-          <div style="display:flex;align-items:center;gap:6px;margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);">
-            <span style="font-family:var(--mono);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);flex-shrink:0;">Suffix:</span>
-            <label class="inline-check"><input type="radio" name="s_route_suffix" value="en route" checked onchange="renderPreview(); scheduleWorkingSave();"> en route</label>
-            <label class="inline-check"><input type="radio" name="s_route_suffix" value="proceeding" onchange="renderPreview(); scheduleWorkingSave();"> proceeding</label>
-          </div>
         </div>
       </div>
     </div>
@@ -7439,9 +7477,8 @@ function renderINO(){
   const routeOtherOn = (document.getElementById('s_route_other_ck')||{}).checked;
   if (routeOtherOn){ const o = get('s_route_other'); if (o) routeList.push(o); }
   const fullRouteList = roadStewardRoute ? routeList.concat(['Road Steward']) : routeList.slice();
-  // Suffix for en-route clause — "en route" (default) or "proceeding"
-  const routeSuffixEl = document.querySelector('input[name="s_route_suffix"]:checked');
-  const routeSuffix = routeSuffixEl ? routeSuffixEl.value : 'en route';
+  // Suffix for en-route clause — always "proceeding"
+  const routeSuffix = 'proceeding';
   const groups  = andList(sceneList);
   const enRoute = andList(fullRouteList);
   const durUnknown = (document.getElementById('s_duration_unknown')||{}).checked;
@@ -10084,7 +10121,6 @@ function collectFormState(){
         groupsOther: (document.getElementById('s_groups_other_ck')||{}).checked, groupsOtherText: gv('s_groups_other'),
         roadStewardScene: (document.getElementById('s_road_steward_scene')||{}).checked,
         roadStewardRoute: (document.getElementById('s_road_steward_route')||{}).checked,
-        routeSuffix: (document.querySelector('input[name="s_route_suffix"]:checked')||{}).value || 'en route',
         routeList: Array.from(document.querySelectorAll('.s_route_ck:checked')).map(c=>c.value),
         routeOther: (document.getElementById('s_route_other_ck')||{}).checked, routeOtherText: gv('s_route_other'),
         durUnknown: (document.getElementById('s_duration_unknown')||{}).checked, durHH: gv('s_dur_hh'), durMM: gv('s_dur_mm'),
@@ -11958,9 +11994,6 @@ function applyDraft(s){
     if (a.groupsOther){ document.getElementById('s_groups_other_ck').checked = true; onInoGroupsOtherChange(); set('s_groups_other', a.groupsOtherText); }
     { const el = document.getElementById('s_road_steward_scene'); if (el) el.checked = !!a.roadStewardScene; }
     { const el = document.getElementById('s_road_steward_route'); if (el) el.checked = !!a.roadStewardRoute; }
-    { const suffix = a.routeSuffix || 'en route';
-      const el = document.querySelector(`input[name="s_route_suffix"][value="${suffix}"]`);
-      if (el) el.checked = true; }
     setChecks('s_route_ck', a.routeList);
     if (a.routeOther){ document.getElementById('s_route_other_ck').checked = true; onInoRouteOtherChange(); set('s_route_other', a.routeOtherText); }
     set('s_dur_hh', a.durHH); set('s_dur_mm', a.durMM);
@@ -12123,6 +12156,10 @@ function attachLiveListeners(){
     // Any real edit after a save reverts the badge to "Not saved".
     root.addEventListener('input', markUnsavedIfSaved);
     root.addEventListener('change', markUnsavedIfSaved);
+    // Sync lane direction when "Direction incident occurred" changes
+    root.addEventListener('change', function(e){
+      if (e.target.classList && e.target.classList.contains('s_dir')) syncLaneDirFromIncidentDir();
+    });
   });
   attachValidationClearers();
 }
@@ -12228,6 +12265,292 @@ function attachKeyboardShortcuts(){
 
 /* ---------- Speed of entry: recent-value autocomplete + frequent locations ---------- */
 const RECENTS_KEY = 'bmtmc_sms_recents_v1';
+/* ---------- SCR road name autocomplete ---------- */
+const SCR_ROADS = [
+  "East Coast Road",
+  "Southport - Nerang Road",
+  "Beenleigh - Redland Bay Road",
+  "Colburn Avenue",
+  "Cleveland - Redland Bay Road",
+  "Bruce Highway",
+  "Redland Bay Road",
+  "Capalaba - Victoria Point Road",
+  "Mount Cotton Road",
+  "Capalaba - Cleveland Road",
+  "Birkdale Road",
+  "Brighton - Redcliffe Road",
+  "Pacific Highway (Pacific Motorway)",
+  "Cunningham Highway",
+  "Cunningham Arterial Road",
+  "Ipswich Motorway",
+  "Cunningham Highway (Ipswich Motorway)",
+  "Ipswich - Cunningham Hwy Connection Road",
+  "Ipswich - Warrego Hwy Connection Road",
+  "Warrego Highway",
+  "Brisbane - Beenleigh Road",
+  "Beenleigh Road",
+  "Swanbank Road",
+  "Logan Motorway",
+  "Logan Sub-Arterial Road",
+  "Logan Road",
+  "Ipswich - Boonah Road",
+  "Ipswich - Rosewood Road",
+  "Mount Lindesay Highway (Brisbane - Beaudesert Road)",
+  "Mount Lindesay Arterial Road",
+  "Mount Crosby Road",
+  "Mount Gravatt-Capalaba Road",
+  "Karrabin - Rosewood Road",
+  "Rosewood - Marburg Road",
+  "Rosewood - Warrill View Road",
+  "Rosewood - Laidley Road",
+  "Haigslea - Amberley Road",
+  "River Road",
+  "Brisbane - Woodford Road",
+  "South Pine Road",
+  "Samford Road",
+  "Samford Sub-Arterial Road",
+  "Brisbane Valley Highway",
+  "Everton Park - Albany Creek Road",
+  "Albany Creek Sub-Arterial Road",
+  "Linkfield Connection Road",
+  "Brisbane - Redland Road",
+  "Centenary Motorway",
+  "Centenary Motorway (Western Freeway)",
+  "Western Freeway",
+  "Western Arterial Road",
+  "Southern Cross Way",
+  "Riverview - Moggill Ferry Road",
+  "Moggill Road",
+  "Moggill Sub-Arterial Road",
+  "Gateway Motorway",
+  "Gateway Extension Motorway",
+  "Gateway Arterial Road",
+  "Port Of Brisbane Motorway",
+  "Port Of Brisbane Road",
+  "Port Drive",
+  "Airport Link",
+  "Airport Link Tunnel",
+  "Pacific Motorway",
+  "Pacific Motorway (South-East Arterial Road)",
+  "Pacific Highway Connection Road",
+  "Riverside Expressway",
+  "Gympie Arterial Road",
+  "Gympie Rd",
+  "East-West Arterial Road",
+  "Griffith Arterial Road",
+  "Kessels Road (Griffith Arterial Road)",
+  "Riawena Road (Griffith Arterial Road)",
+  "Granard Road (Griffith Arterial Road)",
+  "Nathan Connection Arterial Road",
+  "South East Busway",
+  "Inner Northern Busway",
+  "Northern Busway",
+  "Eastern Busway",
+  "Queen Street Bus Station",
+  "Sandgate Sub-Arterial Road",
+  "Sandgate Road",
+  "Redland Sub-Arterial Road",
+  "Strathpine Sub-Arterial Road",
+  "Cleveland Sub-Arterial Road",
+  "Redcliffe Sub-Arterial Road",
+  "Anzac Avenue",
+  "Deception Bay Road",
+  "Wembley Road",
+  "Clem7 Tunnel",
+  "Legacy Way Tunnel",
+  "Go Between Bridge",
+  "Lytton Road",
+  "Stafford Road",
+  "Kingston Road",
+  "Waterford Tamborine Road",
+  "Albert Street",
+  "Morayfield Road",
+  "D'Aguilar Highway",
+  "King Street",
+  "Lower King Street (Caboolture Bypass)",
+  "Beerburrum Road",
+  "Beaudesert Road"
+];
+
+const SCR_ROAD_IDS = ['g_road','av_road','s_road'];
+const SCR_SUBURB_IDS = ['g_suburb','av_suburb','s_suburb'];
+const SCR_SUBURBS = [
+  "Acacia Ridge","Albany Creek","Albion","Alderley","Alexandra Hills","Algester","Amberley","Amity",
+  "Annerley","Anstead","Arana Hills","Archerfield","Armstrong Creek","Ascot","Ashgrove","Ashwell",
+  "Aspley","Auchenflower","Augustine Heights","Bahrs Scrub","Bald Hills","Balmoral","Banks Creek",
+  "Banksia Beach","Bannockburn","Banyo","Bardon","Barellan Point","Basin Pocket","Beachmere",
+  "Beenleigh","Belivah","Bellara","Bellbird Park","Bellbowrie","Bellmere","Bellthorpe","Belmont",
+  "Berrinba","Bethania","Birkdale","Blacksoil","Blackstone","Bongaree","Boondall","Booroobin",
+  "Booval","Boronia Heights","Bowen Hills","Bracalba","Bracken Ridge","Brassall","Bray Park",
+  "Brendale","Bridgeman Downs","Brighton","Brisbane Airport","Brisbane City","Brookfield","Brookwater",
+  "Browns Plains","Buccan","Bulimba","Bulwer","Bundamba","Bunya","Burbank","Burpengary",
+  "Burpengary East","Caboolture","Caboolture South","Calamvale","Calvert","Camira","Camp Hill",
+  "Camp Mountain","Campbells Pocket","Cannon Hill","Capalaba","Carbrook","Carina","Carina Heights",
+  "Carindale","Carole Park","Carseldine","Cashmere","Cedar Creek","Cedar Grove","Cedar Vale",
+  "Cedarton","Chambers Flat","Chandler","Chapel Hill","Chelmer","Chermside","Chermside West",
+  "Churchill","Chuwar","Clayfield","Clear Mountain","Cleveland","Clontarf","Closeburn","Coalfalls",
+  "Collingwood Park","Commissioners Flat","Coochiemudlo Island","Coopers Plains","Coorparoo",
+  "Corinda","Cornubia","Cowan Cowan","Crestmead","D'Aguilar","Daisy Hill","Dakabin","Darra",
+  "Dayboro","Deagon","Deception Bay","Deebing Heights","Delaneys Creek","Dinmore","Donnybrook",
+  "Doolandella","Draper","Drewvale","Dunwich","Durack","Dutton Park","Eagle Farm","Eagleby",
+  "East Brisbane","East Ipswich","Eastern Heights","Eatons Hill","Ebbw Vale","Ebenezer",
+  "Edens Landing","Eight Mile Plains","Elimbah","Ellen Grove","England Creek","Enoggera",
+  "Enoggera Reservoir","Everton Hills","Everton Park","Fairfield","Ferny Grove","Ferny Hills",
+  "Fig Tree Pocket","Fitzgibbon","Flagstone","Flinders Lakes","Flinders View","Forest Lake",
+  "Forestdale","Fortitude Valley","Gailes","Gaythorne","Geebung","Glenlogan","Godwin Beach",
+  "Goodna","Goolman","Gordon Park","Graceville","Grandchester","Grange","Greenbank","Greenslopes",
+  "Griffin","Gumdale","Haigslea","Hamilton","Hawthorne","Heathwood","Hemmant","Hendra",
+  "Heritage Park","Herston","Highgate Hill","Highvale","Hillcrest","Holland Park","Holland Park West",
+  "Holmview","Inala","Indooroopilly","Ipswich","Ironbark","Jamboree Heights","Jeebropilly",
+  "Jimboomba","Jindalee","Jollys Lookout","Joyner","Kagaru","Kalinga","Kallangur","Kangaroo Point",
+  "Karalee","Karana Downs","Karawatha","Karrabin","Karragarra Island","Kedron","Kelvin Grove",
+  "Kenmore","Kenmore Hills","Keperra","Kholo","King Scrub","Kingston","Kippa-Ring","Kobble Creek",
+  "Kooringal","Kuraby","Kurwongbah","Laceys Creek","Lake Manchester","Lamb Island","Lanefield",
+  "Larapinta","Lawnton","Leichhardt","Logan Central","Logan Reserve","Logan Village","Loganholme",
+  "Loganlea","Lota","Lower Mount Walker","Lutwyche","Lyons","Lytton","MacGregor","Mackenzie",
+  "Macleay Island","Mango Hill","Manly","Manly West","Mansfield","Marburg","Margate","Marsden",
+  "McDowall","Meadowbrook","Meldale","Middle Park","Milton","Mitchelton","Moggill","Monarch Glen",
+  "Moodlu","Moores Pocket","Moorina","Moorooka","Morayfield","Moreton Island","Morningside",
+  "Mount Coot-tha","Mount Cotton","Mount Crosby","Mount Delaney","Mount Forbes","Mount Glorious",
+  "Mount Gravatt","Mount Gravatt East","Mount Marrow","Mount Mee","Mount Nebo","Mount Ommaney",
+  "Mount Pleasant","Mount Samson","Mount Warren Park","Muirlea","Mundoolun","Munruben","Murarrie",
+  "Murrumba Downs","Mutdapilly","Narangba","Nathan","Neurum","New Beith","New Chum","New Farm",
+  "Newmarket","Newport","Newstead","Newtown","Ningi","Norman Park","North Booval","North Ipswich",
+  "North Lakes","North Maclean","North Stradbroke Island","North Tivoli","Northgate","Nudgee",
+  "Nudgee Beach","Nundah","Ocean View","One Mile","Ormiston","Oxley","Paddington","Pallara",
+  "Park Ridge","Park Ridge South","Parkinson","Peak Crossing","Peel Island","Petrie",
+  "Petrie Terrace","Pine Mountain","Pinjarra Hills","Pinkenba","Point Lookout","Port of Brisbane",
+  "Priestdale","Pullenvale","Purga","Raceview","Ransome","Red Hill","Redbank","Redbank Plains",
+  "Redcliffe","Redland Bay","Regents Park","Richlands","Ripley","Riverbend","Riverhills","Riverview",
+  "Robertson","Rochedale","Rochedale South","Rocklea","Rocksberg","Rosewood","Rothwell","Runcorn",
+  "Russell Island","Sadliers Crossing","Salisbury","Samford Valley","Samford Village","Samsonvale",
+  "Sandgate","Sandstone Point","Scarborough","Seven Hills","Seventeen Mile Rocks","Shailer Park",
+  "Sheldon","Sherwood","Shorncliffe","Silkstone","Silverbark Ridge","Sinnamon Park","Slacks Creek",
+  "South Brisbane","South Maclean","South Ripley","Spring Hill","Spring Mountain","Springfield",
+  "Springfield Central","Springfield Lakes","Springwood","St Lucia","Stafford","Stafford Heights",
+  "Stanmore","Stockleigh","Stones Corner","Stony Creek","Strathpine","Stretton","Sumner",
+  "Sunnybank","Sunnybank Hills","Swanbank","Taigum","Tallegalla","Tamborine","Tanah Merah",
+  "Taringa","Tarragindi","Teneriffe","Tennyson","Thagoona","The Bluff","The Gap","Thorneside",
+  "Thornlands","Tingalpa","Tivoli","Toorbul","Toowong","Underwood","Undullah","Upper Brookfield",
+  "Upper Caboolture","Upper Kedron","Upper Mount Gravatt","Veresdale","Veresdale Scrub",
+  "Victoria Point","Virginia","Wacol","Wakerley","Walloon","Wamuran","Wamuran Basin","Warner",
+  "Waterford","Waterford West","Wavell Heights","Wellington Point","Welsby","West End",
+  "West Ipswich","Westlake","White Patch","White Rock","Whiteside","Wights Mountain","Willawong",
+  "Willowbank","Wilston","Windaroo","Windsor","Wishart","Wolffdene","Woodend","Woodford","Woodhill",
+  "Woodridge","Woody Point","Woolloongabba","Wooloowin","Woolshed","Woorim","Wulkuraka","Wynnum",
+  "Wynnum West","Yamanto","Yarrabilba","Yeerongpilly","Yeronga","Yugar","Zillmere"
+];
+let scrAcActive = {}; // {inputId: activeIndex}
+
+function scrAcHighlight(text, q){
+  if (!q) return escAttr(text);
+  const lo = text.toLowerCase(), idx = lo.indexOf(q.toLowerCase());
+  if (idx === -1) return escAttr(text);
+  return escAttr(text.slice(0, idx)) + '<span class="scr-match">' + escAttr(text.slice(idx, idx + q.length)) + '</span>' + escAttr(text.slice(idx + q.length));
+}
+
+function scrAcRender(inputId){
+  const inp = document.getElementById(inputId);
+  const dd = document.getElementById('scr_ac_' + inputId);
+  if (!inp || !dd) return;
+  const q = (inp.value || '').trim().toLowerCase();
+  if (!q){ dd.classList.remove('open'); return; }
+
+  const isSuburb = SCR_SUBURB_IDS.includes(inputId);
+  const staticList = isSuburb ? SCR_SUBURBS : SCR_ROADS;
+  const recentKind = isSuburb ? 'suburb' : 'road';
+  const groupLabel = isSuburb ? 'Suburbs' : 'State-Controlled Roads';
+
+  // Recent matches (from the existing recents pool)
+  const recentMatches = (recents[recentKind] || []).filter(r => r.toLowerCase().includes(q));
+  const recentSet = new Set(recentMatches.map(r => r.toLowerCase()));
+  // Static matches, de-duped against recents, preserving list order
+  const staticMatches = staticList.filter(r => r.toLowerCase().includes(q) && !recentSet.has(r.toLowerCase()));
+
+  if (!recentMatches.length && !staticMatches.length){ dd.innerHTML = '<div class="scr-ac-empty">No matches</div>'; dd.classList.add('open'); scrAcActive[inputId] = -1; return; }
+
+  const items = [];
+  let html = '';
+  if (recentMatches.length){
+    html += '<div class="scr-ac-group">Recent</div>';
+    recentMatches.forEach(r => { html += '<div class="scr-ac-item" data-val="' + escAttr(r) + '">' + scrAcHighlight(r, q) + '</div>'; items.push(r); });
+  }
+  if (staticMatches.length){
+    html += '<div class="scr-ac-group">' + groupLabel + '</div>';
+    staticMatches.forEach(r => { html += '<div class="scr-ac-item" data-val="' + escAttr(r) + '">' + scrAcHighlight(r, q) + '</div>'; items.push(r); });
+  }
+  dd.innerHTML = html;
+  dd.classList.add('open');
+  scrAcActive[inputId] = -1;
+
+  dd.querySelectorAll('.scr-ac-item').forEach((el, i) => {
+    el.addEventListener('mousedown', function(e){
+      e.preventDefault();
+      inp.value = items[i];
+      dd.classList.remove('open');
+      inp.focus();
+      inp.dispatchEvent(new Event('input', {bubbles:true}));
+    });
+  });
+}
+
+function scrAcKeydown(e, inputId){
+  const dd = document.getElementById('scr_ac_' + inputId);
+  if (!dd || !dd.classList.contains('open')) return;
+  const items = dd.querySelectorAll('.scr-ac-item');
+  if (!items.length) return;
+  let idx = scrAcActive[inputId] == null ? -1 : scrAcActive[inputId];
+
+  if (e.key === 'ArrowDown'){
+    e.preventDefault();
+    idx = Math.min(idx + 1, items.length - 1);
+    scrAcActive[inputId] = idx;
+    items.forEach((el, i) => el.classList.toggle('active', i === idx));
+    items[idx].scrollIntoView({block:'nearest'});
+  } else if (e.key === 'ArrowUp'){
+    e.preventDefault();
+    idx = Math.max(idx - 1, 0);
+    scrAcActive[inputId] = idx;
+    items.forEach((el, i) => el.classList.toggle('active', i === idx));
+    items[idx].scrollIntoView({block:'nearest'});
+  } else if (e.key === 'Enter' && idx >= 0){
+    e.preventDefault();
+    const inp = document.getElementById(inputId);
+    inp.value = items[idx].dataset.val;
+    dd.classList.remove('open');
+    inp.focus();
+    inp.dispatchEvent(new Event('input', {bubbles:true}));
+  } else if (e.key === 'Escape'){
+    dd.classList.remove('open');
+  }
+}
+
+function setupScrAutocomplete(){
+  // Use event delegation from document since road/suburb inputs are rebuilt by buildINO/buildGeneric/buildAV.
+  const ALL_AC_IDS = SCR_ROAD_IDS.concat(SCR_SUBURB_IDS);
+  const isAcInput = (el) => el && el.tagName === 'INPUT' && ALL_AC_IDS.includes(el.id);
+
+  document.addEventListener('input', function(e){
+    if (isAcInput(e.target)) scrAcRender(e.target.id);
+  });
+  document.addEventListener('focus', function(e){
+    if (isAcInput(e.target)){
+      e.target.removeAttribute('list');
+      e.target.setAttribute('autocomplete', 'off');
+      if ((e.target.value||'').trim()) scrAcRender(e.target.id);
+    }
+  }, true);
+  document.addEventListener('blur', function(e){
+    if (isAcInput(e.target)){
+      const id = e.target.id;
+      setTimeout(() => { const dd = document.getElementById('scr_ac_' + id); if (dd) dd.classList.remove('open'); }, 150);
+    }
+  }, true);
+  document.addEventListener('keydown', function(e){
+    if (isAcInput(e.target)) scrAcKeydown(e, e.target.id);
+  });
+}
+
 const FREQLOC_KEY = 'bmtmc_sms_freqloc_v1';
 const RECENT_LIMIT = 15;
 
@@ -12298,6 +12621,7 @@ function captureRecentsFromForm(){
 
 function renderDatalists(){
   Object.keys(RECENT_FIELDS).forEach(kind=>{
+    if (kind === 'road' || kind === 'suburb') return; // road & suburb use custom autocomplete dropdown
     const dl = document.getElementById(RECENT_FIELDS[kind].list);
     if (!dl) return;
     dl.innerHTML = recents[kind].map(v=>`<option value="${escAttr(v)}"></option>`).join('');
@@ -12314,12 +12638,14 @@ function setupAutocomplete(){
     document.body.appendChild(host);
   }
   Object.keys(RECENT_FIELDS).forEach(kind=>{
+    if (kind === 'road' || kind === 'suburb') return; // road & suburb use custom autocomplete dropdown
     RECENT_FIELDS[kind].ids.forEach(id=>{
       const inp = document.getElementById(id);
       if (inp && !inp.getAttribute('list')) inp.setAttribute('list', RECENT_FIELDS[kind].list);
     });
   });
   renderDatalists();
+  setupScrAutocomplete();
 }
 
 /* ---------- Frequent locations: one-tap road+suburb fill ---------- */
