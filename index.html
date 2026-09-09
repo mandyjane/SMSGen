@@ -2013,7 +2013,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 204.13</span>
+    <span class="app-version">Version 204.15</span>
   </footer>
 </div>
 
@@ -2191,7 +2191,7 @@ const CRASH_ITEMS_MORE = [
 // (Pedestrian and Cyclist deliberately excluded; they force plain "crash".)
 const CRASH_VEHICLE_KEYS = ["cars","vehicles","heavyvehicles","buses","motorcycles","escooters","ebicycles","animals","tma","trains","trams"];
 
-const RESPONDERS = ["TRU","TMA","Towing","QPS","QAS","QFD","TQ","Maintenance","FCU","Heavy haulage"];
+const RESPONDERS = ["TRU","Tow","TMA","QAS","QFD","QPS","FCU","SOC","Road Steward","Traffic Control","Emergency services","Translink response service","Mechanical services","Media","Medivac"];
 const RESPONDER_LOWER = {"Towing":"towing","Maintenance":"maintenance","Heavy haulage":"heavy haulage"};
 
 /* ---------- SEQ OPS / INO reference data ---------- */
@@ -3503,6 +3503,20 @@ function buildTTS(){
 
     <div class="seg-head" style="margin-top:36px;">LOCATION DETAILS</div>
     <div class="field">
+      <span class="field-label">Road</span>
+      <div class="scr-ac-wrap">
+      <input type="text" id="tts_road" placeholder="e.g. Pacific Mwy" autocomplete="off">
+      <div class="scr-ac-list" id="scr_ac_tts_road"></div>
+      </div>
+    </div>
+    <div class="field">
+      <span class="field-label">Suburb</span>
+      <div class="scr-ac-wrap">
+      <input type="text" id="tts_suburb" placeholder="e.g. Eight Mile Plains" autocomplete="off">
+      <div class="scr-ac-list" id="scr_ac_tts_suburb"></div>
+      </div>
+    </div>
+    <div class="field">
       <textarea id="tts_loc_detail" rows="6" placeholder="Paste location details from STREAMS (route, description, address, coordinates)\u2026" style="font-size:13px;"></textarea>
     </div>
 
@@ -3852,9 +3866,7 @@ function foldInoPeakLane(info){
 function currentInoGroupList(){
   const out = [];
   Array.from(document.querySelectorAll('.s_groups_ck:checked')).forEach(c=>out.push(c.value));
-  if ((document.getElementById('s_road_steward_scene')||{}).checked) out.push('Road Steward');
   Array.from(document.querySelectorAll('.s_route_ck:checked')).forEach(c=>out.push(c.value));
-  if ((document.getElementById('s_road_steward_route')||{}).checked) out.push('Road Steward');
   if ((document.getElementById('s_groups_other_ck')||{}).checked){ const o=(document.getElementById('s_groups_other')||{}).value; if (o&&o.trim()) out.push(o.trim()); }
   if ((document.getElementById('s_route_other_ck')||{}).checked){ const o=(document.getElementById('s_route_other')||{}).value; if (o&&o.trim()) out.push(o.trim()); }
   return out;
@@ -4030,36 +4042,18 @@ function pluralise(name, n){
    separate tokens joined by &/and. */
 function directionPhrase(checked, abbrev){
   if (!checked || !checked.length) return '';
-  const ns = ["North","South"].filter(d=>checked.includes(d));
-  const ew = ["East","West"].filter(d=>checked.includes(d));
-  // Primary cross-axis token: first-listed N/S + first-listed E/W, ordered N/S then E/W.
-  const primaryParts = [];
-  if (ns.length) primaryParts.push(ns[0]);
-  if (ew.length) primaryParts.push(ew[0]);
+  // Values are now "Northbound", "Southbound", etc. or "Both directions", "All directions"
   const compassTokens = [];
-  if (primaryParts.length){
-    const raw = primaryParts.join('').toLowerCase() + 'bound';
-    compassTokens.push(abbrev ? (GEN_DIR_ABBREV_MAP[raw] || raw) : raw);
-  }
-  // Leftover opposites (a second N/S or E/W) each become their own token.
-  if (ns.length > 1){
-    const raw = ns[1].toLowerCase() + 'bound';
-    compassTokens.push(abbrev ? (GEN_DIR_ABBREV_MAP[raw] || raw) : raw);
-  }
-  if (ew.length > 1){
-    const raw = ew[1].toLowerCase() + 'bound';
-    compassTokens.push(abbrev ? (GEN_DIR_ABBREV_MAP[raw] || raw) : raw);
-  }
-  // Both directions / All directions: individual tokens, in checkbox order.
   const extraTokens = [];
-  ["Both directions","All directions"].forEach(d=>{
-    if (checked.includes(d)){
-      const raw = d.toLowerCase();
-      extraTokens.push(abbrev ? raw : raw);
+  checked.forEach(d => {
+    const lo = d.toLowerCase();
+    if (lo === 'both directions' || lo === 'all directions') {
+      extraTokens.push(lo);
+    } else {
+      // Already in "northbound" format
+      compassTokens.push(abbrev ? (GEN_DIR_ABBREV_MAP[lo] || lo) : lo);
     }
   });
-  // When abbreviated: all tokens join with the &/and toggle (laneJoin), no " / " separator.
-  // Normal mode: within each group join with " and "; groups join with " / ".
   if (abbrev){
     const allTokens = [...compassTokens, ...extraTokens];
     return laneJoin(allTokens);
@@ -4811,11 +4805,8 @@ let inoLengthUnit = 'km';
 function syncLaneDirFromIncidentDir(){
   const incDirs = Array.from(document.querySelectorAll('.s_dir:checked')).map(c => c.value);
   document.querySelectorAll('.s_lane_dir').forEach(cb => {
-    // Map: incident "North" → lane "Northbound"
-    const match = incDirs.some(d => cb.value.toLowerCase().startsWith(d.toLowerCase()));
-    // Also handle "Both directions" / "All directions" directly
-    const directMatch = incDirs.includes(cb.value);
-    cb.checked = match || directMatch;
+    // Values now match directly: "Northbound" ↔ "Northbound", "Both directions" ↔ "Both directions"
+    cb.checked = incDirs.includes(cb.value);
   });
 }
 
@@ -6251,11 +6242,11 @@ function buildINO(){
     <div class="field" id="s_dir_field">
       <span class="field-label">Direction incident occurred</span>
       <div class="check-grid" style="align-items:center;">
-        ${["North","South","East","West"].map(d=>`<label class="inline-check"><input type="checkbox" class="s_dir" value="${d}"> ${d}</label>`).join('')}
+        ${["Northbound","Southbound","Eastbound","Westbound"].map(d=>`<label class="inline-check"><input type="radio" name="s_dir_radio" class="s_dir desel-radio" value="${d}" onclick="toggleDeselectableRadio(this)" onchange="syncLaneDirFromIncidentDir(); renderPreview(); scheduleWorkingSave();"> ${d}</label>`).join('')}
         <button type="button" class="moreless-btn" id="s_dir_more_btn" aria-expanded="false" onclick="toggleMoreless('s_dir')"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button>
       </div>
       <div class="check-grid moreless-extra" id="s_dir_extra" data-open-display="flex" style="display:none;margin-top:6px;">
-          ${["Both directions","All directions"].map(d=>`<label class="inline-check"><input type="checkbox" class="s_dir" value="${d}"> ${d}</label>`).join('')}
+          ${["Both directions","All directions"].map(d=>`<label class="inline-check"><input type="radio" name="s_dir_radio" class="s_dir desel-radio" value="${d}" onclick="toggleDeselectableRadio(this)" onchange="syncLaneDirFromIncidentDir(); renderPreview(); scheduleWorkingSave();"> ${d}</label>`).join('')}
       </div>
     </div>
 
@@ -6559,18 +6550,16 @@ function buildINO(){
           <div class="check-grid">
             ${RESPONDERS.map(r=>`<label class="inline-check"><input type="checkbox" class="s_groups_ck" value="${r}" onchange="syncInoGroup('scene','${r}')"> ${r}</label>`).join('')}
             <label class="inline-check"><input type="checkbox" id="s_groups_other_ck" onchange="onInoGroupsOtherChange()"> Other</label>
-            <label class="inline-check"><input type="checkbox" id="s_road_steward_scene" onchange="renderPreview(); scheduleWorkingSave();"> Road Steward</label>
           </div>
           <input type="text" id="s_groups_other" placeholder="Other groups (e.g. SES)" style="display:none;margin-top:8px;">
         </div>
         <div class="responder-col-card">
-          <h4>En route</h4>
+          <h4>Proceeding</h4>
           <div class="check-grid">
             ${RESPONDERS.map(r=>`<label class="inline-check"><input type="checkbox" class="s_route_ck" value="${r}" onchange="syncInoGroup('route','${r}')"> ${r}</label>`).join('')}
             <label class="inline-check"><input type="checkbox" id="s_route_other_ck" onchange="onInoRouteOtherChange()"> Other</label>
-            <label class="inline-check"><input type="checkbox" id="s_road_steward_route" onchange="renderPreview(); scheduleWorkingSave();"> Road Steward</label>
           </div>
-          <input type="text" id="s_route_other" placeholder="Other (en route)" style="display:none;margin-top:8px;">
+          <input type="text" id="s_route_other" placeholder="Other (proceeding)" style="display:none;margin-top:8px;">
         </div>
       </div>
     </div>
@@ -7469,14 +7458,13 @@ function renderINO(){
   const groupList = Array.from(document.querySelectorAll('.s_groups_ck:checked')).map(c=>c.value);
   const groupsOtherOn = (document.getElementById('s_groups_other_ck')||{}).checked;
   if (groupsOtherOn){ const o = get('s_groups_other'); if (o) groupList.push(o); }
-  const roadStewardScene = (document.getElementById('s_road_steward_scene')||{}).checked;
-  const roadStewardRoute = (document.getElementById('s_road_steward_route')||{}).checked;
-  // Road Steward is folded into the at-scene and en-route lists so they join as one sentence each
-  const sceneList = roadStewardScene ? groupList.concat(['Road Steward']) : groupList.slice();
-  const routeList = Array.from(document.querySelectorAll('.s_route_ck:checked')).map(c=>c.value);
+  // Map "Road Steward" to "TMR Road Steward" in output
+  const mapRoadSteward = (list) => list.map(v => v === 'Road Steward' ? 'TMR Road Steward' : v);
+  const sceneList = mapRoadSteward(groupList);
+  const routeList = mapRoadSteward(Array.from(document.querySelectorAll('.s_route_ck:checked')).map(c=>c.value));
   const routeOtherOn = (document.getElementById('s_route_other_ck')||{}).checked;
   if (routeOtherOn){ const o = get('s_route_other'); if (o) routeList.push(o); }
-  const fullRouteList = roadStewardRoute ? routeList.concat(['Road Steward']) : routeList.slice();
+  const fullRouteList = routeList;
   // Suffix for en-route clause — always "proceeding"
   const routeSuffix = 'proceeding';
   const groups  = andList(sceneList);
@@ -10119,8 +10107,6 @@ function collectFormState(){
         cctv: rb('s_cctv'), cctvText: gv('s_cctv_text'),
         groupsList: Array.from(document.querySelectorAll('.s_groups_ck:checked')).map(c=>c.value),
         groupsOther: (document.getElementById('s_groups_other_ck')||{}).checked, groupsOtherText: gv('s_groups_other'),
-        roadStewardScene: (document.getElementById('s_road_steward_scene')||{}).checked,
-        roadStewardRoute: (document.getElementById('s_road_steward_route')||{}).checked,
         routeList: Array.from(document.querySelectorAll('.s_route_ck:checked')).map(c=>c.value),
         routeOther: (document.getElementById('s_route_other_ck')||{}).checked, routeOtherText: gv('s_route_other'),
         durUnknown: (document.getElementById('s_duration_unknown')||{}).checked, durHH: gv('s_dur_hh'), durMM: gv('s_dur_mm'),
@@ -10412,24 +10398,8 @@ function setConsecWording(on){
   renderChipSettings();
   renderPreview();
 }
-/* Lane-list connector: default "and" (off); when on, lane lists use "&". */
-const LANE_AMP_KEY = 'bmtmc_lane_amp_v1';
-let laneAmpersand = false;
-function loadLaneAmpPref(){
-  try {
-    const raw = window.localStorage.getItem(LANE_AMP_KEY);
-    if (raw !== null) laneAmpersand = (raw === '1');
-  } catch(e){ /* ignore */ }
-}
-function persistLaneAmpPref(){
-  try { window.localStorage.setItem(LANE_AMP_KEY, laneAmpersand ? '1' : '0'); } catch(e){ /* ignore */ }
-}
-function setLaneAmpersand(on){
-  laneAmpersand = !!on;
-  persistLaneAmpPref();
-  renderChipSettings();
-  renderPreview();
-}
+/* Lane-list connector: always "and". */
+const laneAmpersand = false;
 /* Caps→title case setting: converts fully-capitalised input to title case on blur.
    e.g. "GATEWAY MOTORWAY" → "Gateway Motorway". Mixed-case text is left alone. */
 const CAPS_TITLE_KEY = 'bmtmc_caps_title_v1';
@@ -10649,13 +10619,6 @@ function renderChipSettings(){
   }).join('');
   panel.innerHTML = `<div class="disp-settings">
     <h4>Display</h4>
-    <div class="disp-row">
-      <span class="disp-name">Use “&amp;” instead of “and”</span>
-      <label class="disp-switch">
-        <input type="checkbox" ${laneAmpersand ? 'checked' : ''} onchange="setLaneAmpersand(this.checked)" aria-label="Use ampersand in lane lists">
-        <span class="disp-track"><span class="disp-knob"></span></span>
-      </label>
-    </div>
     <div class="disp-row">
       <span class="disp-name">Convert ALL CAPS input to Title Case on leaving a field</span>
       <label class="disp-switch">
@@ -11992,7 +11955,6 @@ function applyDraft(s){
     // resolution
     setChecks('s_groups_ck', a.groupsList);
     if (a.groupsOther){ document.getElementById('s_groups_other_ck').checked = true; onInoGroupsOtherChange(); set('s_groups_other', a.groupsOtherText); }
-    { const el = document.getElementById('s_road_steward_scene'); if (el) el.checked = !!a.roadStewardScene; }
     { const el = document.getElementById('s_road_steward_route'); if (el) el.checked = !!a.roadStewardRoute; }
     setChecks('s_route_ck', a.routeList);
     if (a.routeOther){ document.getElementById('s_route_other_ck').checked = true; onInoRouteOtherChange(); set('s_route_other', a.routeOtherText); }
@@ -12372,8 +12334,8 @@ const SCR_ROADS = [
   "Beaudesert Road"
 ];
 
-const SCR_ROAD_IDS = ['g_road','av_road','s_road'];
-const SCR_SUBURB_IDS = ['g_suburb','av_suburb','s_suburb'];
+const SCR_ROAD_IDS = ['g_road','av_road','s_road','tts_road'];
+const SCR_SUBURB_IDS = ['g_suburb','av_suburb','s_suburb','tts_suburb'];
 const SCR_SUBURBS = [
   "Acacia Ridge","Albany Creek","Albion","Alderley","Alexandra Hills","Algester","Amberley","Amity",
   "Annerley","Anstead","Arana Hills","Archerfield","Armstrong Creek","Ascot","Ashgrove","Ashwell",
@@ -12462,7 +12424,21 @@ function scrAcRender(inputId){
   const groupLabel = isSuburb ? 'Suburbs' : 'State-Controlled Roads';
 
   // Recent matches (from the existing recents pool)
-  const recentMatches = (recents[recentKind] || []).filter(r => r.toLowerCase().includes(q));
+  // Filter out recents that are abbreviations of static list entries
+  // e.g. "Pacific Mwy" is redundant when "Pacific Motorway" exists
+  const staticLo = new Set(staticList.map(r => r.toLowerCase()));
+  const isAbbrevOfStatic = (recent) => {
+    const rLo = recent.toLowerCase();
+    // If the recent is an exact match of a static entry, it's not an abbreviation — it IS the entry
+    if (staticLo.has(rLo)) return true;
+    // Check if any static entry starts with the same prefix (first word) and is longer
+    const firstWord = rLo.split(/[\s\-]/)[0];
+    return staticList.some(s => {
+      const sLo = s.toLowerCase();
+      return sLo.startsWith(firstWord) && sLo !== rLo && sLo.length > rLo.length;
+    });
+  };
+  const recentMatches = (recents[recentKind] || []).filter(r => r.toLowerCase().includes(q) && !isAbbrevOfStatic(r));
   const recentSet = new Set(recentMatches.map(r => r.toLowerCase()));
   // Static matches, de-duped against recents, preserving list order
   const staticMatches = staticList.filter(r => r.toLowerCase().includes(q) && !recentSet.has(r.toLowerCase()));
@@ -12556,8 +12532,8 @@ const RECENT_LIMIT = 15;
 
 // Which inputs share each recent-value pool, and which datalist they point at.
 const RECENT_FIELDS = {
-  road:   { list: 'dl_road',   ids: ['g_road','av_road','s_road'] },
-  suburb: { list: 'dl_suburb', ids: ['g_suburb','av_suburb','s_suburb'] },
+  road:   { list: 'dl_road',   ids: ['g_road','av_road','s_road','tts_road'] },
+  suburb: { list: 'dl_suburb', ids: ['g_suburb','av_suburb','s_suburb','tts_suburb'] },
   cross:  { list: 'dl_cross',  ids: ['g_cross','s_cross'] }
 };
 
@@ -12730,7 +12706,7 @@ applyInoReopenVisibility();
 renderPreview();
 loadPersistedDrafts();
 loadChipColours();
-loadLaneAmpPref();
+// laneAmpersand removed — always "and"
 loadConsecWordingPref();
 loadCapsToTitlePref();
 loadEditWriteBackPref();
