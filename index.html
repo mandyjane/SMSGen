@@ -1207,6 +1207,23 @@
   #body-ino .freqloc-add:hover { border-color: var(--blue); color: var(--blue); }
   #body-ino .freqloc-note { color: var(--blue); }
 
+  /* Responder group labels and More/Less */
+  .resp-group-label {
+    font-family: var(--mono, 'JetBrains Mono', monospace);
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--muted, #6b7280); margin: 10px 0 5px 0; padding: 0;
+  }
+  .resp-group-label:first-child, .responder-col-card h4 + .resp-group-label { margin-top: 0; }
+  .resp-more-link {
+    display: inline-block; margin-top: 10px; padding: 0; border: none; background: none;
+    font-size: 12px; font-weight: 600; color: var(--muted, #6b7280); cursor: pointer;
+    letter-spacing: .02em;
+  }
+  .resp-more-link:hover { color: var(--blue, #1a5fc7); }
+  .resp-more-link .ml-chev { font-size: 11px; }
+  .resp-more-section { display: none; margin-top: 8px; border-top: 1px dashed var(--line, #e5e7eb); padding-top: 8px; }
+  .resp-more-section.open { display: block; }
+
   /* SCR road autocomplete dropdown */
   .scr-ac-wrap { position: relative; }
   .scr-ac-list {
@@ -2013,7 +2030,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 204.15</span>
+    <span class="app-version">Version 204.16</span>
   </footer>
 </div>
 
@@ -6547,19 +6564,49 @@ function buildINO(){
       <div class="responder-cols">
         <div class="responder-col-card">
           <h4>At scene</h4>
+          <div class="resp-group-label">Emergency</div>
           <div class="check-grid">
-            ${RESPONDERS.map(r=>`<label class="inline-check"><input type="checkbox" class="s_groups_ck" value="${r}" onchange="syncInoGroup('scene','${r}')"> ${r}</label>`).join('')}
-            <label class="inline-check"><input type="checkbox" id="s_groups_other_ck" onchange="onInoGroupsOtherChange()"> Other</label>
+            ${["QPS","QAS","QFD"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_groups_ck" value="${r}" onchange="syncInoGroup('scene','${r}')"> ${r}</label>`).join('')}
           </div>
-          <input type="text" id="s_groups_other" placeholder="Other groups (e.g. SES)" style="display:none;margin-top:8px;">
+          <div class="resp-group-label">Traffic &amp; Road</div>
+          <div class="check-grid">
+            ${["TRU","TMA","FCU","Road Steward","Traffic Control"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_groups_ck" value="${r}" onchange="syncInoGroup('scene','${r}')"> ${r}</label>`).join('')}
+          </div>
+          <div class="resp-group-label">Support</div>
+          <div class="check-grid">
+            ${["Tow","Mechanical services","Media"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_groups_ck" value="${r}" onchange="syncInoGroup('scene','${r}')"> ${r}</label>`).join('')}
+          </div>
+          <button type="button" class="resp-more-link" onclick="toggleRespMore('scene')"><span id="scene_resp_ml_label">More</span> <span class="ml-chev" id="scene_resp_ml_chev">▾</span></button>
+          <div class="resp-more-section" id="scene_resp_more">
+            <div class="check-grid">
+              ${["Medivac","SOC","Emergency services","Translink response service"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_groups_ck" value="${r}" onchange="syncInoGroup('scene','${r}')"> ${r}</label>`).join('')}
+              <label class="inline-check"><input type="checkbox" id="s_groups_other_ck" onchange="onInoGroupsOtherChange()"> Other</label>
+            </div>
+            <input type="text" id="s_groups_other" placeholder="Other groups (e.g. SES)" style="display:none;margin-top:8px;">
+          </div>
         </div>
         <div class="responder-col-card">
           <h4>Proceeding</h4>
+          <div class="resp-group-label">Emergency</div>
           <div class="check-grid">
-            ${RESPONDERS.map(r=>`<label class="inline-check"><input type="checkbox" class="s_route_ck" value="${r}" onchange="syncInoGroup('route','${r}')"> ${r}</label>`).join('')}
-            <label class="inline-check"><input type="checkbox" id="s_route_other_ck" onchange="onInoRouteOtherChange()"> Other</label>
+            ${["QPS","QAS","QFD"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_route_ck" value="${r}" onchange="syncInoGroup('route','${r}')"> ${r}</label>`).join('')}
           </div>
-          <input type="text" id="s_route_other" placeholder="Other (proceeding)" style="display:none;margin-top:8px;">
+          <div class="resp-group-label">Traffic &amp; Road</div>
+          <div class="check-grid">
+            ${["TRU","TMA","FCU","Road Steward","Traffic Control"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_route_ck" value="${r}" onchange="syncInoGroup('route','${r}')"> ${r}</label>`).join('')}
+          </div>
+          <div class="resp-group-label">Support</div>
+          <div class="check-grid">
+            ${["Tow","Mechanical services","Media"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_route_ck" value="${r}" onchange="syncInoGroup('route','${r}')"> ${r}</label>`).join('')}
+          </div>
+          <button type="button" class="resp-more-link" onclick="toggleRespMore('route')"><span id="route_resp_ml_label">More</span> <span class="ml-chev" id="route_resp_ml_chev">▾</span></button>
+          <div class="resp-more-section" id="route_resp_more">
+            <div class="check-grid">
+              ${["Medivac","SOC","Emergency services","Translink response service"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_route_ck" value="${r}" onchange="syncInoGroup('route','${r}')"> ${r}</label>`).join('')}
+              <label class="inline-check"><input type="checkbox" id="s_route_other_ck" onchange="onInoRouteOtherChange()"> Other</label>
+            </div>
+            <input type="text" id="s_route_other" placeholder="Other (proceeding)" style="display:none;margin-top:8px;">
+          </div>
         </div>
       </div>
     </div>
@@ -9536,6 +9583,34 @@ function syncResponder(which, value){
 }
 
 /* INO Groups at scene / En route are mutually exclusive per value, same as Generic. */
+/* Responder More/Less toggle for scene and route columns */
+const RESP_MORE_VALUES = ['Medivac','SOC','Emergency services','Translink response service'];
+function toggleRespMore(col, forceOpen){
+  const section = document.getElementById(col + '_resp_more');
+  const label = document.getElementById(col + '_resp_ml_label');
+  const chev = document.getElementById(col + '_resp_ml_chev');
+  if (!section) return;
+  const isOpen = section.classList.contains('open');
+  if (forceOpen && isOpen) return;
+  section.classList.toggle('open', forceOpen || !isOpen);
+  const nowOpen = section.classList.contains('open');
+  if (label) label.textContent = nowOpen ? 'Less' : 'More';
+  if (chev) chev.textContent = nowOpen ? '▴' : '▾';
+}
+/* Auto-expand More if any hidden responder is checked (e.g. from draft restore) */
+function autoExpandRespMore(){
+  ['scene','route'].forEach(col => {
+    const cls = col === 'scene' ? 's_groups_ck' : 's_route_ck';
+    const otherCkId = col === 'scene' ? 's_groups_other_ck' : 's_route_other_ck';
+    const hasHidden = RESP_MORE_VALUES.some(v => {
+      const el = document.querySelector(`.${cls}[value="${v}"]`);
+      return el && el.checked;
+    });
+    const otherChecked = (document.getElementById(otherCkId)||{}).checked;
+    if (hasHidden || otherChecked) toggleRespMore(col, true);
+  });
+}
+
 function syncInoGroup(which, value){
   const thisCls  = which === 'scene' ? 's_groups_ck' : 's_route_ck';
   const otherCls = which === 'scene' ? 's_route_ck'  : 's_groups_ck';
@@ -11955,9 +12030,9 @@ function applyDraft(s){
     // resolution
     setChecks('s_groups_ck', a.groupsList);
     if (a.groupsOther){ document.getElementById('s_groups_other_ck').checked = true; onInoGroupsOtherChange(); set('s_groups_other', a.groupsOtherText); }
-    { const el = document.getElementById('s_road_steward_route'); if (el) el.checked = !!a.roadStewardRoute; }
     setChecks('s_route_ck', a.routeList);
     if (a.routeOther){ document.getElementById('s_route_other_ck').checked = true; onInoRouteOtherChange(); set('s_route_other', a.routeOtherText); }
+    autoExpandRespMore();
     set('s_dur_hh', a.durHH); set('s_dur_mm', a.durMM);
     if (a.durRecovery){ const rc = document.getElementById('s_dur_recovery'); if (rc){ rc.checked = true; onInoRecoveryChange(); } }
     if (a.durFcuQps){ const fq = document.getElementById('s_dur_fcuqps'); if (fq){ fq.checked = true; } }
