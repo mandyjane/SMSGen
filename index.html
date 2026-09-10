@@ -2030,7 +2030,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 204.17</span>
+    <span class="app-version">Version 204.19</span>
   </footer>
 </div>
 
@@ -4271,10 +4271,36 @@ const GEN_DIR_ABBREV_MAP = {
   northeastbound: 'NEB', northwestbound: 'NWB', southeastbound: 'SEB', southwestbound: 'SWB',
   inbound: 'IB', outbound: 'OB'
 };
+/* Show/hide the lane count control when Unknown direction is selected */
+function onLaneDirChange(){
+  const sel = (document.querySelector('.s_lane_dir:checked')||{}).value;
+  const wrap = document.getElementById('s_lane_count_wrap');
+  if (wrap) wrap.style.display = (sel === 'Unknown') ? 'block' : 'none';
+}
+function toggleUnknownLaneNum(){
+  const mode = (document.querySelector('input[name="s_unknown_lane_count"]:checked')||{}).value;
+  const numEl = document.getElementById('s_unknown_lane_num');
+  if (numEl) numEl.style.display = (mode === 'number') ? 'inline-block' : 'none';
+}
+/* Get the unknown lane count: "single" or a number word */
+function getUnknownLaneCount(){
+  const mode = (document.querySelector('input[name="s_unknown_lane_count"]:checked')||{}).value;
+  if (mode === 'single') return { word: 'Single', n: 1 };
+  const n = parseInt((document.getElementById('s_unknown_lane_num')||{}).value, 10);
+  if (isNaN(n) || n < 1) return { word: 'Single', n: 1 };
+  return { word: capNumWord(n), n: n };
+}
+/* Check if Unknown direction is selected */
+function isUnknownLaneDir(){
+  return (document.querySelector('.s_lane_dir:checked')||{}).value === 'Unknown';
+}
+
 function withLaneDirection(clause, scope){
   if (!clause) return clause;
   const dirs = readLaneDirections(scope);
   if (!dirs.length) return clause;
+  // Unknown direction: no direction suffix appended
+  if (dirs.includes('unknown') || dirs.includes('Unknown')) return clause;
   if (dirs.includes('both') || dirs.includes('both directions')) return `${clause} in both directions`;
   if (dirs.includes('all directions')) return `${clause} in all directions`;
   const useAbbrev = (typeof genDirAbbrev !== 'undefined') && genDirAbbrev && GEN_DIR_SCOPES.includes(scope);
@@ -4992,13 +5018,24 @@ function buildLanesP(prefix){
   }
 
   if (prefix === 's'){
+    // When Unknown direction is selected, verb changes to "open" and
+    // if no specific positions are ticked, use the lane count control.
+    const unknownDir = isUnknownLaneDir();
+    const effectiveVerb = unknownDir ? 'open' : stateStr;
+
     // INO: lane positions (Left/Centre/Right), each with an optional count.
-    // If ANY selected position has a count, render per-position with counts:
-    //   "1 x left lane & 1 x middle lane blocked".
-    // If NO position has a count, combine them: "left & middle lanes blocked"
-    //   (or "left lane blocked" for a single position).
     const posEls = Array.from(document.querySelectorAll('.s_lane_pos:checked'));
-    if (!posEls.length) return stateStr || '';
+
+    // No positions ticked: if Unknown direction, use lane count control
+    if (!posEls.length){
+      if (unknownDir){
+        const lc = getUnknownLaneCount();
+        const laneStr = `${lc.word} lane${lc.n > 1 ? 's' : ''} open`;
+        return laneStr;
+      }
+      return stateStr || '';
+    }
+
     const withCount = posEls.map(el => {
       const numEl = document.querySelector(`.s_lane_pos_num[data-pos="${el.value}"]`);
       const n = numEl ? parseInt(numEl.value, 10) : NaN;
@@ -5015,8 +5052,8 @@ function buildLanesP(prefix){
       const names = withCount.map(p => p.pos);
       laneStr = laneJoin(names) + ' lane' + (names.length > 1 ? 's' : '');
     }
-    if (laneStr && stateStr){ return withLaneDirection(`${laneStr} ${stateStr}`, '.s_lane_dir'); }
-    return withLaneDirection(laneStr || stateStr, '.s_lane_dir');
+    if (laneStr && effectiveVerb){ return withLaneDirection(`${laneStr} ${effectiveVerb}`, '.s_lane_dir'); }
+    return withLaneDirection(laneStr || effectiveVerb, '.s_lane_dir');
   }
 
   // Generic: L1–L5 identifiers plus optional Left/Centre/Right positions.
@@ -5277,19 +5314,20 @@ function onInoDiversionChange(){
   if (detail) detail.style.display = yes ? 'block' : 'none';
   if (!yes){
     const box = document.getElementById('s_diversion_text');
-    if (box){ box.value = ''; box.style.display = 'none'; }
-    document.querySelectorAll('input[name="s_div_available"]').forEach(r => { r.checked = false; r._wasChecked = false; });
+    if (box) box.value = '';
+    const wrap = document.getElementById('demo_div_via_wrap');
+    if (wrap) wrap.style.display = 'none';
+    document.querySelectorAll('input[name="s_div_available"]').forEach(r => { r.checked = false; });
   }
   renderPreview();
   scheduleWorkingSave();
 }
 function onInoDivAvailChange(){
   const avail = (document.querySelector('input[name="s_div_available"]:checked')||{}).value;
+  const wrap = document.getElementById('demo_div_via_wrap');
   const box = document.getElementById('s_diversion_text');
-  if (box){
-    box.style.display = (avail === 'yes') ? 'block' : 'none';
-    if (avail !== 'yes') box.value = '';
-  }
+  if (wrap) wrap.style.display = (avail === 'yes') ? 'block' : 'none';
+  if (avail !== 'yes' && box) box.value = '';
   renderPreview();
   scheduleWorkingSave();
 }
@@ -6409,8 +6447,17 @@ function buildINO(){
       <p class="hint" style="margin-bottom:6px;margin-top:-2px;">Auto-selected from "Direction incident occurred" — editable independently.</p>
       <div class="check-grid">
         ${['Northbound','Southbound','Eastbound','Westbound','Both directions','All directions'].map(d =>
-          `<label class="inline-check"><input type="radio" name="s_lane_dir_radio" class="s_lane_dir desel-radio" value="${d}" onclick="toggleDeselectableRadio(this)" onchange="renderPreview(); scheduleWorkingSave();"> ${d}</label>`
+          `<label class="inline-check"><input type="radio" name="s_lane_dir_radio" class="s_lane_dir desel-radio" value="${d}" onclick="toggleDeselectableRadio(this)" onchange="onLaneDirChange(); renderPreview(); scheduleWorkingSave();"> ${d}</label>`
         ).join('')}
+        <label class="inline-check" style="border-style:dashed;"><input type="radio" name="s_lane_dir_radio" class="s_lane_dir desel-radio" value="Unknown" onclick="toggleDeselectableRadio(this)" onchange="onLaneDirChange(); renderPreview(); scheduleWorkingSave();"> Unknown</label>
+      </div>
+      <div id="s_lane_count_wrap" style="display:none;margin-top:8px;">
+        <span class="field-label" style="font-size:11px;">Lane count</span>
+        <div class="check-grid" style="gap:5px;">
+          <label class="inline-check"><input type="radio" name="s_unknown_lane_count" value="single" checked onchange="renderPreview(); scheduleWorkingSave();"> Single</label>
+          <input type="number" id="s_unknown_lane_num" min="1" max="10" placeholder="#" style="width:55px;padding:5px 8px;font-size:13px;border:1px solid var(--line-strong,#d1d5db);border-radius:6px;display:none;" oninput="renderPreview(); scheduleWorkingSave();">
+          <label class="inline-check"><input type="radio" name="s_unknown_lane_count" value="number" onchange="toggleUnknownLaneNum(); renderPreview(); scheduleWorkingSave();"> Number</label>
+        </div>
       </div>
     </div>
 
@@ -6453,6 +6500,7 @@ function buildINO(){
         <span id="s_oppsec_chev">▸</span> Additional info
       </button>
       <div id="s_oppsec_body" style="display:none;margin-top:10px;">
+        <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted,#6b7280);margin-bottom:6px;cursor:pointer;"><input type="checkbox" id="s_opp_comma" checked onchange="renderPreview(); scheduleWorkingSave();" style="accent-color:var(--blue,#1a5fc7);"> Separate with comma</label>
         <input type="text" id="s_opp_text" placeholder="Additional information" oninput="renderPreview(); scheduleWorkingSave();">
       </div>
     </div>
@@ -6491,21 +6539,30 @@ function buildINO(){
     </div>
 
     <div class="field" id="s_diversion_wrap">
-      <span class="field-label">Diversion</span>
+      <span class="field-label">Diversion required?</span>
       <div class="check-grid">
-        <label class="inline-check"><input type="radio" class="desel-radio" name="s_diversion" value="yes" onclick="toggleDeselectableRadio(this)" onchange="onInoDiversionChange()"> Yes</label>
-        <label class="inline-check"><input type="radio" class="desel-radio" name="s_diversion" value="no" onclick="toggleDeselectableRadio(this)" onchange="onInoDiversionChange()"> No</label>
+        <label class="inline-check"><input type="radio" name="s_diversion" value="yes" onchange="onInoDiversionChange()"> Yes</label>
+        <label class="inline-check"><input type="radio" name="s_diversion" value="no" onchange="onInoDiversionChange()"> No</label>
       </div>
       <div id="s_diversion_detail" style="display:none;margin-top:10px;">
         <div class="field" style="margin-bottom:8px;">
           <span class="field-label">Are diversions available?</span>
           <div class="check-grid">
-            <label class="inline-check"><input type="radio" class="desel-radio" name="s_div_available" value="yes" onclick="toggleDeselectableRadio(this)" onchange="onInoDivAvailChange()"> Yes</label>
-            <label class="inline-check"><input type="radio" class="desel-radio" name="s_div_available" value="no" onclick="toggleDeselectableRadio(this)" onchange="onInoDivAvailChange()"> No</label>
+            <label class="inline-check"><input type="radio" name="s_div_available" value="yes" onchange="onInoDivAvailChange()"> Yes</label>
+            <label class="inline-check"><input type="radio" name="s_div_available" value="no" onchange="onInoDivAvailChange()"> No</label>
           </div>
         </div>
-        <input type="text" id="s_diversion_text" placeholder="Diversion location (e.g. Smith St)" style="display:none;" oninput="renderPreview(); scheduleWorkingSave();">
+    <div id="demo_div_via_wrap" style="display:none;">
+      <div style="font-size:11px;font-weight:600;color:var(--muted,#6b7280);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">via</div>
+      <input type="text" id="s_diversion_text" placeholder="Diversion location (e.g. Smith St)" oninput="renderPreview(); scheduleWorkingSave();">
+    </div>
       </div>
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--line,#e5e7eb);margin:16px 0;">
+    <div class="field">
+      <span class="field-label">Additional information</span>
+      <input type="text" id="s_addl_info" placeholder="Free text — appended to the end of the message" oninput="renderPreview(); scheduleWorkingSave();">
     </div>
 
     </div>
@@ -7473,10 +7530,11 @@ function renderINO(){
   const length = congestionYN === 'yes' ? get('s_length') : '';
   const congestionRaw = congestionYN === 'yes' ? titleCaseLocationField(expandAbbreviations(get('s_congestion'))) : '';
   const congestion = congestionRaw ? `from ${congestionRaw}` : '';
-  // Additional info: single free-text box. Emit the operator's entered text as-is (no auto-capitalise),
-  // prefixed with ", " so it appends to the previous clause.
+  // Additional info: single free-text box. Appended directly to the lane clause.
+  // Comma prefix controlled by checkbox.
   const oppRaw = expandAbbreviations(get('s_opp_text'));
-  const oppStr = oppRaw ? `, ${oppRaw}` : '';
+  const oppComma = (document.getElementById('s_opp_comma')||{}).checked;
+  const oppStr = oppRaw ? (oppComma ? `, ${oppRaw}` : ` ${oppRaw}`) : '';
   const diversionVal = (document.querySelector('input[name="s_diversion"]:checked')||{}).value;
   let diversion = '';
   if (diversionVal === 'yes'){
@@ -7494,9 +7552,11 @@ function renderINO(){
     } else if (divAvail === 'no'){
       diversion = 'No diversions available';
     }
-  } else if (diversionVal === 'no') diversion = 'No diversion available';
+  } else if (diversionVal === 'no') diversion = '';
   // Congestion = No → explicit "Nil congestion" (sits before the diversion detail).
   const nilCongestion = congestionYN === 'no' ? 'Nil congestion' : '';
+  // Additional information: free text appended to the end of the message, no auto-capitalise.
+  const addlInfo = expandAbbreviations(get('s_addl_info')) || '';
 
   // Actions
   const actQld = (document.querySelector('input[name="s_act_qld"]:checked')||{}).value === 'yes';
@@ -7765,7 +7825,7 @@ function renderINO(){
       // Guard against a doubled "Nil congestion": if lengthCong already resolved to it
       // (FINAL + Congestion clear), drop the radio-driven nilCongestion.
       const nilCong2 = (lengthCong === 'Nil congestion') ? '' : nilCongestion;
-      const preDivBits = [laneBit, oppStr, lengthCong, nilCong2].filter(Boolean);
+      const preDivBits = [laneBit + oppStr, lengthCong, nilCong2].filter(Boolean);
       niBits = preDivBits;  // diversion handled separately
       const reopenPair = [inoReopenedStr, inoStillStr].filter(Boolean).join(', ');
       if (reopenPair) niBits.unshift(reopenPair);
@@ -7804,7 +7864,8 @@ function renderINO(){
     // FINAL the note stays on the Final Update line (handled below) — don't double it here.
     if (isNo1Final && finalNote) niBits.push(finalNote);
     const mainImpact = niBits.length ? niBits.join('; ') : '[impact]';
-    const fullImpact = diversion ? `${mainImpact}. ${diversion}` : mainImpact;
+    let fullImpact = diversion ? `${mainImpact}. ${diversion}` : mainImpact;
+    if (addlInfo) fullImpact = `${fullImpact}. ${addlInfo}`;
     lines.push(`Network Impact: ${fullImpact}.`);
 
     // ----- No.# FINAL only: a separate "Final Update:" line -----
@@ -7841,9 +7902,10 @@ function renderINO(){
     // Unknown injuries and infrastructure now generate nothing (v203);
     // fatalities is dropped (fatBit already resolves to '' in that case).
     const updDetailBits = isUpdateContext ? [infra, injBit, fatBit].filter(Boolean) : [];
-    const netBits = [laneClause, oppStr, ...updDetailBits, lengthCong, nilCong2].filter(Boolean);
+    const netBits = [laneClause + oppStr, ...updDetailBits, lengthCong, nilCong2].filter(Boolean);
     const netMain = netBits.join('; ');
-    const netFull = diversion ? `${netMain}. ${diversion}` : netMain;
+    let netFull = diversion ? `${netMain}. ${diversion}` : netMain;
+    if (addlInfo) netFull = netFull ? `${netFull}. ${addlInfo}` : addlInfo;
     // Register clickable sub-parts of this line.
     regSeg(laneClause, 's_lanes_field');
     regSeg(inoReopenedStr, 's_reopen_wrap');
@@ -10190,11 +10252,12 @@ function collectFormState(){
         laneAll: (document.getElementById('s_lane_all')||{}).checked,
         laneUnknown: (document.getElementById('s_lane_unknown')||{}).checked,
         laneNil: (document.getElementById('s_lane_nil')||{}).checked,
-        oppText: gv('s_opp_text'),
+        oppText: gv('s_opp_text'), oppComma: !!(document.getElementById('s_opp_comma')&&document.getElementById('s_opp_comma').checked),
         congestionYN: rb('s_congestion_yn'),
         length: gv('s_length'), lengthUnit: (typeof inoLengthUnit !== 'undefined') ? inoLengthUnit : 'km',
         congType: (document.querySelector('input[name="s_cong_type"]:checked')||{}).value || '', congPeak: !!(document.getElementById('s_cong_peak')&&document.getElementById('s_cong_peak').checked), congestion: gv('s_congestion'),
-        diversion: rb('s_diversion'), diversionText: gv('s_diversion_text'),
+        diversion: rb('s_diversion'), divAvailable: rb('s_div_available'), diversionText: gv('s_diversion_text'),
+        addlInfo: gv('s_addl_info'),
         lowercase: (document.getElementById('s_lowercase')||{}).checked,
         actQld: rb('s_act_qld'), vision6: rb('s_vision6'), publicSms: rb('s_publicsms'),
         systems: Array.from(document.querySelectorAll('.s_sys:checked')).map(c=>c.value),
@@ -12017,9 +12080,11 @@ function applyDraft(s){
       oppVal = [a.oppText, a.secText].filter(Boolean).join('; ');
     }
     if (oppVal){ set('s_opp_text', oppVal); toggleInoOppSec(true); }
+    { const oc = document.getElementById('s_opp_comma'); if (oc && a.oppComma !== undefined) oc.checked = !!a.oppComma; }
     if (a.congestionYN){ setRadio('s_congestion_yn', a.congestionYN); syncRadioFlags('s_congestion_yn'); onInoCongestionChange(); }
     set('s_length', a.length); set('s_congestion', a.congestion);
-    if (a.diversion){ setRadio('s_diversion', a.diversion); syncRadioFlags('s_diversion'); onInoDiversionChange(); set('s_diversion_text', a.diversionText); }
+    if (a.diversion){ setRadio('s_diversion', a.diversion); syncRadioFlags('s_diversion'); onInoDiversionChange(); if (a.divAvailable){ setRadio('s_div_available', a.divAvailable); onInoDivAvailChange(); } set('s_diversion_text', a.diversionText); }
+    if (a.addlInfo) set('s_addl_info', a.addlInfo);
     { const lc = document.getElementById('s_lowercase'); if (lc){ lc.checked = !!a.lowercase; setLowercasePref(!!a.lowercase); } }
     relabelInoEventOptions();
     // actions
@@ -12584,7 +12649,7 @@ function scrAcKeydown(e, inputId){
     scrAcActive[inputId] = idx;
     items.forEach((el, i) => el.classList.toggle('active', i === idx));
     items[idx].scrollIntoView({block:'nearest'});
-  } else if (e.key === 'Enter' && idx >= 0){
+  } else if ((e.key === 'Enter' || e.key === 'Tab') && idx >= 0){
     e.preventDefault();
     const inp = document.getElementById(inputId);
     inp.value = items[idx].dataset.val;
