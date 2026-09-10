@@ -2030,7 +2030,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 204.19</span>
+    <span class="app-version">Version 205.1</span>
   </footer>
 </div>
 
@@ -4271,24 +4271,35 @@ const GEN_DIR_ABBREV_MAP = {
   northeastbound: 'NEB', northwestbound: 'NWB', southeastbound: 'SEB', southwestbound: 'SWB',
   inbound: 'IB', outbound: 'OB'
 };
-/* Show/hide the lane count control when Unknown direction is selected */
+/* Show/hide grey-out on Impact on lanes when Unknown direction is selected */
 function onLaneDirChange(){
   const sel = (document.querySelector('.s_lane_dir:checked')||{}).value;
-  const wrap = document.getElementById('s_lane_count_wrap');
-  if (wrap) wrap.style.display = (sel === 'Unknown') ? 'block' : 'none';
+  const isUnknown = (sel === 'Unknown');
+  // Grey out Left/Centre/Right/All/Nil when Unknown — but keep Open lanes count active
+  document.querySelectorAll('.s_lane_pos, #s_lane_all, #s_lane_nil').forEach(el => {
+    const label = el.closest('label');
+    if (label) { label.style.opacity = isUnknown ? '0.35' : '1'; label.style.pointerEvents = isUnknown ? 'none' : ''; }
+  });
+  document.querySelectorAll('.s_lane_pos_num').forEach(el => {
+    el.style.opacity = isUnknown ? '0.35' : '';
+    el.style.pointerEvents = isUnknown ? 'none' : '';
+  });
 }
-function toggleUnknownLaneNum(){
-  const mode = (document.querySelector('input[name="s_unknown_lane_count"]:checked')||{}).value;
-  const numEl = document.getElementById('s_unknown_lane_num');
-  if (numEl) numEl.style.display = (mode === 'number') ? 'inline-block' : 'none';
+/* When Open lanes count is typed, clear other lane selections since they're mutually exclusive */
+function onOpenLaneCountChange(){
+  const n = parseInt((document.getElementById('s_open_lane_count')||{}).value, 10);
+  if (!isNaN(n) && n > 0){
+    // Clear Left/Centre/Right, All, Nil
+    document.querySelectorAll('.s_lane_pos').forEach(c => { c.checked = false; });
+    const allCk = document.getElementById('s_lane_all'); if (allCk) allCk.checked = false;
+    const nilCk = document.getElementById('s_lane_nil'); if (nilCk) nilCk.checked = false;
+  }
 }
-/* Get the unknown lane count: "single" or a number word */
-function getUnknownLaneCount(){
-  const mode = (document.querySelector('input[name="s_unknown_lane_count"]:checked')||{}).value;
-  if (mode === 'single') return { word: 'Single', n: 1 };
-  const n = parseInt((document.getElementById('s_unknown_lane_num')||{}).value, 10);
-  if (isNaN(n) || n < 1) return { word: 'Single', n: 1 };
-  return { word: capNumWord(n), n: n };
+/* Get the open lane count from the input field */
+function getOpenLaneCount(){
+  const n = parseInt((document.getElementById('s_open_lane_count')||{}).value, 10);
+  if (isNaN(n) || n < 1) return null;
+  return { word: n === 1 ? 'Single' : capNumWord(n), n: n };
 }
 /* Check if Unknown direction is selected */
 function isUnknownLaneDir(){
@@ -5019,20 +5030,23 @@ function buildLanesP(prefix){
 
   if (prefix === 's'){
     // When Unknown direction is selected, verb changes to "open" and
-    // if no specific positions are ticked, use the lane count control.
+    // lane controls are greyed out — Open lanes count field is used instead.
     const unknownDir = isUnknownLaneDir();
     const effectiveVerb = unknownDir ? 'open' : stateStr;
+
+    // Open lanes count field: generates "Single lane open" / "Two lanes open" etc.
+    // Takes priority when filled (mutually exclusive with positions).
+    const openLc = getOpenLaneCount();
+    if (openLc){
+      return `${openLc.word} lane${openLc.n > 1 ? 's' : ''} open`;
+    }
 
     // INO: lane positions (Left/Centre/Right), each with an optional count.
     const posEls = Array.from(document.querySelectorAll('.s_lane_pos:checked'));
 
-    // No positions ticked: if Unknown direction, use lane count control
+    // No positions ticked
     if (!posEls.length){
-      if (unknownDir){
-        const lc = getUnknownLaneCount();
-        const laneStr = `${lc.word} lane${lc.n > 1 ? 's' : ''} open`;
-        return laneStr;
-      }
+      if (unknownDir) return '';
       return stateStr || '';
     }
 
@@ -6451,14 +6465,6 @@ function buildINO(){
         ).join('')}
         <label class="inline-check" style="border-style:dashed;"><input type="radio" name="s_lane_dir_radio" class="s_lane_dir desel-radio" value="Unknown" onclick="toggleDeselectableRadio(this)" onchange="onLaneDirChange(); renderPreview(); scheduleWorkingSave();"> Unknown</label>
       </div>
-      <div id="s_lane_count_wrap" style="display:none;margin-top:8px;">
-        <span class="field-label" style="font-size:11px;">Lane count</span>
-        <div class="check-grid" style="gap:5px;">
-          <label class="inline-check"><input type="radio" name="s_unknown_lane_count" value="single" checked onchange="renderPreview(); scheduleWorkingSave();"> Single</label>
-          <input type="number" id="s_unknown_lane_num" min="1" max="10" placeholder="#" style="width:55px;padding:5px 8px;font-size:13px;border:1px solid var(--line-strong,#d1d5db);border-radius:6px;display:none;" oninput="renderPreview(); scheduleWorkingSave();">
-          <label class="inline-check"><input type="radio" name="s_unknown_lane_count" value="number" onchange="toggleUnknownLaneNum(); renderPreview(); scheduleWorkingSave();"> Number</label>
-        </div>
-      </div>
     </div>
 
     <div class="field" id="s_lanes_field">
@@ -6474,6 +6480,10 @@ function buildINO(){
         <label class="inline-check lane-all"><input type="checkbox" id="s_lane_all" onchange="onInoLaneAllChange()"><i class="ti ti-barrier-block lane-all-ico" aria-hidden="true"></i> All</label>
         <span class="lane-nil-divider" aria-hidden="true"></span>
         <label class="inline-check lane-nil"><input type="checkbox" id="s_lane_nil" onchange="onInoLaneNilChange()"><i class="ti ti-circle-off lane-nil-ico" aria-hidden="true"></i> Nil</label>
+        <span style="width:1px;height:22px;background:var(--line-strong,#d1d5db);margin:0 4px;" aria-hidden="true"></span>
+        <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--muted,#6b7280);">Open lanes
+          <input type="number" id="s_open_lane_count" min="1" max="10" placeholder="#" style="width:48px;padding:4px 6px;font-size:13px;border:1px solid var(--line-strong,#d1d5db);border-radius:5px;text-align:center;" oninput="onOpenLaneCountChange(); renderPreview(); scheduleWorkingSave();">
+        </label>
       </div>
       <div id="s_reopen_wrap" style="display:none; margin-top:10px;">
         <button type="button" class="reopen-toggle" id="s_reopen_btn" aria-expanded="false" onclick="toggleReopenPanel()">
@@ -10247,6 +10257,7 @@ function collectFormState(){
         reopenPos: Array.from(document.querySelectorAll('.s_reopen_pos:checked')).map(c=>c.value),
         reopenCounts: (function(){ const o={}; document.querySelectorAll('.s_reopen_pos_num').forEach(el=>{ if(el.value) o[el.dataset.pos]=el.value; }); return o; })(),
         laneDir: Array.from(document.querySelectorAll('.s_lane_dir:checked')).map(c=>c.value),
+        openLaneCount: gv('s_open_lane_count'),
         reopenDir: Array.from(document.querySelectorAll('.s_reopen_dir:checked')).map(c=>c.value),
         laneState: rb('s_lane_state'),
         laneAll: (document.getElementById('s_lane_all')||{}).checked,
@@ -12060,7 +12071,8 @@ function applyDraft(s){
       toggleReopenPanel(true);
     }
     // v161: restore lane directions (main + reopen), then reveal the row if any is ticked.
-    setChecks('s_lane_dir', a.laneDir);
+    setChecks('s_lane_dir', a.laneDir); onLaneDirChange();
+    if (a.openLaneCount) set('s_open_lane_count', a.openLaneCount);
     setChecks('s_reopen_dir', a.reopenDir);
     if (document.querySelector('.s_lane_dir:checked')) toggleMoreless('s_lanedir', true);
     if (document.querySelector('.s_reopen_dir:checked')){ toggleReopenPanel(true); toggleMoreless('s_reopendir', true); }
