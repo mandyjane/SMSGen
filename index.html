@@ -1214,6 +1214,8 @@
     color: var(--muted, #6b7280); margin: 10px 0 5px 0; padding: 0;
   }
   .resp-group-label:first-child, .responder-col-card h4 + .resp-group-label { margin-top: 0; }
+  .resp-grid-emergency { display: grid; grid-template-columns: repeat(4, auto); gap: 5px; justify-content: start; }
+  @media (max-width: 520px) { .resp-grid-emergency { grid-template-columns: repeat(2, auto); } }
   .resp-more-link {
     display: inline-block; margin-top: 10px; padding: 0; border: none; background: none;
     font-size: 12px; font-weight: 600; color: var(--muted, #6b7280); cursor: pointer;
@@ -1223,6 +1225,11 @@
   .resp-more-link .ml-chev { font-size: 11px; }
   .resp-more-section { display: none; margin-top: 8px; border-top: 1px dashed var(--line, #e5e7eb); padding-top: 8px; }
   .resp-more-section.open { display: block; }
+  .resp-more-summary {
+    display: none; margin-left: 6px; font-size: 11px; font-weight: 500;
+    color: var(--blue-deep, #16407c); background: var(--blue-soft, #e8f0fe);
+    padding: 2px 8px; border-radius: 10px; vertical-align: middle;
+  }
 
   /* SCR road autocomplete dropdown */
   .scr-ac-wrap { position: relative; }
@@ -2030,7 +2037,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 205.1</span>
+    <span class="app-version">Version 205.6</span>
   </footer>
 </div>
 
@@ -5296,15 +5303,28 @@ function onInoInfraChange(){
 function onInoGroupsOtherChange(){
   const ck = document.getElementById('s_groups_other_ck').checked;
   document.getElementById('s_groups_other').style.display = ck ? 'block' : 'none';
+  updateAllRespSummaries();
   renderPreview();
 }
 function onInoRouteOtherChange(){
   const ck = document.getElementById('s_route_other_ck').checked;
   document.getElementById('s_route_other').style.display = ck ? 'block' : 'none';
+  updateAllRespSummaries();
   renderPreview();
 }
 /* Expand/collapse the "opposite carriageway or secondary road" section. Collapsed by
    default; auto-expanded on Load when either sub-option carried a value. */
+/* Actions "Other" collapsible section */
+function toggleActOther(force){
+  const body = document.getElementById('s_act_other_body');
+  const chev = document.getElementById('s_act_other_chev');
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  const open = (typeof force === 'boolean') ? force : !isOpen;
+  body.style.display = open ? 'block' : 'none';
+  if (chev) chev.textContent = open ? '▾' : '▸';
+}
+
 function toggleInoOppSec(force){
   const body = document.getElementById('s_oppsec_body');
   const chev = document.getElementById('s_oppsec_chev');
@@ -6569,7 +6589,6 @@ function buildINO(){
       </div>
     </div>
 
-    <hr style="border:none;border-top:1px solid var(--line,#e5e7eb);margin:16px 0;">
     <div class="field">
       <span class="field-label">Additional information</span>
       <input type="text" id="s_addl_info" placeholder="Free text — appended to the end of the message" oninput="renderPreview(); scheduleWorkingSave();">
@@ -6598,26 +6617,30 @@ function buildINO(){
       <span class="field-label">Activated systems</span>
       <div class="check-grid">
         ${["VMS","VSLS","LUMS"].map(x=>`<label class="inline-check"><input type="checkbox" class="s_sys" value="${x}"> ${x}</label>`).join('')}
+        <label class="inline-check"><input type="checkbox" class="s_sys" value="Traffic signals"> Traffic signals</label>
         <button type="button" class="moreless-btn" id="s_sys_more_btn" aria-expanded="false" onclick="toggleSysMore()"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button>
         <span class="moreless-extra" id="s_sys_more" style="display:none;">
           <label class="inline-check"><input type="checkbox" class="s_sys" value="RCIS"> RCIS</label>
-          <label class="inline-check"><input type="checkbox" class="s_sys" value="Traffic signals" id="s_sys_tsig" onchange="onInoTrafficSignalsChange()"> Traffic signals</label>
         </span>
-      </div>
-      <div id="s_tcu_wrap" style="display:none; margin-top:10px;">
-        <span class="field-label">TCU number</span>
-        <input type="text" id="s_tcu" placeholder="e.g. M2718" oninput="renderPreview(); scheduleWorkingSave();" style="max-width:220px;">
       </div>
     </div>
 
     <div class="field" id="s_cctv_wrap">
       <span class="field-label">CCTV</span>
       <div class="check-grid">
-        <label class="inline-check"><input type="radio" name="s_cctv" value="available" onchange="onInoCctvChange()"> Available</label>
-        <label class="inline-check"><input type="radio" name="s_cctv" value="not" checked onchange="onInoCctvChange()"> Not available</label>
+        <label class="inline-check"><input type="radio" name="s_cctv" value="available" onchange="renderPreview(); scheduleWorkingSave();"> Available</label>
+        <label class="inline-check"><input type="radio" name="s_cctv" value="not" checked onchange="renderPreview(); scheduleWorkingSave();"> Not available</label>
       </div>
-      <div id="s_cctv_field" style="display:none;margin-top:10px;">
-        <input type="text" id="s_cctv_text" placeholder="CCTV detail (e.g. camera ref / location)">
+    </div>
+
+    <div class="field">
+      <button type="button" class="link-btn" id="s_act_other_toggle" onclick="toggleActOther()" aria-expanded="false" style="font-size:13.5px;">
+        <span id="s_act_other_chev">▸</span> Other
+      </button>
+      <div id="s_act_other_body" style="display:none;margin-top:10px;">
+        <div class="check-grid">
+          ${["TQ notified","TfNSW notified","TOC notified","Bus Operations","ATN advised","TQ managing incident","TfNSW managing incident"].map(x=>`<label class="inline-check"><input type="checkbox" class="s_act_other_ck" value="${x}" onchange="renderPreview(); scheduleWorkingSave();"> ${x}</label>`).join('')}
+        </div>
       </div>
     </div>
 
@@ -6650,18 +6673,18 @@ function buildINO(){
         <div class="responder-col-card">
           <h4>At scene</h4>
           <div class="resp-group-label">Emergency</div>
-          <div class="check-grid">
-            ${["QPS","QAS","QFD"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_groups_ck" value="${r}" onchange="syncInoGroup('scene','${r}')"> ${r}</label>`).join('')}
+          <div class="check-grid resp-grid-emergency">
+            ${["QPS","QAS","QFD","FCU"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_groups_ck" value="${r}" onchange="syncInoGroup('scene','${r}')"> ${r}</label>`).join('')}
           </div>
           <div class="resp-group-label">Traffic &amp; Road</div>
           <div class="check-grid">
-            ${["TRU","TMA","FCU","Road Steward","Traffic Control"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_groups_ck" value="${r}" onchange="syncInoGroup('scene','${r}')"> ${r}</label>`).join('')}
+            ${["TRU","TMA","Road Steward","Traffic Control"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_groups_ck" value="${r}" onchange="syncInoGroup('scene','${r}')"> ${r}</label>`).join('')}
           </div>
           <div class="resp-group-label">Support</div>
           <div class="check-grid">
-            ${["Tow","Mechanical services","Media"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_groups_ck" value="${r}" onchange="syncInoGroup('scene','${r}')"> ${r}</label>`).join('')}
+            ${["Tow","Media","Mechanical services"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_groups_ck" value="${r}" onchange="syncInoGroup('scene','${r}')"> ${r}</label>`).join('')}
           </div>
-          <button type="button" class="resp-more-link" onclick="toggleRespMore('scene')"><span id="scene_resp_ml_label">More</span> <span class="ml-chev" id="scene_resp_ml_chev">▾</span></button>
+          <button type="button" class="resp-more-link" onclick="toggleRespMore('scene')"><span id="scene_resp_ml_label">More</span> <span class="ml-chev" id="scene_resp_ml_chev">▾</span><span class="resp-more-summary" id="scene_resp_summary"></span></button>
           <div class="resp-more-section" id="scene_resp_more">
             <div class="check-grid">
               ${["Medivac","SOC","Emergency services","Translink response service"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_groups_ck" value="${r}" onchange="syncInoGroup('scene','${r}')"> ${r}</label>`).join('')}
@@ -6673,18 +6696,18 @@ function buildINO(){
         <div class="responder-col-card">
           <h4>Proceeding</h4>
           <div class="resp-group-label">Emergency</div>
-          <div class="check-grid">
-            ${["QPS","QAS","QFD"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_route_ck" value="${r}" onchange="syncInoGroup('route','${r}')"> ${r}</label>`).join('')}
+          <div class="check-grid resp-grid-emergency">
+            ${["QPS","QAS","QFD","FCU"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_route_ck" value="${r}" onchange="syncInoGroup('route','${r}')"> ${r}</label>`).join('')}
           </div>
           <div class="resp-group-label">Traffic &amp; Road</div>
           <div class="check-grid">
-            ${["TRU","TMA","FCU","Road Steward","Traffic Control"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_route_ck" value="${r}" onchange="syncInoGroup('route','${r}')"> ${r}</label>`).join('')}
+            ${["TRU","TMA","Road Steward","Traffic Control"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_route_ck" value="${r}" onchange="syncInoGroup('route','${r}')"> ${r}</label>`).join('')}
           </div>
           <div class="resp-group-label">Support</div>
           <div class="check-grid">
-            ${["Tow","Mechanical services","Media"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_route_ck" value="${r}" onchange="syncInoGroup('route','${r}')"> ${r}</label>`).join('')}
+            ${["Tow","Media","Mechanical services"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_route_ck" value="${r}" onchange="syncInoGroup('route','${r}')"> ${r}</label>`).join('')}
           </div>
-          <button type="button" class="resp-more-link" onclick="toggleRespMore('route')"><span id="route_resp_ml_label">More</span> <span class="ml-chev" id="route_resp_ml_chev">▾</span></button>
+          <button type="button" class="resp-more-link" onclick="toggleRespMore('route')"><span id="route_resp_ml_label">More</span> <span class="ml-chev" id="route_resp_ml_chev">▾</span><span class="resp-more-summary" id="route_resp_summary"></span></button>
           <div class="resp-more-section" id="route_resp_more">
             <div class="check-grid">
               ${["Medivac","SOC","Emergency services","Translink response service"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_route_ck" value="${r}" onchange="syncInoGroup('route','${r}')"> ${r}</label>`).join('')}
@@ -7577,9 +7600,7 @@ function renderINO(){
   // so it's handled separately from the "X & Y activated" list.
   const trafficSignals = systemsAll.includes('Traffic signals');
   const systems = systemsAll.filter(v => v !== 'Traffic signals');
-  const tcu = trafficSignals ? get('s_tcu') : '';
   const cctvAvail = (document.querySelector('input[name="s_cctv"]:checked')||{}).value === 'available';
-  const cctvText = cctvAvail ? get('s_cctv_text') : '';
 
   // join a list with commas and a connector before the last item.
   // Connector follows the "Use & instead of and" toggle (laneAmpersand): & when on, and when off.
@@ -7748,10 +7769,9 @@ function renderINO(){
         : reopenSentence(reopened);
     } else {
       if (reopened.length && curState !== 'Closed') inoReopenedStr = reopenSentence(reopened);
-      // Still-impacted wording only when the impact type is Blocked/Affected (not Closed, which
-      // renders its own "All lanes closed" clause). The state word follows the selected type
-      // ("blocked" or "affected"), defaulting to "blocked" if somehow unset.
-      if (stillBlocked.length && curState !== 'Closed'){
+      // Still-impacted wording only when SOME lanes were reopened and other lanes remain
+      // blocked/affected. Without reopened lanes, the regular lane clause handles it.
+      if (reopened.length && stillBlocked.length && curState !== 'Closed'){
         const stateWord = curState ? curState.toLowerCase() : 'blocked';
         inoStillStr = stillSentence(stillBlocked, stateWord);
       }
@@ -7950,10 +7970,13 @@ function renderINO(){
     if (vision6) actBits.push('Vision 6');
     if (publicSms) actBits.push('Public SMS');
     if (systems.length){ const sysStr = `${andList(systems)} activated`; actBits.push(sysStr); regSeg(sysStr, 's_sys_field'); }
-    if (trafficSignals){ const tsStr = tcu ? `traffic signal intervention - ${tcu}` : 'traffic signal intervention'; actBits.push(tsStr); regSeg(tsStr, 's_sys_field'); }
-    const cctvStr = cctvAvail ? (cctvText ? `CCTV available - ${cctvText}` : 'CCTV available') : 'CCTV not available';
+    if (trafficSignals){ actBits.push('traffic signal intervention'); regSeg('traffic signal intervention', 's_sys_field'); }
+    const cctvStr = cctvAvail ? 'CCTV available' : 'CCTV not available';
     actBits.push(cctvStr);
     regSeg(cctvStr, 's_cctv_wrap');
+    // Actions "Other" selections
+    const actOtherChecked = Array.from(document.querySelectorAll('.s_act_other_ck:checked')).map(c=>c.value);
+    actOtherChecked.forEach(v => actBits.push(v));
     lines.push(`Actions: ${actBits.join('; ')}.`);
   }
 
@@ -9688,7 +9711,32 @@ function toggleRespMore(col, forceOpen){
   const nowOpen = section.classList.contains('open');
   if (label) label.textContent = nowOpen ? 'Less' : 'More';
   if (chev) chev.textContent = nowOpen ? '▴' : '▾';
+  updateRespMoreSummary(col);
 }
+/* Update the summary badge next to More — shows selected hidden items when collapsed */
+function updateRespMoreSummary(col){
+  const section = document.getElementById(col + '_resp_more');
+  const badge = document.getElementById(col + '_resp_summary');
+  if (!section || !badge) return;
+  const isOpen = section.classList.contains('open');
+  if (isOpen){ badge.style.display = 'none'; return; }
+  const cls = col === 'scene' ? 's_groups_ck' : 's_route_ck';
+  const otherCkId = col === 'scene' ? 's_groups_other_ck' : 's_route_other_ck';
+  const selected = RESP_MORE_VALUES.filter(v => {
+    const el = document.querySelector(`.${cls}[value="${v}"]`);
+    return el && el.checked;
+  });
+  const otherChecked = (document.getElementById(otherCkId)||{}).checked;
+  if (otherChecked) selected.push('Other');
+  if (selected.length){
+    badge.textContent = selected.join(', ');
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+/* Update both summaries — called on any responder change */
+function updateAllRespSummaries(){ updateRespMoreSummary('scene'); updateRespMoreSummary('route'); }
 /* Auto-expand More if any hidden responder is checked (e.g. from draft restore) */
 function autoExpandRespMore(){
   ['scene','route'].forEach(col => {
@@ -9713,6 +9761,7 @@ function syncInoGroup(which, value){
       if (c.value === value && c.checked) c.checked = false;
     });
   }
+  updateAllRespSummaries();
   renderPreview();
 }
 
@@ -10272,8 +10321,8 @@ function collectFormState(){
         lowercase: (document.getElementById('s_lowercase')||{}).checked,
         actQld: rb('s_act_qld'), vision6: rb('s_vision6'), publicSms: rb('s_publicsms'),
         systems: Array.from(document.querySelectorAll('.s_sys:checked')).map(c=>c.value),
-        tcu: gv('s_tcu'),
-        cctv: rb('s_cctv'), cctvText: gv('s_cctv_text'),
+        cctv: rb('s_cctv'),
+        actOther: Array.from(document.querySelectorAll('.s_act_other_ck:checked')).map(c=>c.value),
         groupsList: Array.from(document.querySelectorAll('.s_groups_ck:checked')).map(c=>c.value),
         groupsOther: (document.getElementById('s_groups_other_ck')||{}).checked, groupsOtherText: gv('s_groups_other'),
         routeList: Array.from(document.querySelectorAll('.s_route_ck:checked')).map(c=>c.value),
@@ -12118,12 +12167,8 @@ function applyDraft(s){
         if (btn){ btn.setAttribute('aria-expanded','true'); const l=btn.querySelector('.ml-label'); if(l) l.textContent='Less'; }
       }
     }
-    // Reveal + restore the TCU field if Traffic signals was selected.
-    if ((a.systems||[]).includes('Traffic signals')){
-      const w = document.getElementById('s_tcu_wrap'); if (w) w.style.display='block';
-      set('s_tcu', a.tcu);
-    }
-    if (a.cctv){ setRadio('s_cctv', a.cctv); onInoCctvChange(); set('s_cctv_text', a.cctvText); }
+    if (a.cctv){ setRadio('s_cctv', a.cctv); }
+    if (a.actOther && a.actOther.length){ setChecks('s_act_other_ck', a.actOther); toggleActOther(true); }
     // resolution
     setChecks('s_groups_ck', a.groupsList);
     if (a.groupsOther){ document.getElementById('s_groups_other_ck').checked = true; onInoGroupsOtherChange(); set('s_groups_other', a.groupsOtherText); }
