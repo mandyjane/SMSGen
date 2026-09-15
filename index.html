@@ -2037,7 +2037,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 205.10</span>
+    <span class="app-version">Version 205.11</span>
   </footer>
 </div>
 
@@ -5504,23 +5504,6 @@ function onInoReopenPosChange(){
 function inoReopenAllOn(){ return !!(document.getElementById('s_reopen_all')||{}).checked; }
 function applyInoReopenAllGrey(){
   const on = inoReopenAllOn();
-  const laneField = document.getElementById('s_lanes_field');
-  if (laneField){
-    // Grey/disable Impact on lanes (everything in the lane field EXCEPT the reopen wrap,
-    // which houses the All button and the per-lane reopen chips).
-    laneField.classList.toggle('field-disabled', on);
-    laneField.querySelectorAll('input,button').forEach(el => {
-      if (el.closest('#s_reopen_wrap')) return;
-      el.disabled = on;
-    });
-  }
-  // Impact type (Blocked/Affected/Closed) sits in its own field above; grey/disable it too.
-  const impactRow = document.querySelector('.impact-type-row');
-  if (impactRow){
-    const impactField = impactRow.closest('.field');
-    if (impactField) impactField.classList.toggle('field-disabled', on);
-    impactRow.querySelectorAll('input,button').forEach(el => { el.disabled = on; });
-  }
   // Grey/disable the per-lane reopen chips (Left/Centre/Right + counts) but keep the All box live.
   document.querySelectorAll('.s_reopen_pos').forEach(cb => {
     cb.disabled = on;
@@ -5539,10 +5522,7 @@ function applyInoReopenAllGrey(){
 }
 function onInoReopenAllChange(){
   if (inoReopenAllOn()){
-    // Clear the mutually-exclusive controls: impact type, blocked lanes, per-lane reopen.
-    const st = document.querySelector('input[name="s_lane_state"]:checked');
-    if (st){ st.checked = false; st._wasChecked = false; document.querySelectorAll('input[name="s_lane_state"]').forEach(r=>{ r._wasChecked = false; }); }
-    document.querySelectorAll('.s_lane_pos:checked').forEach(cb=>{ cb.checked = false; const n=document.querySelector(`.s_lane_pos_num[data-pos="${cb.value}"]`); if(n) n.value=''; });
+    // Clear per-lane reopen chips (All replaces individual selections).
     document.querySelectorAll('.s_reopen_pos:checked').forEach(cb=>{ cb.checked = false; });
     document.querySelectorAll('.s_reopen_pos_num').forEach(el=>{ el.value=''; });
     updateReopenCount();
