@@ -2037,7 +2037,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 205.11</span>
+    <span class="app-version">Version 205.12</span>
   </footer>
 </div>
 
@@ -6490,7 +6490,7 @@ function buildINO(){
             <span class="reopen-all-divider"></span>
             <label class="inline-check reopen-all"><input type="checkbox" id="s_reopen_all" onchange="onInoReopenAllChange()"><i class="ti ti-road reopen-all-ico" aria-hidden="true"></i> All</label>
           </div>
-          ${laneDirectionRow('s_reopen_dir','s_reopendir')}
+          ${laneDirectionRow('s_reopen_dir','s_reopendir', true)}
         </div>
       </div>
       </div>
@@ -6807,9 +6807,13 @@ function onLaneDirectionChange(cb, dirClass){
   }
   renderPreview(); scheduleWorkingSave();
 }
-function laneDirectionRow(dirClass, mlPrefix){
+function laneDirectionRow(dirClass, mlPrefix, useRadio){
+  const inputType = useRadio ? 'radio' : 'checkbox';
+  const radioName = useRadio ? `name="${dirClass}_radio"` : '';
+  const radioClass = useRadio ? ' desel-radio' : '';
+  const radioClick = useRadio ? ` onclick="toggleDeselectableRadio(this)"` : '';
   const boxes = LANE_DIRECTIONS.map(d =>
-    `<label class="inline-check"><input type="checkbox" class="${dirClass}" value="${d}" onchange="onLaneDirectionChange(this,'${dirClass}')"> ${d}</label>`
+    `<label class="inline-check"><input type="${inputType}" ${radioName} class="${dirClass}${radioClass}" value="${d}"${radioClick} onchange="${useRadio ? '' : `onLaneDirectionChange(this,'${dirClass}'); `}renderPreview(); scheduleWorkingSave();"> ${d}</label>`
   ).join('');
   const mark = `<svg class="dir-toggle-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M15.5 8.5l-2 5-5 2 2-5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`;
   return `<div class="lane-dir-row">`
