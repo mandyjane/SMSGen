@@ -2037,7 +2037,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 205.9</span>
+    <span class="app-version">Version 205.10</span>
   </footer>
 </div>
 
@@ -7749,6 +7749,18 @@ function renderINO(){
     if (inoReopenAllOn()){
       // Master "All" reopen — whole carriageway open, literal wording (no "are").
       inoReopenedStr = withLaneDirection('All lanes now open', '.s_reopen_dir');
+      // If impact lanes are still checked AND reopen direction is NOT Both/All directions,
+      // the blocked lanes in the other direction still need to show.
+      const reopenDirVal = (document.querySelector('.s_reopen_dir:checked')||{}).value || '';
+      const fullClear = ['Both directions','All directions'].includes(reopenDirVal);
+      if (!fullClear){
+        const stillBlocked = sortLanes(Array.from(document.querySelectorAll('.s_lane_pos:checked')).map(c=>c.value));
+        const curState = (document.querySelector('input[name="s_lane_state"]:checked')||{}).value || '';
+        if (stillBlocked.length && curState && curState !== 'Closed'){
+          const stateWord = curState.toLowerCase();
+          inoStillStr = stillSentence(stillBlocked, stateWord);
+        }
+      }
     } else {
     const reopened = sortLanes(Array.from(document.querySelectorAll('.s_reopen_pos:checked')).map(c=>c.value));
     const stillBlocked = sortLanes(Array.from(document.querySelectorAll('.s_lane_pos:checked')).map(c=>c.value));
