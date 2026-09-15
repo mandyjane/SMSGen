@@ -2037,7 +2037,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 205.6</span>
+    <span class="app-version">Version 205.7</span>
   </footer>
 </div>
 
@@ -5051,10 +5051,11 @@ function buildLanesP(prefix){
     // INO: lane positions (Left/Centre/Right), each with an optional count.
     const posEls = Array.from(document.querySelectorAll('.s_lane_pos:checked'));
 
-    // No positions ticked
+    // No positions ticked — still show impact type + direction
     if (!posEls.length){
       if (unknownDir) return '';
-      return stateStr || '';
+      if (stateStr) return withLaneDirection(capFirstLetter(stateStr), '.s_lane_dir');
+      return '';
     }
 
     const withCount = posEls.map(el => {
@@ -5482,16 +5483,6 @@ function onInoReopenPosChange(){
     if (!cb.checked) numEl.value = '';
   });
   const anyOpen = document.querySelectorAll('.s_reopen_pos:checked').length > 0;
-  // Mutual exclusion: a lane can't be both "now open" and still in "Impact on lanes".
-  // Any position just ticked as reopened is removed from the blocked-lanes selection.
-  document.querySelectorAll('.s_reopen_pos:checked').forEach(rc => {
-    const blocked = document.querySelector(`.s_lane_pos[value="${rc.value}"]`);
-    if (blocked && blocked.checked){
-      blocked.checked = false;
-      const bn = document.querySelector(`.s_lane_pos_num[data-pos="${rc.value}"]`);
-      if (bn){ bn.value = ''; }
-    }
-  });
   onInoLanePosChange._skipReopenSync = true;
   onInoLanePosChange();
   onInoLanePosChange._skipReopenSync = false;
