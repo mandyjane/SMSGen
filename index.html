@@ -2037,7 +2037,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 205.7</span>
+    <span class="app-version">Version 205.8</span>
   </footer>
 </div>
 
@@ -7924,6 +7924,10 @@ function renderINO(){
     // fatalities is dropped (fatBit already resolves to '' in that case).
     const updDetailBits = isUpdateContext ? [infra, injBit, fatBit].filter(Boolean) : [];
     const netBits = [laneClause + oppStr, ...updDetailBits, lengthCong, nilCong2].filter(Boolean);
+    // The reopen ("… now open") and still-impacted ("… remain blocked/closed") clauses read as
+    // one comma-joined statement, then the "; " separator applies before the rest.
+    const reopenPair = [inoReopenedStr, inoStillStr].filter(Boolean).join(', ');
+    if (reopenPair) netBits.unshift(reopenPair);
     const netMain = netBits.join('; ');
     let netFull = diversion ? `${netMain}. ${diversion}` : netMain;
     if (addlInfo) netFull = netFull ? `${netFull}. ${addlInfo}` : addlInfo;
@@ -7947,9 +7951,6 @@ function renderINO(){
     regSeg(oppStr, 's_opp_text');
     // update-context infra/inj/fat already registered above to their own fields
     // The reopen ("… now open") and still-impacted ("… remain blocked/closed") clauses read as
-    // one comma-joined statement, then the "; " separator applies before the rest.
-    const reopenPair = [inoReopenedStr, inoStillStr].filter(Boolean).join(', ');
-    if (reopenPair) netBits.unshift(reopenPair);
     const netLabel = isUpdateContext ? 'Update' : 'Network Impact';
     lines.push(`${netLabel}: ${netFull || '[impact]'}.`);
   }
