@@ -2028,7 +2028,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 206.05</span>
+    <span class="app-version">Version 206.06</span>
   </footer>
 </div>
 
@@ -7414,7 +7414,7 @@ function renderINO(){
       }
       diversion = dt ? `diversion via ${dt}` : 'diversions available';
     } else if (divAvail === 'no'){
-      diversion = 'no diversions available';
+      diversion = 'no diversion available';
     }
   } else if (diversionVal === 'no') diversion = '';
   // Congestion = No → explicit "Nil congestion" (sits before the diversion detail).
@@ -7450,6 +7450,9 @@ function renderINO(){
   // Map "Road Steward" to "TMR Road Steward" in output
   const mapRoadSteward = (list) => list.map(v => v === 'Road Steward' ? 'TMR Road Steward' : v);
   const sceneList = mapRoadSteward(groupList);
+  // "All emergency services" always leads the list
+  const aesIdx = sceneList.indexOf('All emergency services');
+  if (aesIdx > 0) { sceneList.splice(aesIdx, 1); sceneList.unshift('All emergency services'); }
   const routeList = mapRoadSteward(Array.from(document.querySelectorAll('.s_route_ck:checked')).map(c=>c.value));
   const routeOtherOn = (document.getElementById('s_route_other_ck')||{}).checked;
   if (routeOtherOn){ const o = get('s_route_other'); if (o) routeList.push(o); }
@@ -7837,11 +7840,14 @@ function renderINO(){
     const merged = andList(allGroups);
     groupsLine = `${groupsLabel}: ${merged || 'nil'}.`;
   } else if (groups && enRoute){
-    // Both scene and en route — "X, Y and Z at scene. A and B [suffix]."
-    groupsLine = `${groupsLabel}: ${groups} at scene. ${enRoute} ${routeSuffix}.`;
+    const hasAllEmerg = sceneList.includes('All emergency services');
+    const sceneClause = hasAllEmerg ? groups : `${groups} at scene`;
+    groupsLine = `${groupsLabel}: ${sceneClause}. ${enRoute} ${routeSuffix}.`;
   } else if (groups){
-    // Scene only — "X, Y and Z at scene."
-    groupsLine = `${groupsLabel}: ${groups} at scene.`;
+    const hasAllEmerg = sceneList.includes('All emergency services');
+    groupsLine = hasAllEmerg
+      ? `${groupsLabel}: ${groups}.`
+      : `${groupsLabel}: ${groups} at scene.`;
   } else if (enRoute){
     // En route only — no scene groups
     groupsLine = `${groupsLabel}: ${enRoute} ${routeSuffix}.`;
