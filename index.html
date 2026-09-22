@@ -2028,7 +2028,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 207.01</span>
+    <span class="app-version">Version 207.03</span>
   </footer>
 </div>
 
@@ -6169,16 +6169,26 @@ function buildINO(){
       <input type="text" id="s_seq_other" placeholder="Custom number label" style="display:none;margin-top:8px;" oninput="applyInoActionsVisibility(); applyInoTimeAutoVisibility(); renderPreview();">
       <div id="s_final_extra" style="display:none;margin-top:10px;">
         <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
+          <label class="inline-check"><input type="checkbox" id="s_final_all_open" onchange="renderPreview(); scheduleWorkingSave();"> All lanes open</label>
+          <label class="inline-check" id="s_congestion_clear_wrap"><input type="checkbox" id="s_congestion_clear" onchange="renderPreview(); scheduleWorkingSave();"> Congestion clear <span class="fld-help" tabindex="0" role="button" aria-label="What this does" data-tip="Generates &ldquo;nil congestion&rdquo; in the Network Impact line instead of the residual-congestion wording.">?</span></label>
           <div id="s_final_reinstate_wrap" style="display:none;">
             <label class="inline-check"><input type="checkbox" id="s_final_reinstate" onchange="onInoReinstateChange()"> Summarise impact <span class="fld-help" tabindex="0" role="button" aria-label="What this does" data-tip="Rewrites the &ldquo;Network Impact:&rdquo; line in past tense, referencing the lanes in place before the incident cleared. Reads &ldquo;All lanes were blocked&rdquo; if a closure was used on any escalation, otherwise names the lanes (e.g. &ldquo;Left lane was blocked&rdquo;). Applies to No.2+ FINAL close-outs.">?</span></label>
           </div>
-          <label class="inline-check" id="s_congestion_clear_wrap"><input type="checkbox" id="s_congestion_clear" onchange="renderPreview(); scheduleWorkingSave();"> Congestion clear <span class="fld-help" tabindex="0" role="button" aria-label="What this does" data-tip="Generates &ldquo;Nil congestion&rdquo; in the Network Impact line instead of the residual-congestion wording.">?</span></label>
         </div>
         <div id="s_final_reinstate_wrap_hints" style="display:none;">
           <div id="s_final_reinstate_note_wrap" style="display:none;margin-top:10px;">
             <span class="field-label" style="margin-bottom:5px;">Impact note — appears after the past-tense impact</span>
             <input type="text" id="s_final_reinstate_note" placeholder="e.g. for a short period prior to the clearance time for vehicle recoveries" oninput="updateFinalOutline(); renderPreview(); scheduleWorkingSave();">
           </div>
+        </div>
+        <div style="margin-top:14px;">
+          <span class="field-label" style="margin-bottom:5px;">Time incident cleared</span>
+          <div class="time-row">
+            <input type="text" id="s_cleared_hh" class="time-box narrow" inputmode="numeric" maxlength="2" placeholder="HH" oninput="onTimeBoxInput(this,'s_cleared_mm')">
+            <span class="time-colon">:</span>
+            <input type="text" id="s_cleared_mm" class="time-box narrow" inputmode="numeric" maxlength="2" placeholder="MM" oninput="onTimeBoxInput(this)">
+          </div>
+          <p class="hint" style="margin-bottom:0;">Auto-filled with the current time when FINAL is ticked. Editable.</p>
         </div>
         <div style="margin-top:10px;">
           <span class="field-label" style="margin-bottom:5px;">Final update / notes — appended to end of Network Impact line</span>
@@ -6254,16 +6264,6 @@ function buildINO(){
         <label class="inline-check"><input type="checkbox" id="s_time_auto20" onchange="onInoTimeAutoChange(20)"> Use current time − 20 min</label>
       </div>
       <p class="hint" id="s_time_locked_note" style="display:none;">Locked on UPDATE — kept from the original escalation.</p>
-    </div>
-
-    <div class="field" id="s_cleared_wrap" style="display:none;">
-      <span class="field-label">Time incident cleared</span>
-      <div class="time-row">
-        <input type="text" id="s_cleared_hh" class="time-box narrow" inputmode="numeric" maxlength="2" placeholder="HH" oninput="onTimeBoxInput(this,'s_cleared_mm')">
-        <span class="time-colon">:</span>
-        <input type="text" id="s_cleared_mm" class="time-box narrow" inputmode="numeric" maxlength="2" placeholder="MM" oninput="onTimeBoxInput(this)">
-      </div>
-      <p class="hint">Auto-filled with the current time when FINAL is ticked. Editable.</p>
     </div>
 
     </div>
@@ -6797,7 +6797,7 @@ function inoImpactSegSummary(){
   const lanes = inoLanesSummary();
   if (lanes && lanes !== '—') bits.push(lanes);
   const cong = (document.querySelector('input[name="s_congestion_yn"]:checked')||{}).value || '';
-  if (cong === 'no') bits.push('Nil congestion');
+  if (cong === 'no') bits.push('nil congestion');
   else if (cong === 'yes'){
     const len = ((document.getElementById('s_length')||{}).value||'').trim();
     bits.push(len ? `Congestion ${len} km` : 'Congestion');
@@ -7077,6 +7077,7 @@ function applyInoFinalReinstateVisibility(){
   const riHints = document.getElementById('s_final_reinstate_wrap_hints');
   if (riHints) riHints.style.display = (on && updateCtx) ? 'block' : 'none';
   if (!(on && updateCtx)){ const ri = document.getElementById('s_final_reinstate'); if (ri) ri.checked = false; }
+  if (!on){ const ao = document.getElementById('s_final_all_open'); if (ao) ao.checked = false; }
   // "Congestion clear" is only meaningful on a No.2+ FINAL (clearing residual congestion carried
   // from an earlier message). On a No.1 FINAL there's no prior congestion to clear — the
   // Congestion Yes/No already covers it — so hide the control and its hint, and untick it to
@@ -7231,8 +7232,6 @@ function onTimeBoxInput(elm, nextId){
 
 function onInoFinalChange(){
   const on = document.getElementById('s_final').checked;
-  const wrap = document.getElementById('s_cleared_wrap');
-  wrap.style.display = on ? 'block' : 'none';
   const extra = document.getElementById('s_final_extra');
   if (extra) extra.style.display = on ? 'block' : 'none';
   applyInoFinalReinstateVisibility();
@@ -7459,7 +7458,7 @@ function renderINO(){
     }
   } else if (diversionVal === 'no') diversion = '';
   // Congestion = No → explicit "Nil congestion" (sits before the diversion detail).
-  const nilCongestion = congestionYN === 'no' ? 'Nil congestion' : '';
+  const nilCongestion = congestionYN === 'no' ? 'nil congestion' : '';
   // Additional information: free text appended to the end of the message, no auto-capitalise.
   const addlInfo = expandAbbreviations(get('s_addl_info')) || '';
 
@@ -7667,6 +7666,7 @@ function renderINO(){
   }
 
   const finalReinstate = finalOn && (document.getElementById('s_final_reinstate')||{}).checked;
+  const finalAllOpen = finalOn && (document.getElementById('s_final_all_open')||{}).checked;
   const congestionClear = finalOn && (document.getElementById('s_congestion_clear')||{}).checked;
   const finalNote = finalOn ? get('s_final_note') : '';
 
@@ -7692,7 +7692,7 @@ function renderINO(){
     ? [ `${lengthStr} of${congTypeWord} congestion${peakSuffix}`, congestion ].filter(Boolean).join(' ')
     : congestion;
   let lengthCong;
-  if (finalOn && congestionClear) lengthCong = 'Nil congestion';
+  if (finalOn && congestionClear) lengthCong = 'nil congestion';
   else lengthCong = lengthCongPlain;
 
   const isUpdateContext = inoUpdate.on || seqNum >= 2;
@@ -7711,7 +7711,12 @@ function renderINO(){
     const closedEverFinal = inoClosedEverSelected || curLaneState === 'Closed'
       || !!(inoPrevLaneInfo && inoPrevLaneInfo.state === 'Closed');
     let niBits;
-    if (closedEverFinal && isSeqFinal && finalReinstate){
+    if (finalAllOpen){
+      const dirs = readLaneDirections('.s_lane_dir');
+      const dirWord = (dirs.length && !dirs.includes('unknown')) ? inoDirectionWord(dirs) : '';
+      const openClause = dirWord ? `All ${dirWord} lanes now open` : 'All lanes now open';
+      niBits = [openClause, lengthCong].filter(Boolean);
+    } else if (closedEverFinal && isSeqFinal && finalReinstate){
       // Closure anywhere in the series (or on this FINAL) → past-tense "All lanes were closed",
       // but ONLY when "Summarise impact" is ticked. Without Summarise, plain FINAL falls through
       // to the present-tense current-state wording below (it does not auto-summarise closure).
@@ -7741,7 +7746,7 @@ function renderINO(){
       }
       // Guard against a doubled "Nil congestion": if lengthCong already resolved to it
       // (FINAL + Congestion clear), drop the radio-driven nilCongestion.
-      const nilCong2 = (lengthCong === 'Nil congestion') ? '' : nilCongestion;
+      const nilCong2 = (lengthCong === 'nil congestion') ? '' : nilCongestion;
       const preDivBits = [laneBit + oppStr, lengthCong, nilCong2].filter(Boolean);
       niBits = preDivBits;  // diversion handled separately
       const reopenPair = [inoReopenedStr, inoStillStr].filter(Boolean).join(', ');
@@ -7771,8 +7776,9 @@ function renderINO(){
       // "Nil congestion" (congestion = No, or FINAL + Congestion clear) has no length/location,
       // so register it to the Congestion control itself. lengthCong may already hold it (clear
       // case); nilCong2 holds the radio-No case — cover both.
-      if (lengthCong === 'Nil congestion') regSeg('Nil congestion', 's_congestion_field');
+      if (lengthCong === 'nil congestion') regSeg('nil congestion', 's_congestion_field');
       if (nilCongestion) regSeg(nilCongestion, 's_congestion_field');
+      regSeg('Nil congestion', 's_congestion_field'); // legacy uppercase match
       regSeg(diversion, 's_diversion_wrap');
       regSeg(capFirstLetter(diversion), 's_diversion_wrap');
     }
@@ -7811,7 +7817,7 @@ function renderINO(){
     // followed by the still-impacted lanes, then the rest.
     const reopenActive = !!(inoReopenedStr || inoStillStr);
     const laneClause = reopenActive ? '' : lanes;
-    const nilCong2 = (lengthCong === 'Nil congestion') ? '' : nilCongestion;
+    const nilCong2 = (lengthCong === 'nil congestion') ? '' : nilCongestion;
     // In an update context (No.2+/UPDATE) the incident-type line is suppressed, so the
     // injuries / fatalities / infrastructure-damage detail would otherwise be lost. Fold
     // it into the Update line, positioned after the lane clause but before congestion and
@@ -7840,7 +7846,7 @@ function renderINO(){
     const lengthPortion = length ? `${length}km of congestion` : '';
     regSeg((lengthPortion && lengthCong.indexOf(lengthPortion) !== -1) ? lengthPortion : lengthCong, 's_length');
     // "Nil congestion" jumps to the Congestion control (no length/location to anchor to).
-    if (lengthCong === 'Nil congestion') regSeg('Nil congestion', 's_congestion_field');
+    if (lengthCong === 'nil congestion') regSeg('nil congestion', 's_congestion_field');
     if (nilCongestion) regSeg(nilCongestion, 's_congestion_field');
     regSeg(diversion, 's_diversion_wrap');
     regSeg(capFirstLetter(diversion), 's_diversion_wrap');
@@ -11969,8 +11975,8 @@ function applyDraft(s){
     applyInoDurOtherVisibility();   // reveal Subject to section if recovery / clean-up / free-text present
     applyDurationOverrideGrey();
     set('s_contact', a.contact); set('s_contact_ph', a.contactPh);
-    // reveal cleared-time field + apply greying if FINAL (without overwriting restored cleared time)
-    document.getElementById('s_cleared_wrap').style.display = (document.getElementById('s_final').checked) ? 'block' : 'none';
+    // reveal FINAL extra section if FINAL is checked (cleared time is now inside s_final_extra)
+    { const fe = document.getElementById('s_final_extra'); if (fe) fe.style.display = (document.getElementById('s_final').checked) ? 'block' : 'none'; }
     applyInoTypeDisable();
     applyInoFinalReinstateVisibility();
     applyInoActionsVisibility();
