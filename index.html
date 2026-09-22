@@ -2028,7 +2028,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 206.03</span>
+    <span class="app-version">Version 206.05</span>
   </footer>
 </div>
 
@@ -6006,9 +6006,16 @@ function buildInoDuration(){
   // "Subject to" clauses: vehicle recovery, FCU/QPS investigation, clean-up
   const subjectParts = [];
   if ((document.getElementById('s_dur_recovery')||{}).checked){
-    const label = inoCrashLabel('s');
-    const plural = /^Multi/.test(label);
-    subjectParts.push(plural ? 'vehicle recoveries' : 'vehicle recovery');
+    let totalVehicles = 0;
+    document.querySelectorAll('.s_crash').forEach(inp => {
+      const n = parseInt(inp.value, 10);
+      if (!isNaN(n) && n > 0) totalVehicles += n;
+    });
+    document.querySelectorAll('#s_crash_others .other-row').forEach(row => {
+      const n = parseInt((row.querySelector('.s_crash_other_num')||{}).value, 10);
+      if (!isNaN(n) && n > 0) totalVehicles += n;
+    });
+    subjectParts.push(totalVehicles > 1 ? 'vehicle recoveries' : 'vehicle recovery');
   }
   if ((document.getElementById('s_dur_fcu')||{}).checked) subjectParts.push('FCU investigation');
   if ((document.getElementById('s_dur_qps')||{}).checked) subjectParts.push('QPS investigation');
@@ -7405,9 +7412,9 @@ function renderINO(){
           return CONNECTORS.has(bare) ? bare : capFirstLetter(w);
         });
       }
-      diversion = dt ? `Diversion via ${dt}` : 'Diversions available';
+      diversion = dt ? `diversion via ${dt}` : 'diversions available';
     } else if (divAvail === 'no'){
-      diversion = 'No diversions available';
+      diversion = 'no diversions available';
     }
   } else if (diversionVal === 'no') diversion = '';
   // Congestion = No → explicit "Nil congestion" (sits before the diversion detail).
@@ -7730,7 +7737,7 @@ function renderINO(){
     // FINAL the note stays on the Final Update line (handled below) — don't double it here.
     if (isNo1Final && finalNote) niBits.push(finalNote);
     const mainImpact = niBits.length ? niBits.join('; ') : '[impact]';
-    let fullImpact = diversion ? `${mainImpact}. ${diversion}` : mainImpact;
+    let fullImpact = diversion ? `${mainImpact}; ${diversion}` : mainImpact;
     if (addlInfo) fullImpact = `${fullImpact}. ${addlInfo}`;
     lines.push(`Network Impact: ${fullImpact}.`);
 
@@ -7774,7 +7781,7 @@ function renderINO(){
     const reopenPair = [inoReopenedStr, inoStillStr].filter(Boolean).join(', ');
     if (reopenPair) netBits.unshift(reopenPair);
     const netMain = netBits.join('; ');
-    let netFull = diversion ? `${netMain}. ${diversion}` : netMain;
+    let netFull = diversion ? `${netMain}; ${diversion}` : netMain;
     if (addlInfo) netFull = netFull ? `${netFull}. ${addlInfo}` : addlInfo;
     // Register clickable sub-parts of this line.
     regSeg(laneClause, 's_lanes_field');
@@ -7843,7 +7850,7 @@ function renderINO(){
   }
   lines.push(groupsLine);
   if (!finalOn) lines.push(`Estimated Duration to Clear: ${duration || '[insert]'}.`);
-  lines.push(`Contact: INO Operations Coordinator Ph. ${contactPh} (${contact || '[insert name]'}).`);
+  lines.push(`Contact: INO Operations Coordinator Ph: ${contactPh} (${contact || '[insert name]'}).`);
 
   // collapse runs of spaces within each line, then join with newlines
   let msg = capitalizeSentences(lines.map(l => l.replace(/[ \t]+/g,' ').trim()).join('\n'));
