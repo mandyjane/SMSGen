@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BMTMC Escalation SMS Generator</title>
+<title>BMTMC Escalation Draft Generator</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%231f3a36%22%2F%3E%3Cg%20transform%3D%22translate(4%204)%22%3E%3Cpath%20d%3D%22M4%2011a8%208%200%200116%200M7%2011a5%205%200%200110%200M12%2011v9M9%2020h6%22%20stroke%3D%22%239fe1cb%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20fill%3D%22none%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1773,7 +1773,7 @@
 <!-- Password gate (v197) -->
 <div id="authGate" style="display:none; position:fixed; inset:0; z-index:99999; background:var(--paper); display:flex; align-items:center; justify-content:center;">
   <div style="text-align:center; max-width:320px; padding:24px;">
-    <div style="font-family:var(--display); font-size:20px; font-weight:700; color:var(--teal-header); margin-bottom:6px;">Escalation SMS Generator</div>
+    <div style="font-family:var(--display); font-size:20px; font-weight:700; color:var(--teal-header); margin-bottom:6px;">Escalation Draft Generator</div>
     <div style="font-family:var(--mono); font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:24px;">BMTMC · Traffic Operations</div>
     <input type="password" id="authInput" placeholder="Enter password" autocomplete="off"
       style="width:100%; padding:11px 14px; border:1.5px solid var(--line-strong); border-radius:var(--radius-sm); font:inherit; font-size:14px; text-align:center; background:var(--card); color:var(--ink);"
@@ -1814,7 +1814,7 @@
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     </span>
     <span class="title-wrap">
-      <span class="title">Escalation SMS Generator</span>
+      <span class="title">Escalation Draft Generator</span>
       <span class="subtitle">BMTMC · Traffic Operations</span>
     </span>
     <span class="official">
@@ -2028,7 +2028,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 206.06</span>
+    <span class="app-version">Version 206.07</span>
   </footer>
 </div>
 
@@ -4244,6 +4244,12 @@ function laneJoin(arr){
    `scope` is a CSS class selecting the checkbox set, e.g. '.s_lane_dir', '.g_reopen_dir'. */
 const LANE_DIRECTIONS = ['Northbound','Southbound','Eastbound','Westbound','Both directions','All directions'];
 function readLaneDirections(scope){
+  // INO main direction uses a <select> dropdown
+  if (scope === '.s_lane_dir') {
+    const sel = document.getElementById('s_lane_dir_select');
+    const v = sel ? sel.value : '';
+    return v ? [v.toLowerCase()] : [];
+  }
   return Array.from(document.querySelectorAll(`${scope}:checked`)).map(c => c.value.toLowerCase());
 }
 /* Append the direction clause to an already-built lane string. No-op when the clause is
@@ -4260,7 +4266,7 @@ const GEN_DIR_ABBREV_MAP = {
 };
 /* Show/hide grey-out on Impact on lanes when Unknown direction is selected */
 function onLaneDirChange(){
-  const sel = (document.querySelector('.s_lane_dir:checked')||{}).value;
+  const sel = (document.getElementById('s_lane_dir_select')||{}).value || '';
   const isUnknown = (sel === 'Unknown');
   // Grey out Left/Centre/Right/All/Nil when Unknown — but keep Open lanes count active
   document.querySelectorAll('.s_lane_pos, #s_lane_all, #s_lane_nil').forEach(el => {
@@ -4290,7 +4296,7 @@ function getOpenLaneCount(){
 }
 /* Check if Unknown direction is selected */
 function isUnknownLaneDir(){
-  return (document.querySelector('.s_lane_dir:checked')||{}).value === 'Unknown';
+  return (document.getElementById('s_lane_dir_select')||{}).value === 'Unknown';
 }
 
 function withLaneDirection(clause, scope){
@@ -4309,9 +4315,15 @@ function withLaneDirection(clause, scope){
 }
 /* Case a lane-position word (Left/Centre/Right) for INO output.
    Always capitalised: "Left", "Centre", "Right". */
+/* Convert a directions array (from readLaneDirections) to the direction word for INO output. */
+function inoDirectionWord(dirs){
+  if (!dirs || !dirs.length) return '';
+  if (dirs.includes('both') || dirs.includes('both directions')) return 'in both directions';
+  if (dirs.includes('all directions')) return 'in all directions';
+  return laneJoin(dirs);
+}
 function inoLanePosCase(pos){
-  const p = String(pos||'');
-  return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase();
+  return String(pos||'').toLowerCase();
 }
 /* Build a "<lanes> <verb> <state>" sentence for reopened/still-blocked/still-closed
    wording on an update. positions: array of lowercase position names (e.g. ["centre","right"]).
@@ -4928,18 +4940,24 @@ function buildLanesP(prefix){
       return { pos: inoLanePosCase(el.value), n: (!isNaN(n) && n > 0) ? n : null };
     });
     const anyCount = withCount.some(p => p.n !== null);
+    const dirs = readLaneDirections('.s_lane_dir');
+    const dirWord = (dirs.length && !dirs.includes('unknown')) ? inoDirectionWord(dirs) : '';
     let laneStr;
     if (anyCount){
+      // With counts: "Two left and one centre lanes blocked northbound"
       laneStr = laneJoin(withCount.map(p => p.n
-        ? `${capNumWord(p.n)} ${p.pos.toLowerCase()} lane${p.n > 1 ? 's' : ''}`
+        ? `${capNumWord(p.n).toLowerCase()} ${p.pos} lane${p.n > 1 ? 's' : ''}`
         : `${p.pos} lane`
       ));
+      const full = [laneStr, effectiveVerb, dirWord].filter(Boolean).join(' ');
+      return capFirstLetter(full);
     } else {
+      // Without counts: "Centre and right northbound lanes blocked"
       const names = withCount.map(p => p.pos);
-      laneStr = laneJoin(names) + ' lane' + (names.length > 1 ? 's' : '');
+      const posStr = laneJoin(names);
+      const full = [posStr, dirWord, 'lane' + (names.length > 1 ? 's' : ''), effectiveVerb].filter(Boolean).join(' ');
+      return capFirstLetter(full);
     }
-    if (laneStr && effectiveVerb){ return withLaneDirection(`${laneStr} ${effectiveVerb}`, '.s_lane_dir'); }
-    return withLaneDirection(laneStr || effectiveVerb, '.s_lane_dir');
   }
 
   // Generic: L1–L5 identifiers plus optional Left/Centre/Right positions.
@@ -6288,27 +6306,6 @@ function buildINO(){
     <div class="ino-seg-summary" id="s_seg_impact_summary"></div>
     <div class="ino-seg-body">
 
-    <div class="field" id="s_impacttype_field">
-      <span class="field-label">Impact type</span>
-      <div class="check-grid impact-type-row">
-        ${["Blocked","Impacted"].map(l=>`<label class="inline-check"><input type="radio" class="desel-radio" name="s_lane_state" value="${l}" onclick="toggleDeselectableRadio(this)" onchange="onInoLaneStateChange()"> ${l}</label>`).join('')}
-        <span class="impact-type-divider" aria-hidden="true"></span>
-        <label class="inline-check impact-closed"><input type="radio" class="desel-radio" name="s_lane_state" value="Closed" onclick="toggleDeselectableRadio(this)" onchange="onInoLaneStateChange()"><i class="ti ti-ban impact-closed-ico" aria-hidden="true"></i> Closed</label>
-      </div>
-      <p class="hint" id="s_closed_note" style="display:none;">Closed selected — generates "Road closed".</p>
-    </div>
-
-    <div class="field" id="s_impact_dir_field" style="margin-top:14px;">
-      <span class="field-label">Direction</span>
-      <p class="hint" style="margin-bottom:6px;margin-top:-2px;">Auto-selected from "Direction incident occurred" — editable independently.</p>
-      <div class="check-grid">
-        ${['Northbound','Southbound','Eastbound','Westbound','Both directions','All directions'].map(d =>
-          `<label class="inline-check"><input type="radio" name="s_lane_dir_radio" class="s_lane_dir desel-radio" value="${d}" onclick="toggleDeselectableRadio(this)" onchange="onLaneDirChange(); renderPreview(); scheduleWorkingSave();"> ${d}</label>`
-        ).join('')}
-        <label class="inline-check" style="border-style:dashed;"><input type="radio" name="s_lane_dir_radio" class="s_lane_dir desel-radio" value="Unknown" onclick="toggleDeselectableRadio(this)" onchange="onLaneDirChange(); renderPreview(); scheduleWorkingSave();"> Unknown</label>
-      </div>
-    </div>
-
     <div class="field" id="s_lanes_field">
       <div class="field-condense-head">
         <span class="field-label" style="margin:0;">Impact on lanes</span>
@@ -6329,7 +6326,7 @@ function buildINO(){
           <i class="ti ti-arrows-diagonal" style="font-size:14px;" aria-hidden="true"></i>
           <span>Lanes now open</span>
           <span class="reopen-count" id="s_reopen_count" style="display:none;">0</span>
-          <span class="reopen-chev">▾</span>
+          <span class="reopen-chev">\u25be</span>
         </button>
         <div id="s_reopen_panel" class="reopen-panel" style="display:none;">
           <div class="reopen-panel-title">Tick the lanes that have reopened:</div>
@@ -6342,6 +6339,30 @@ function buildINO(){
         </div>
       </div>
       </div>
+    </div>
+
+    <div class="field" id="s_impacttype_field">
+      <span class="field-label">Impact type</span>
+      <div class="check-grid impact-type-row">
+        ${["Blocked","Impacted"].map(l=>`<label class="inline-check"><input type="radio" class="desel-radio" name="s_lane_state" value="${l}" onclick="toggleDeselectableRadio(this)" onchange="onInoLaneStateChange()"> ${l}</label>`).join('')}
+        <span class="impact-type-divider" aria-hidden="true"></span>
+        <label class="inline-check impact-closed"><input type="radio" class="desel-radio" name="s_lane_state" value="Closed" onclick="toggleDeselectableRadio(this)" onchange="onInoLaneStateChange()"><i class="ti ti-ban impact-closed-ico" aria-hidden="true"></i> Closed</label>
+      </div>
+      <p class="hint" id="s_closed_note" style="display:none;">Closed selected \u2014 generates "Road closed".</p>
+    </div>
+
+    <div class="field" id="s_impact_dir_field" style="margin-top:14px;">
+      <span class="field-label">Direction (optional)</span>
+      <select id="s_lane_dir_select" onchange="onLaneDirChange(); renderPreview(); scheduleWorkingSave();">
+        <option value="">\u2014 select direction \u2014</option>
+        <option value="Northbound">Northbound</option>
+        <option value="Southbound">Southbound</option>
+        <option value="Eastbound">Eastbound</option>
+        <option value="Westbound">Westbound</option>
+        <option value="Both directions">Both directions</option>
+        <option value="All directions">All directions</option>
+        <option value="Unknown">Unknown</option>
+      </select>
     </div>
 
     <div class="field" style="border-top:none;padding-top:0;margin-top:-8px;">
@@ -10083,7 +10104,7 @@ function collectFormState(){
         laneCounts: (function(){ const o={}; document.querySelectorAll('.s_lane_pos_num').forEach(el=>{ if(el.value) o[el.dataset.pos]=el.value; }); return o; })(),
         reopenPos: Array.from(document.querySelectorAll('.s_reopen_pos:checked')).map(c=>c.value),
         reopenCounts: (function(){ const o={}; document.querySelectorAll('.s_reopen_pos_num').forEach(el=>{ if(el.value) o[el.dataset.pos]=el.value; }); return o; })(),
-        laneDir: Array.from(document.querySelectorAll('.s_lane_dir:checked')).map(c=>c.value),
+        laneDir: (document.getElementById('s_lane_dir_select')||{}).value || '',
         openLaneCount: gv('s_open_lane_count'),
         reopenDir: Array.from(document.querySelectorAll('.s_reopen_dir:checked')).map(c=>c.value),
         laneState: rb('s_lane_state'),
@@ -11863,7 +11884,7 @@ function applyDraft(s){
       toggleReopenPanel(true);
     }
     // v161: restore lane directions (main + reopen), then reveal the row if any is ticked.
-    setChecks('s_lane_dir', a.laneDir); onLaneDirChange();
+    { const dd = document.getElementById('s_lane_dir_select'); if (dd) { dd.value = Array.isArray(a.laneDir) ? (a.laneDir[0]||'') : (a.laneDir||''); } onLaneDirChange(); }
     if (a.openLaneCount) set('s_open_lane_count', a.openLaneCount);
     setChecks('s_reopen_dir', a.reopenDir);
     if (document.querySelector('.s_lane_dir:checked')) toggleMoreless('s_lanedir', true);
