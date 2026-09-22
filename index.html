@@ -2028,7 +2028,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 206.01</span>
+    <span class="app-version">Version 206.02</span>
   </footer>
 </div>
 
@@ -6367,10 +6367,10 @@ function buildINO(){
           </div>
         </div>
         <div class="field" style="margin-bottom:12px;">
-          <div class="check-grid" style="align-items:center;">
+          <button type="button" class="moreless-btn" id="s_cong_more_btn" aria-expanded="false" onclick="var w=document.getElementById('s_cong_more_wrap');var show=w.style.display==='none';w.style.display=show?'flex':'none';this.querySelector('.ml-label').textContent=show?'Less':'More';this.querySelector('.ml-chev').textContent=show?'\u25b4':'\u25be';this.setAttribute('aria-expanded',show)"><span class="ml-label">More</span> <span class="ml-chev">\u25be</span></button>
+          <div class="check-grid" id="s_cong_more_wrap" style="display:none;margin-top:8px;">
             <label class="inline-check"><input type="radio" class="desel-radio" name="s_cong_type" value="localised" onclick="toggleDeselectableRadio(this)" onchange="renderPreview()"> Localised</label>
             <label class="inline-check"><input type="radio" class="desel-radio" name="s_cong_type" value="residual" onclick="toggleDeselectableRadio(this)" onchange="renderPreview()"> Residual</label>
-            <span style="width:1px;height:18px;background:var(--line-strong);margin:0 4px;"></span>
             <label class="inline-check"><input type="checkbox" id="s_cong_peak" onchange="renderPreview(); scheduleWorkingSave();"> AM/PM peak</label>
           </div>
         </div>
@@ -6539,37 +6539,51 @@ function buildINO(){
       </div>
       <div class="field-summary" id="s_dur_summary"></div>
       <div class="field-controls">
-      <div class="time-row">
-        <input type="text" id="s_dur_hh" class="time-box narrow" inputmode="numeric" maxlength="2" placeholder="HH" oninput="onInoDurationBoxInput(this)">
-        <span class="time-unit">hrs</span>
-        <input type="text" id="s_dur_mm" class="time-box narrow" inputmode="numeric" maxlength="3" placeholder="MM" oninput="onInoDurationBoxInput(this)">
-        <span class="time-unit">min</span>
-      </div>
-      <div class="dur-quick" id="s_dur_quick">
-        <input type="checkbox" id="s_duration_unknown" style="display:none;">
-        <button type="button" class="dur-quick-btn" id="s_dur_unknown_btn" onclick="toggleInoDurationUnknown()">Unknown</button>
-        <button type="button" class="dur-quick-btn" onclick="setInoDurationQuick(15)">15 min</button>
-        <button type="button" class="dur-quick-btn" onclick="setInoDurationQuick(30)">30 min</button>
-        <button type="button" class="dur-quick-btn" onclick="setInoDurationQuick(60)">60 min</button>
-      </div>
-      <div class="resp-group-label" style="margin-top:14px;">Subject to:</div>
+      <div class="resp-group-label" style="margin-top:0;">Subject to:</div>
       <div class="check-grid">
         <label class="inline-check"><input type="checkbox" id="s_dur_recovery" onchange="onInoRecoveryChange(); renderPreview(); scheduleWorkingSave();"> Vehicle recovery</label>
         <label class="inline-check"><input type="checkbox" id="s_dur_fcuqps" onchange="renderPreview(); scheduleWorkingSave();"> FCU and QPS investigation</label>
         <label class="inline-check"><input type="checkbox" id="s_dur_cleanup" onchange="renderPreview(); scheduleWorkingSave();"> Clean-up</label>
       </div>
-      <input type="text" id="s_dur_other" placeholder="Free-text duration" style="margin-top:8px;" oninput="onInoDurationOtherInput()">
+      <div style="margin-top:12px;">
+        <button type="button" class="moreless-btn" id="s_dur_time_btn" aria-expanded="false" onclick="var w=document.getElementById('s_dur_time_wrap');var show=w.style.display==='none';w.style.display=show?'block':'none';this.querySelector('.ml-label').textContent=show?'Less':'More';this.querySelector('.ml-chev').textContent=show?'\u25b4':'\u25be';this.setAttribute('aria-expanded',show)"><span class="ml-label">More</span> <span class="ml-chev">\u25be</span></button>
+        <div id="s_dur_time_wrap" style="display:none;margin-top:8px;">
+          <div class="time-row">
+            <input type="text" id="s_dur_hh" class="time-box narrow" inputmode="numeric" maxlength="2" placeholder="HH" oninput="onInoDurationBoxInput(this)">
+            <span class="time-unit">hrs</span>
+            <input type="text" id="s_dur_mm" class="time-box narrow" inputmode="numeric" maxlength="3" placeholder="MM" oninput="onInoDurationBoxInput(this)">
+            <span class="time-unit">min</span>
+          </div>
+          <div class="dur-quick" id="s_dur_quick">
+            <input type="checkbox" id="s_duration_unknown" style="display:none;">
+            <button type="button" class="dur-quick-btn" id="s_dur_unknown_btn" onclick="toggleInoDurationUnknown()">Unknown</button>
+            <button type="button" class="dur-quick-btn" onclick="setInoDurationQuick(15)">15 min</button>
+            <button type="button" class="dur-quick-btn" onclick="setInoDurationQuick(30)">30 min</button>
+            <button type="button" class="dur-quick-btn" onclick="setInoDurationQuick(60)">60 min</button>
+          </div>
+        </div>
+      </div>
+      <input type="text" id="s_dur_other" placeholder="Free-text duration" style="margin-top:10px;" oninput="onInoDurationOtherInput()">
       <p class="hint" id="s_dur_recovery_hint" style="display:none;"></p>
       </div>
     </div>
 
+    </div>
+    </div>
+
+    <div class="ino-seg" id="s_seg_contact">
+    <button type="button" class="ino-seg-head" onclick="toggleInoSeg('s_seg_contact')">
+      <span class="ino-seg-chev">\u25be</span><span class="ino-seg-title">Contact</span><span class="ino-seg-count" id="s_seg_contact_count"></span>
+    </button>
+    <div class="ino-seg-summary" id="s_seg_contact_summary"></div>
+    <div class="ino-seg-body">
     <div class="field">
       <span class="field-label">Coordinator Ph.</span>
       <input type="text" id="s_contact_ph" placeholder="07 5563 6444">
       <p class="hint">Leave blank to use the default 07 5563 6444. Enter a number to override it.</p>
     </div>
 
-    <div class="field">
+    <div class="field" style="margin-bottom:0;">
       <span class="field-label">Coordinator name</span>
       <input type="text" id="s_contact" placeholder="e.g. J. Smith">
     </div>
