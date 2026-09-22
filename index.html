@@ -2028,7 +2028,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 205.15</span>
+    <span class="app-version">Version 205.16</span>
   </footer>
 </div>
 
@@ -4384,8 +4384,6 @@ function titleCaseLocationField(str){
   return out;
 }
 
-/* Lowercase ONLY the on/off-ramp phrase(s) within a piece of text, leaving everything else
-
 function capitalizeSentences(text){
   if (!text) return text;
   // Capitalise the first letter of the message, after a newline, and after a
@@ -6337,10 +6335,7 @@ function buildINO(){
         <label class="inline-check lane-all"><input type="checkbox" id="s_lane_all" onchange="onInoLaneAllChange()"><i class="ti ti-barrier-block lane-all-ico" aria-hidden="true"></i> All</label>
         <span class="lane-nil-divider" aria-hidden="true"></span>
         <label class="inline-check lane-nil"><input type="checkbox" id="s_lane_nil" onchange="onInoLaneNilChange()"><i class="ti ti-circle-off lane-nil-ico" aria-hidden="true"></i> Nil</label>
-        <span style="width:1px;height:22px;background:var(--line-strong,#d1d5db);margin:0 4px;" aria-hidden="true"></span>
-        <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--muted,#6b7280);">Open lanes
-          <input type="number" id="s_open_lane_count" min="1" max="10" placeholder="#" style="width:48px;padding:4px 6px;font-size:13px;border:1px solid var(--line-strong,#d1d5db);border-radius:5px;text-align:center;" oninput="onOpenLaneCountChange(); renderPreview(); scheduleWorkingSave();">
-        </label>
+
       </div>
       <div id="s_reopen_wrap" style="display:none; margin-top:10px;">
         <button type="button" class="reopen-toggle" id="s_reopen_btn" aria-expanded="false" onclick="toggleReopenPanel()">
@@ -6367,6 +6362,9 @@ function buildINO(){
         <span id="s_oppsec_chev">▸</span> Additional info
       </button>
       <div id="s_oppsec_body" style="display:none;margin-top:10px;">
+        <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--muted,#6b7280);margin-bottom:8px;">Open lanes
+          <input type="number" id="s_open_lane_count" min="1" max="10" placeholder="#" style="width:48px;padding:4px 6px;font-size:13px;border:1px solid var(--line-strong,#d1d5db);border-radius:5px;text-align:center;" oninput="onOpenLaneCountChange(); renderPreview(); scheduleWorkingSave();">
+        </label>
         <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted,#6b7280);margin-bottom:6px;cursor:pointer;"><input type="checkbox" id="s_opp_comma" checked onchange="renderPreview(); scheduleWorkingSave();" style="accent-color:var(--blue,#1a5fc7);"> Separate with comma</label>
         <input type="text" id="s_opp_text" placeholder="Additional information" oninput="renderPreview(); scheduleWorkingSave();">
       </div>
