@@ -2028,7 +2028,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 206.07</span>
+    <span class="app-version">Version 206.09</span>
   </footer>
 </div>
 
@@ -2207,7 +2207,7 @@ const CRASH_ITEMS_MORE = [
 const CRASH_VEHICLE_KEYS = ["cars","vehicles","heavyvehicles","buses","motorcycles","escooters","ebicycles","animals","tma","trains","trams"];
 
 const RESPONDERS = ["TRU","Tow","TMA","QAS","QFD","QPS","FCU","SOC","Road Steward","Traffic Control","All emergency services","Translink response service","Mechanical services","Media","Medivac"];
-const RESPONDER_LOWER = {"Towing":"towing","Maintenance":"maintenance","Heavy haulage":"heavy haulage"};
+const RESPONDER_LOWER = {"Tow":"tow","Towing":"towing","Maintenance":"maintenance","Heavy haulage":"heavy haulage"};
 
 /* ---------- SEQ OPS / INO reference data ---------- */
 const INO_SEQ = ["No.1","No.2","No.3","No.4","No.5","No.6","No.7","No.8","No.9","No.10","No.11","No.12","No.13","No.14","No.15"];
@@ -3814,7 +3814,7 @@ function laneTotal(info){
   return t;
 }
 /* Rank the two non-closed impact states (Closed is handled elsewhere, outranking both). */
-function laneStateRank(s){ return s === 'Blocked' ? 2 : (s === 'Impacted' ? 1 : 0); }
+function laneStateRank(s){ return (s === 'Blocked' || s === 'LaneClosed') ? 2 : (s === 'Impacted' ? 1 : 0); }
 /* Union two lane records: merge positions, take the LARGER per-lane count for any shared
    position, and keep the worse state (Blocked > Affected). */
 function unionLaneInfo(a, b){
@@ -4264,6 +4264,15 @@ const GEN_DIR_ABBREV_MAP = {
   northeastbound: 'NEB', northwestbound: 'NWB', southeastbound: 'SEB', southwestbound: 'SWB',
   inbound: 'IB', outbound: 'OB'
 };
+/* Normalise lane state: 'RoadClosed' and legacy 'Closed' both mean road-level closure.
+   'LaneClosed' is a lane-level verb (same as Blocked/Impacted but word is 'closed'). */
+function isRoadClosure(stateVal){ return stateVal === 'Closed' || stateVal === 'RoadClosed'; }
+function laneStateVerb(stateVal){
+  if (!stateVal) return '';
+  if (stateVal === 'LaneClosed') return 'closed';
+  return stateVal.toLowerCase();
+}
+
 /* Show/hide grey-out on Impact on lanes when Unknown direction is selected */
 function onLaneDirChange(){
   const sel = (document.getElementById('s_lane_dir_select')||{}).value || '';
@@ -4281,12 +4290,21 @@ function onLaneDirChange(){
 /* When Open lanes count is typed, clear other lane selections since they're mutually exclusive */
 function onOpenLaneCountChange(){
   const n = parseInt((document.getElementById('s_open_lane_count')||{}).value, 10);
-  if (!isNaN(n) && n > 0){
+  const filled = !isNaN(n) && n > 0;
+  if (filled){
     // Clear Left/Centre/Right, All, Nil
     document.querySelectorAll('.s_lane_pos').forEach(c => { c.checked = false; });
     const allCk = document.getElementById('s_lane_all'); if (allCk) allCk.checked = false;
     const nilCk = document.getElementById('s_lane_nil'); if (nilCk) nilCk.checked = false;
   }
+  // Grey out Impact on lanes and Impact type when open lane count is filled
+  const lanesField = document.getElementById('s_lanes_field');
+  const typeField = document.getElementById('s_impacttype_field');
+  [lanesField, typeField].forEach(f => {
+    if (!f) return;
+    f.style.opacity = filled ? '0.35' : '';
+    f.style.pointerEvents = filled ? 'none' : '';
+  });
 }
 /* Get the open lane count from the input field */
 function getOpenLaneCount(){
@@ -4864,7 +4882,7 @@ function buildLanesP(prefix){
   // The predecessor test looks only at the immediate prior message (inoPrevLaneInfo.state),
   // NOT at whether any earlier ancestor was closed — a not-closed message between two closed
   // ones still re-reads "are now closed".
-  if (prefix === 's' && stateStr === 'closed'){
+  if (prefix === 's' && (stateStr === 'roadclosed' || stateStr === 'closed')){
     if (!isInoUpdateContext()) return withLaneDirection('Road closed', '.s_lane_dir');
     const prevClosed = !!(inoPrevLaneInfo && inoPrevLaneInfo.state === 'Closed');
     return withLaneDirection(prevClosed ? 'Road remains closed' : 'Road is now closed', '.s_lane_dir');
@@ -4887,18 +4905,24 @@ function buildLanesP(prefix){
   // the SAME state word (captured as inoPrevLaneInfo.all + .state).
   if (prefix === 's' && inoLaneAllOn()){
     // When no impact type is selected, default to "All lanes closed" with direction
-    const effectiveState = (stateStr === 'blocked' || stateStr === 'affected') ? stateStr : 'closed';
-    if (effectiveState === 'closed'){
+    const effectiveState = (stateStr === 'blocked' || stateStr === 'affected' || stateStr === 'laneclosed') ? stateStr : 'roadclosed';
+    if (effectiveState === 'roadclosed' || effectiveState === 'closed'){
       if (!isInoUpdateContext()) return withLaneDirection('Road closed', '.s_lane_dir');
       const prevClosed = !!(inoPrevLaneInfo && inoPrevLaneInfo.state === 'Closed');
       return withLaneDirection(prevClosed ? 'Road remains closed' : 'Road is now closed', '.s_lane_dir');
     }
+    const allVerb = (effectiveState === 'laneclosed') ? 'closed' : effectiveState;
     let allClause;
-    if (!isInoUpdateContext()) allClause = `All lanes ${effectiveState}`;
+    if (!isInoUpdateContext()){
+      const dirs = readLaneDirections('.s_lane_dir');
+      const dirWord = (dirs.length && !dirs.includes('unknown')) ? inoDirectionWord(dirs) : '';
+      allClause = dirWord ? `All ${dirWord} lanes ${allVerb}` : `All lanes ${allVerb}`;
+      return allClause;
+    }
     else {
       const prevSame = !!(inoPrevLaneInfo && inoPrevLaneInfo.all
         && (inoPrevLaneInfo.state||'').toLowerCase() === effectiveState);
-      allClause = prevSame ? `All lanes remain ${effectiveState}` : `All lanes are now ${effectiveState}`;
+      allClause = prevSame ? `All lanes remain ${allVerb}` : `All lanes are now ${allVerb}`;
     }
     return withLaneDirection(allClause, '.s_lane_dir');
   }
@@ -4915,7 +4939,7 @@ function buildLanesP(prefix){
     // When Unknown direction is selected, verb changes to "open" and
     // lane controls are greyed out — Open lanes count field is used instead.
     const unknownDir = isUnknownLaneDir();
-    const effectiveVerb = unknownDir ? 'open' : stateStr;
+    const effectiveVerb = unknownDir ? 'open' : (stateStr === 'laneclosed' ? 'closed' : stateStr);
 
     // Open lanes count field: generates "Single lane open" / "Two lanes open" etc.
     // Takes priority when filled (mutually exclusive with positions).
@@ -4930,7 +4954,7 @@ function buildLanesP(prefix){
     // No positions ticked — still show impact type + direction
     if (!posEls.length){
       if (unknownDir) return '';
-      if (stateStr) return withLaneDirection(capFirstLetter(stateStr), '.s_lane_dir');
+      { const verb = stateStr === 'laneclosed' ? 'closed' : stateStr; if (verb) return withLaneDirection(capFirstLetter(verb), '.s_lane_dir'); }
       return '';
     }
 
@@ -4994,7 +5018,7 @@ function buildInoReinstateImpact(){
     ? { pos: inoPeakLaneInfo.pos.slice(), counts: Object.assign({}, inoPeakLaneInfo.counts), state: inoPeakLaneInfo.state, total: inoPeakLaneInfo.total, unioned: !!inoPeakLaneInfo.unioned }
     : null;
   const curInfo = laneInfoFromInoForm();
-  if (curInfo && curInfo.state !== 'Closed'){
+  if (curInfo && !isRoadClosure(curInfo.state)){
     const curTotal = laneTotal(curInfo);
     if (curTotal > 0){
       // Blank state on the FINAL's own lanes (e.g. reached via the reopen path) counts as Blocked.
@@ -5291,7 +5315,7 @@ function onInoLanePosChange(){
   scheduleWorkingSave();
 }
 function applyInoClosedGrey(){
-  const closed = (document.querySelector('input[name="s_lane_state"]:checked')||{}).value === 'Closed';
+  const closed = isRoadClosure((document.querySelector('input[name="s_lane_state"]:checked')||{}).value);
   const field = document.getElementById('s_lanes_field');
   const note = document.getElementById('s_closed_note');
   if (field){
@@ -5318,7 +5342,7 @@ function onInoLaneStateChange(){
   // Mutual exclusion (Closed side): selecting Closed clears any "Lanes now open" ticks —
   // a whole-carriageway closure can't coexist with reopened lanes (mirror of the reopen
   // handler, which clears a leftover Closed).
-  const closedNow = (document.querySelector('input[name="s_lane_state"]:checked')||{}).value === 'Closed';
+  const closedNow = isRoadClosure((document.querySelector('input[name="s_lane_state"]:checked')||{}).value);
   if (closedNow){
     inoClearLaneNil();
     let cleared = false;
@@ -5459,7 +5483,7 @@ function onInoLaneAllChange(){
     // If the current Impact type is Closed, switch it to Blocked — "All" needs a Blocked/
     // Affected state word (Closed already has its own whole-road clause).
     const st = document.querySelector('input[name="s_lane_state"]:checked');
-    if (st && st.value === 'Closed'){
+    if (st && isRoadClosure(st.value)){
       st.checked = false;
       const blk = document.querySelector('input[name="s_lane_state"][value="Blocked"]');
       if (blk){ blk.checked = true; blk._wasChecked = true; }
@@ -5526,8 +5550,8 @@ function applyInoLaneNilGrey(){
   if (allLbl) allLbl.style.opacity = on ? '0.4' : '';
   const unknownLbl = (document.getElementById('s_lane_unknown')||{}).closest ? document.getElementById('s_lane_unknown').closest('.inline-check') : null;
   if (unknownLbl) unknownLbl.style.opacity = on ? '0.4' : '';
-  const closedLbl = (document.querySelector('input[name="s_lane_state"][value="Closed"]')||{}).closest
-    ? document.querySelector('input[name="s_lane_state"][value="Closed"]').closest('.inline-check') : null;
+  const closedLbl = (document.querySelector('input[name="s_lane_state"][value="RoadClosed"]')||{}).closest
+    ? document.querySelector('input[name="s_lane_state"][value="RoadClosed"]').closest('.inline-check') : null;
   if (closedLbl) closedLbl.style.opacity = on ? '0.4' : '';
   if (!on){
     document.querySelectorAll('.s_lane_pos').forEach(cb => {
@@ -5547,7 +5571,7 @@ function onInoLaneNilChange(){
     // Mutually exclusive with Closed → switch to Blocked so Nil has a verb; leave Blocked/
     // Affected alone if already set.
     const st = document.querySelector('input[name="s_lane_state"]:checked');
-    if (st && st.value === 'Closed'){
+    if (st && isRoadClosure(st.value)){
       st.checked = false;
       const blk = document.querySelector('input[name="s_lane_state"][value="Blocked"]');
       if (blk){ blk.checked = true; blk._wasChecked = true; }
@@ -5707,7 +5731,7 @@ function onGenericLaneAllChange(){
     // Closed already reads as its own whole-road clause; All needs Blocked/Affected, so
     // switch a current Closed to Blocked.
     const st = document.querySelector('input[name="g_lane_state"]:checked');
-    if (st && st.value === 'Closed'){
+    if (st && isRoadClosure(st.value)){
       st.checked = false; st._wasChecked = false;
       const blk = document.querySelector('input[name="g_lane_state"][value="Blocked"]');
       if (blk){ blk.checked = true; blk._wasChecked = true; }
@@ -5787,7 +5811,7 @@ function onGenericLaneNilChange(){
     // Mutually exclusive with Closed: nothing impacted ≠ whole-road closure. Switch to Blocked
     // so Nil has a verb; leave Blocked/Affected alone if already set.
     const st = document.querySelector('input[name="g_lane_state"]:checked');
-    if (st && st.value === 'Closed'){
+    if (st && isRoadClosure(st.value)){
       st.checked = false; st._wasChecked = false;
       const blk = document.querySelector('input[name="g_lane_state"][value="Blocked"]');
       if (blk){ blk.checked = true; blk._wasChecked = true; }
@@ -6024,16 +6048,7 @@ function buildInoDuration(){
   // "Subject to" clauses: vehicle recovery, FCU/QPS investigation, clean-up
   const subjectParts = [];
   if ((document.getElementById('s_dur_recovery')||{}).checked){
-    let totalVehicles = 0;
-    document.querySelectorAll('.s_crash').forEach(inp => {
-      const n = parseInt(inp.value, 10);
-      if (!isNaN(n) && n > 0) totalVehicles += n;
-    });
-    document.querySelectorAll('#s_crash_others .other-row').forEach(row => {
-      const n = parseInt((row.querySelector('.s_crash_other_num')||{}).value, 10);
-      if (!isNaN(n) && n > 0) totalVehicles += n;
-    });
-    subjectParts.push(totalVehicles > 1 ? 'vehicle recoveries' : 'vehicle recovery');
+    subjectParts.push('vehicle recovery');
   }
   if ((document.getElementById('s_dur_fcu')||{}).checked) subjectParts.push('FCU investigation');
   if ((document.getElementById('s_dur_qps')||{}).checked) subjectParts.push('QPS investigation');
@@ -6343,12 +6358,17 @@ function buildINO(){
 
     <div class="field" id="s_impacttype_field">
       <span class="field-label">Impact type</span>
+      <div class="resp-group-label" style="margin-top:0;">Lanes</div>
       <div class="check-grid impact-type-row">
-        ${["Blocked","Impacted"].map(l=>`<label class="inline-check"><input type="radio" class="desel-radio" name="s_lane_state" value="${l}" onclick="toggleDeselectableRadio(this)" onchange="onInoLaneStateChange()"> ${l}</label>`).join('')}
-        <span class="impact-type-divider" aria-hidden="true"></span>
-        <label class="inline-check impact-closed"><input type="radio" class="desel-radio" name="s_lane_state" value="Closed" onclick="toggleDeselectableRadio(this)" onchange="onInoLaneStateChange()"><i class="ti ti-ban impact-closed-ico" aria-hidden="true"></i> Closed</label>
+        <label class="inline-check"><input type="radio" class="desel-radio" name="s_lane_state" value="Blocked" onclick="toggleDeselectableRadio(this)" onchange="onInoLaneStateChange()"> Blocked</label>
+        <label class="inline-check"><input type="radio" class="desel-radio" name="s_lane_state" value="Impacted" onclick="toggleDeselectableRadio(this)" onchange="onInoLaneStateChange()"> Impacted</label>
+        <label class="inline-check"><input type="radio" class="desel-radio" name="s_lane_state" value="LaneClosed" onclick="toggleDeselectableRadio(this)" onchange="onInoLaneStateChange()"> Closed</label>
       </div>
-      <p class="hint" id="s_closed_note" style="display:none;">Closed selected \u2014 generates "Road closed".</p>
+      <div class="resp-group-label">Road</div>
+      <div class="check-grid">
+        <label class="inline-check impact-closed"><input type="radio" class="desel-radio" name="s_lane_state" value="RoadClosed" onclick="toggleDeselectableRadio(this)" onchange="onInoLaneStateChange()"><i class="ti ti-ban impact-closed-ico" aria-hidden="true"></i> Closed</label>
+      </div>
+      <p class="hint" id="s_closed_note" style="display:none;">Generates "Road closed [direction]".</p>
     </div>
 
     <div class="field" id="s_impact_dir_field" style="margin-top:14px;">
@@ -6370,10 +6390,10 @@ function buildINO(){
         <span id="s_oppsec_chev">▸</span> Additional info
       </button>
       <div id="s_oppsec_body" style="display:none;margin-top:10px;">
-        <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--muted,#6b7280);margin-bottom:8px;">Open lanes
+        <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--muted,#6b7280);margin-bottom:8px;">Number of lanes open
           <input type="number" id="s_open_lane_count" min="1" max="10" placeholder="#" style="width:48px;padding:4px 6px;font-size:13px;border:1px solid var(--line-strong,#d1d5db);border-radius:5px;text-align:center;" oninput="onOpenLaneCountChange(); renderPreview(); scheduleWorkingSave();">
         </label>
-        <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted,#6b7280);margin-bottom:6px;cursor:pointer;"><input type="checkbox" id="s_opp_comma" checked onchange="renderPreview(); scheduleWorkingSave();" style="accent-color:var(--blue,#1a5fc7);"> Separate with comma</label>
+        <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted,#6b7280);margin-bottom:8px;cursor:pointer;"><input type="checkbox" id="s_opp_comma" checked onchange="renderPreview(); scheduleWorkingSave();" style="accent-color:var(--blue,#1a5fc7);"> Add comma</label>
         <input type="text" id="s_opp_text" placeholder="Additional information" oninput="renderPreview(); scheduleWorkingSave();">
       </div>
     </div>
@@ -6396,8 +6416,8 @@ function buildINO(){
             </div>
           </div>
         </div>
-        <div class="field" style="margin-bottom:12px;">
-          <button type="button" class="moreless-btn" id="s_cong_more_btn" aria-expanded="false" onclick="var w=document.getElementById('s_cong_more_wrap');var show=w.style.display==='none';w.style.display=show?'flex':'none';this.querySelector('.ml-label').textContent=show?'Less':'More';this.querySelector('.ml-chev').textContent=show?'\u25b4':'\u25be';this.setAttribute('aria-expanded',show)"><span class="ml-label">More</span> <span class="ml-chev">\u25be</span></button>
+        <div style="margin-top:10px;margin-bottom:12px;">
+          <button type="button" class="link-btn" id="s_cong_more_btn" aria-expanded="false" style="font-size:13.5px;" onclick="var w=document.getElementById('s_cong_more_wrap');var show=w.style.display==='none';w.style.display=show?'flex':'none';this.querySelector('.ml-chev').textContent=show?'\u25be':'\u25b8';this.setAttribute('aria-expanded',show)"><span class="ml-chev">\u25b8</span> Additional info</button>
           <div class="check-grid" id="s_cong_more_wrap" style="display:none;margin-top:8px;">
             <label class="inline-check"><input type="radio" class="desel-radio" name="s_cong_type" value="localised" onclick="toggleDeselectableRadio(this)" onchange="renderPreview()"> Localised</label>
             <label class="inline-check"><input type="radio" class="desel-radio" name="s_cong_type" value="residual" onclick="toggleDeselectableRadio(this)" onchange="renderPreview()"> Residual</label>
@@ -6577,7 +6597,7 @@ function buildINO(){
         <label class="inline-check"><input type="checkbox" id="s_dur_cleanup" onchange="renderPreview(); scheduleWorkingSave();"> Clean-up</label>
       </div>
       <div style="margin-top:12px;">
-        <button type="button" class="moreless-btn" id="s_dur_time_btn" aria-expanded="false" onclick="var w=document.getElementById('s_dur_time_wrap');var show=w.style.display==='none';w.style.display=show?'block':'none';this.querySelector('.ml-label').textContent=show?'Less':'More';this.querySelector('.ml-chev').textContent=show?'\u25b4':'\u25be';this.setAttribute('aria-expanded',show)"><span class="ml-label">More</span> <span class="ml-chev">\u25be</span></button>
+        <button type="button" class="link-btn" id="s_dur_time_btn" aria-expanded="false" style="font-size:13.5px;" onclick="var w=document.getElementById('s_dur_time_wrap');var show=w.style.display==='none';w.style.display=show?'block':'none';this.querySelector('.ml-chev').textContent=show?'\u25be':'\u25b8';this.setAttribute('aria-expanded',show)"><span class="ml-chev">\u25b8</span> Time</button>
         <div id="s_dur_time_wrap" style="display:none;margin-top:8px;">
           <div class="time-row">
             <input type="text" id="s_dur_hh" class="time-box narrow" inputmode="numeric" maxlength="2" placeholder="HH" oninput="onInoDurationBoxInput(this)">
@@ -7312,7 +7332,7 @@ function renderINO(){
   const infraField = document.getElementById('s_infra_field');
   if (infraField) infraField.style.display = (infraVal2 === 'yes') ? 'block' : 'none';
   // Auto-select diversion Yes when Road closed
-  const isClosed = (document.querySelector('input[name="s_lane_state"]:checked')||{}).value === 'Closed';
+  const isClosed = isRoadClosure((document.querySelector('input[name="s_lane_state"]:checked')||{}).value);
   if (isClosed){
     const divYes = document.querySelector('input[name="s_diversion"][value="yes"]');
     if (divYes && !divYes.checked){ divYes.checked = true; divYes._wasChecked = true; onInoDiversionChange(); }
@@ -11135,7 +11155,7 @@ function inoIncidentHadClosure(state){
     if (incidentKey(d.state) !== key) return false;
     const io = d.state.ino || {};
     if (io.laneState === 'Closed') return true;                       // this draft's own state
-    if (io.reinstatePrevLaneInfo && io.reinstatePrevLaneInfo.state === 'Closed') return true;
+    if (io.reinstatePrevLaneInfo && isRoadClosure(io.reinstatePrevLaneInfo.state)) return true;
     if (io.reinstateClosedEver === true) return true;                 // a closure latched by this draft
     return false;
   });
