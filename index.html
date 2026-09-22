@@ -2028,7 +2028,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 205.17</span>
+    <span class="app-version">Version 206.01</span>
   </footer>
 </div>
 
@@ -6011,7 +6011,8 @@ function buildInoDuration(){
   }
   if ((document.getElementById('s_dur_fcuqps')||{}).checked) subjectParts.push('FCU and QPS investigation');
   if ((document.getElementById('s_dur_cleanup')||{}).checked) subjectParts.push('clean-up');
-  const subjectClause = subjectParts.length ? 'subject to ' + andList(subjectParts) : '';
+  const subjectJoined = subjectParts.length <= 2 ? subjectParts.join(' and ') : subjectParts.slice(0,-1).join(', ') + ' and ' + subjectParts[subjectParts.length-1];
+  const subjectClause = subjectParts.length ? 'subject to ' + subjectJoined : '';
   // Free-text duration appended after everything else
   const pieces = [base, subjectClause, otherVal].filter(Boolean);
   if (!pieces.length) return '';
