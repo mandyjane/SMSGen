@@ -2028,7 +2028,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 207.04</span>
+    <span class="app-version">Version 207.07</span>
   </footer>
 </div>
 
@@ -2154,7 +2154,9 @@ function composeHazardLabel(hazardValue, text){
   const pos = HAZARD_FREETEXT[hazardValue];
   const t = (text||'').trim();
   if (!pos || !t) return title;
-  return pos === 'before' ? `${t} ${title}` : `${title} ${t}`;
+  // When free text goes before the label, lowercase the label so
+  // "vehicle" + "Fire" → "vehicle fire" (capFirstLetter handles the leading capital)
+  return pos === 'before' ? `${t} ${title.toLowerCase()}` : `${title} ${t}`;
 }
 
 /* Resolve a chosen event sub-type to its output label for the standalone cases
@@ -3266,7 +3268,7 @@ function bccImpact(){
 }
 function bccInjury(){
   const v = (document.querySelector('input[name="b_inj"]:checked')||{}).value || '';
-  if (v === 'no') return 'Nil injuries';
+  if (v === 'no') return 'nil injuries';
   if (v === 'unknown') return 'Unknown, awaiting further details';
   if (v !== 'yes') return '';
   const counts = {};
@@ -4893,7 +4895,7 @@ function buildLanesP(prefix){
   // "are now/remain" wording, since it represents no impact. Mutually exclusive with
   // Closed/All/Unknown/positions, so it short-circuits above them.
   if (prefix === 's' && inoLaneNilOn()){
-    return withLaneDirection('Nil lanes impacted', '.s_lane_dir');
+    return withLaneDirection('nil lanes impacted', '.s_lane_dir');
   }
 
   // INO whole-carriageway "All" for Blocked/Affected. Mirrors the Closed three-case wording:
@@ -5963,6 +5965,8 @@ function applyInoDurOtherVisibility(){
     || (document.getElementById('s_dur_fcu')||{}).checked
     || (document.getElementById('s_dur_qps')||{}).checked
     || (document.getElementById('s_dur_cleanup')||{}).checked
+    || (document.getElementById('s_dur_emergency_ops')||{}).checked
+    || (document.getElementById('s_dur_road_surface')||{}).checked
     || !!((document.getElementById('s_dur_other')||{value:''}).value.trim());
   if (has){ wrap.style.display = 'block'; syncDurOtherBtn(true); }
 }
@@ -6053,6 +6057,8 @@ function buildInoDuration(){
   if ((document.getElementById('s_dur_fcu')||{}).checked) subjectParts.push('FCU investigation');
   if ((document.getElementById('s_dur_qps')||{}).checked) subjectParts.push('QPS investigation');
   if ((document.getElementById('s_dur_cleanup')||{}).checked) subjectParts.push('clean-up');
+  if ((document.getElementById('s_dur_emergency_ops')||{}).checked) subjectParts.push('emergency services operation');
+  if ((document.getElementById('s_dur_road_surface')||{}).checked) subjectParts.push('road surface assessment');
   const subjectJoined = subjectParts.length <= 2 ? subjectParts.join(' and ') : subjectParts.slice(0,-1).join(', ') + ' and ' + subjectParts[subjectParts.length-1];
   const subjectClause = subjectParts.length ? 'subject to ' + subjectJoined : '';
   // Free-text duration appended after everything else
@@ -6300,6 +6306,9 @@ function buildINO(){
           <span class="hint" style="margin-top:0;align-self:center;">How many injured?</span>
         </div>
         <div id="s_inj_rows" style="margin-top:10px;display:flex;flex-direction:column;gap:8px;"></div>
+        <div style="margin-top:10px;">
+          <label class="inline-check"><input type="checkbox" id="s_inj_qas" onchange="renderPreview(); scheduleWorkingSave();"> Transported by QAS</label>
+        </div>
       </div>
     </div>
 
@@ -6587,6 +6596,37 @@ function buildINO(){
           </div>
         </div>
       </div>
+
+    <button type="button" class="link-btn" id="s_departed_toggle" style="margin-top:12px;font-size:13.5px;" onclick="var w=document.getElementById('s_departed_wrap');var show=w.style.display==='none';w.style.display=show?'block':'none';this.querySelector('.ml-chev').textContent=show?'\u25be':'\u25b8';this.setAttribute('aria-expanded',show?'true':'false')" aria-expanded="false"><span class="ml-chev">\u25b8</span> Departed</button>
+    <div id="s_departed_wrap" style="display:none;margin-top:10px;">
+      <div class="responder-col-card" style="container-type:inline-size;">
+        <h4 style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-soft,#38423e);margin-bottom:10px;"><span style="width:6px;height:6px;border-radius:50%;background:#95a5a6;display:inline-block;"></span> Departed</h4>
+        <div class="resp-group-label">Emergency</div>
+        <div class="check-grid resp-grid-emergency">
+          ${["QPS","QAS","QFD","FCU"].map(r=>\`<label class="inline-check"><input type="checkbox" class="s_departed_ck" value="\${r}" onchange="renderPreview(); scheduleWorkingSave();"> \${r}</label>\`).join('')}
+        </div>
+        <div class="resp-group-label">Traffic &amp; Road</div>
+        <div class="check-grid">
+          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="TRU" onchange="renderPreview(); scheduleWorkingSave();"> TRU</label>
+          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="TMA" onchange="renderPreview(); scheduleWorkingSave();"> TMA</label>
+          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="Road Steward" onchange="renderPreview(); scheduleWorkingSave();"> Road Steward</label>
+          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="Traffic Control" onchange="renderPreview(); scheduleWorkingSave();"> Traffic Control</label>
+        </div>
+        <div class="resp-group-label">Support</div>
+        <div class="check-grid">
+          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="Tow" onchange="renderPreview(); scheduleWorkingSave();"> Tow</label>
+          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="Media" onchange="renderPreview(); scheduleWorkingSave();"> Media</label>
+          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="Mechanical services" onchange="renderPreview(); scheduleWorkingSave();"> Mechanical services</label>
+        </div>
+        <div class="check-grid" style="margin-top:8px;">
+          <button type="button" class="moreless-btn" id="s_departed_more_btn" aria-expanded="false" onclick="toggleMoreless('s_departed')"><span class="ml-label">More</span> <span class="ml-chev">\u25be</span></button>
+        </div>
+        <div class="check-grid moreless-extra" id="s_departed_extra" data-open-display="flex" style="display:none;margin-top:8px;">
+          ${["Medivac","SOC","All emergency services","Translink response service"].map(r=>\`<label class="inline-check"><input type="checkbox" class="s_departed_ck" value="\${r}" onchange="renderPreview(); scheduleWorkingSave();"> \${r}</label>\`).join('')}
+          <label class="inline-check"><input type="checkbox" id="s_departed_other_ck" onchange="document.getElementById('s_departed_other').style.display=this.checked?'block':'none'; renderPreview(); scheduleWorkingSave();"> Other</label>
+        </div>
+        <input type="text" id="s_departed_other" placeholder="Other (departed)" style="display:none;margin-top:8px;" oninput="renderPreview(); scheduleWorkingSave();">
+      </div>
     </div>
 
     <div class="field" id="s_dur_field">
@@ -6602,7 +6642,11 @@ function buildINO(){
         <label class="inline-check"><input type="checkbox" id="s_dur_fcu" onchange="renderPreview(); scheduleWorkingSave();"> FCU investigation</label>
         <label class="inline-check"><input type="checkbox" id="s_dur_qps" onchange="renderPreview(); scheduleWorkingSave();"> QPS investigation</label>
         <label class="inline-check"><input type="checkbox" id="s_dur_cleanup" onchange="renderPreview(); scheduleWorkingSave();"> Clean-up</label>
+        <label class="inline-check"><input type="checkbox" id="s_dur_emergency_ops" onchange="renderPreview(); scheduleWorkingSave();"> Emergency services operation</label>
+        <label class="inline-check"><input type="checkbox" id="s_dur_road_surface" onchange="renderPreview(); scheduleWorkingSave();"> Road surface assessment</label>
       </div>
+      <input type="text" id="s_dur_other" placeholder="Free-text duration" style="margin-top:10px;" oninput="onInoDurationOtherInput()">
+      <p class="hint" id="s_dur_recovery_hint" style="display:none;"></p>
       <div style="margin-top:12px;">
         <button type="button" class="link-btn" id="s_dur_time_btn" aria-expanded="false" style="font-size:13.5px;" onclick="var w=document.getElementById('s_dur_time_wrap');var show=w.style.display==='none';w.style.display=show?'block':'none';this.querySelector('.ml-chev').textContent=show?'\u25be':'\u25b8';this.setAttribute('aria-expanded',show)"><span class="ml-chev">\u25b8</span> Time</button>
         <div id="s_dur_time_wrap" style="display:none;margin-top:8px;">
@@ -6621,8 +6665,6 @@ function buildINO(){
           </div>
         </div>
       </div>
-      <input type="text" id="s_dur_other" placeholder="Free-text duration" style="margin-top:10px;" oninput="onInoDurationOtherInput()">
-      <p class="hint" id="s_dur_recovery_hint" style="display:none;"></p>
       </div>
     </div>
 
@@ -6948,13 +6990,13 @@ function inoIncidentSummary(){
   const eventType = buildEventTypeP('s');
   const injVal = (document.querySelector('input[name="s_inj"]:checked')||{}).value;
   let injBit = '';
-  if (injVal === 'no') injBit = 'Nil injuries';
+  if (injVal === 'no') injBit = 'nil injuries';
   else if (injVal === 'unknown') injBit = 'awaiting QAS assessment to confirm injuries';
   else if (injVal === 'yes') injBit = 'Injuries';
   const fatVal = (document.querySelector('input[name="s_fat"]:checked')||{}).value;
   let fatBit = '';
   if (fatVal === 'yes') fatBit = 'Fatalities';
-  else if (fatVal === 'no') fatBit = 'Nil fatalities';
+  else if (fatVal === 'no') fatBit = 'nil fatalities';
   const bits = [eventType, injBit, fatBit].filter(Boolean);
   return bits.length ? capFirstLetter(bits.join('; ')) : '—';
 }
@@ -7419,7 +7461,7 @@ function renderINO(){
   let infra = '';
   if (infraVal === 'yes'){ const t = get('s_infra_text'); infra = t || 'Infrastructure damage'; }
   else if (infraVal === 'unknown') infra = '';
-  else if (infraVal === 'no') infra = 'Nil infrastructure damage';
+  else if (infraVal === 'no') infra = 'nil infrastructure damage';
 
   // injuries — aggregate by severity: "2 x moderate injuries, 1 x minor injuries"
   const injVal = (document.querySelector('input[name="s_inj"]:checked')||{}).value;
@@ -7520,6 +7562,17 @@ function renderINO(){
   const fullRouteList = routeList;
   // Suffix for en-route clause — always "proceeding"
   const routeSuffix = 'proceeding';
+  const departedList = mapRoadSteward(Array.from(document.querySelectorAll('.s_departed_ck:checked')).map(c=>c.value));
+  const departedOtherOn = (document.getElementById('s_departed_other_ck')||{}).checked;
+  if (departedOtherOn){ const o = (document.getElementById('s_departed_other')||{value:''}).value.trim(); if (o) departedList.push(o); }
+  // Sort: "All emergency services" first, "tow" last
+  const aesIdxD = departedList.indexOf('All emergency services');
+  if (aesIdxD > 0) { departedList.splice(aesIdxD, 1); departedList.unshift('All emergency services'); }
+  const towIdxD = departedList.findIndex(g => g.toLowerCase() === 'tow');
+  if (towIdxD >= 0 && towIdxD < departedList.length - 1) { departedList.splice(towIdxD, 1); departedList.push('tow'); }
+  // Apply Tow -> tow mapping
+  for (let i = 0; i < departedList.length; i++) { if (departedList[i] === 'Tow') departedList[i] = 'tow'; }
+  const departed = andList(departedList);
   const groups  = andList(sceneList);
   const enRoute = andList(fullRouteList);
   const durUnknown = (document.getElementById('s_duration_unknown')||{}).checked;
@@ -7557,10 +7610,11 @@ function renderINO(){
   {
     if (injVal === 'yes' && injuriesStr) injBit = injuriesStr;
     else if (injVal === 'unknown') injBit = 'awaiting QAS assessment to confirm injuries';
-    else if (injVal === 'no') injBit = 'Nil injuries';
+    else if (injVal === 'no') injBit = 'nil injuries';
+    if (injBit && injVal === 'yes' && (document.getElementById('s_inj_qas')||{}).checked) injBit += ' transported by QAS';
     if (fatYes){ const fc = parseInt(fatCount,10) || 0; fatBit = fc === 1 ? '1x fatality' : `${fc}x fatalities`; }
     else if (fatVal === 'unknown') fatBit = '';   // Unknown fatalities are omitted from the SMS
-    else if (fatVal === 'no') fatBit = 'Nil fatalities';
+    else if (fatVal === 'no') fatBit = 'nil fatalities';
     const incBits = [eventType, infra, injBit, fatBit].filter(Boolean);
     // Register each incident sub-part so it's individually clickable, jumping to its own field.
     // eventType can carry internal casing the whole-message lowercase pass later flattens — e.g.
@@ -7712,7 +7766,7 @@ function renderINO(){
   const congTypeWord = congType ? ` ${congType}` : '';
   const peakSuffix = congPeak ? ` including ${congPeak.toUpperCase()} peak` : '';
   const lengthCongPlain = lengthStr
-    ? [ `${lengthStr} of${congTypeWord} congestion${peakSuffix}`, congestion ].filter(Boolean).join(' ')
+    ? [ `${lengthStr} of${congTypeWord} congestion`, congestion ].filter(Boolean).join(' ') + peakSuffix
     : congestion;
   let lengthCong;
   if (finalOn && congestionClear) lengthCong = 'nil congestion';
@@ -7790,7 +7844,7 @@ function renderINO(){
         if (!(inoAllOpenAnnounced)) regSeg(laneRegStr, 's_lanes_field');
       }
       regSeg(oppStr, 's_opp_text');
-      const lengthPortionF = lengthStr ? `${lengthStr} of${congTypeWord} congestion${peakSuffix}` : '';
+      const lengthPortionF = lengthStr ? `${lengthStr} of${congTypeWord} congestion` : '';
       regSeg((lengthPortionF && lengthCong.indexOf(lengthPortionF) !== -1) ? lengthPortionF : lengthCong, 's_length');
       // On a FINAL the congestion reads "Residual congestion of 1.3km from Sandgate" — the
       // "Xkm of congestion" form above never appears, so also register the bare "Xkm" token
@@ -7914,6 +7968,7 @@ function renderINO(){
     if (towI >= 0) { allGroups.splice(towI, 1); allGroups.push('tow'); }
     const merged = andList(allGroups);
     groupsLine = `${groupsLabel}: ${merged || 'nil'}.`;
+    if (departed) groupsLine += `\n${departed} departed.`;
   } else if (groups && enRoute){
     const hasAllEmerg = sceneList.includes('All emergency services');
     const sceneClause = hasAllEmerg ? groups : `${groups} at scene`;
@@ -10119,6 +10174,7 @@ function collectFormState(){
   }
   if (tmpl === 'ino'){
     const rb = name => { const el=document.querySelector(`input[name="${name}"]:checked`); return el?el.value:''; };
+    const injQas = !!(document.getElementById('s_inj_qas')||{}).checked;
     const injRows = Array.from(document.querySelectorAll('#s_inj_rows .inj-row')).map(r=>({
       sev: r.querySelector('.s_inj_sev').value
     }));
@@ -10179,12 +10235,15 @@ function collectFormState(){
         groupsOther: (document.getElementById('s_groups_other_ck')||{}).checked, groupsOtherText: gv('s_groups_other'),
         routeList: Array.from(document.querySelectorAll('.s_route_ck:checked')).map(c=>c.value),
         routeOther: (document.getElementById('s_route_other_ck')||{}).checked, routeOtherText: gv('s_route_other'),
+        departedList: Array.from(document.querySelectorAll('.s_departed_ck:checked')).map(c=>c.value), departedOther: (document.getElementById('s_departed_other_ck')||{}).checked, departedOtherText: gv('s_departed_other'),
         durUnknown: (document.getElementById('s_duration_unknown')||{}).checked, durHH: gv('s_dur_hh'), durMM: gv('s_dur_mm'),
         durOther: gv('s_dur_other'),
         durRecovery: (document.getElementById('s_dur_recovery')||{}).checked,
         durFcu: (document.getElementById('s_dur_fcu')||{}).checked,
         durQps: (document.getElementById('s_dur_qps')||{}).checked,
         durCleanup: (document.getElementById('s_dur_cleanup')||{}).checked,
+        durEmergencyOps: (document.getElementById('s_dur_emergency_ops')||{}).checked,
+        durRoadSurface: (document.getElementById('s_dur_road_surface')||{}).checked,
         contact: gv('s_contact'), contactPh: gv('s_contact_ph'),
         // Whether this message has announced (or inherited) "All lanes are now open".
         allOpenAnnounced: inoMessageAnnouncesAllOpen()
@@ -11974,7 +12033,8 @@ function applyDraft(s){
     if (a.congPeak && !a.congPeakVal){ setRadio('s_cong_peak', 'am'); }
     if (a.diversion){ setRadio('s_diversion', a.diversion); syncRadioFlags('s_diversion'); onInoDiversionChange(); if (a.divAvailable){ setRadio('s_div_available', a.divAvailable); onInoDivAvailChange(); } set('s_diversion_text', a.diversionText); }
     if (a.addlInfo) set('s_addl_info', a.addlInfo);
-    relabelInoEventOptions();
+    if (a.injQas){ const q = document.getElementById('s_inj_qas'); if (q) q.checked = true; }
+        relabelInoEventOptions();
     // actions
     if (a.actQld) setRadio('s_act_qld', a.actQld);
     if (a.vision6) setRadio('s_vision6', a.vision6);
@@ -12001,6 +12061,8 @@ function applyDraft(s){
     if (a.groupsOther){ document.getElementById('s_groups_other_ck').checked = true; onInoGroupsOtherChange(); set('s_groups_other', a.groupsOtherText); }
     setChecks('s_route_ck', a.routeList);
     if (a.routeOther){ document.getElementById('s_route_other_ck').checked = true; onInoRouteOtherChange(); set('s_route_other', a.routeOtherText); }
+    if (a.departedList && a.departedList.length){ setChecks('s_departed_ck', a.departedList); document.getElementById('s_departed_wrap').style.display='block'; document.getElementById('s_departed_toggle').querySelector('.ml-chev').textContent='\u25be'; }
+    if (a.departedOther){ const ck=document.getElementById('s_departed_other_ck'); if(ck){ck.checked=true; document.getElementById('s_departed_other').style.display='block';} set('s_departed_other', a.departedOtherText); }
     autoExpandRespMore();
     set('s_dur_hh', a.durHH); set('s_dur_mm', a.durMM);
     if (a.durRecovery){ const rc = document.getElementById('s_dur_recovery'); if (rc){ rc.checked = true; onInoRecoveryChange(); } }
@@ -12008,6 +12070,8 @@ function applyDraft(s){
     if (a.durFcu){ const f = document.getElementById('s_dur_fcu'); if (f) f.checked = true; }
     if (a.durQps){ const q = document.getElementById('s_dur_qps'); if (q) q.checked = true; }
     if (a.durCleanup){ const cl = document.getElementById('s_dur_cleanup'); if (cl){ cl.checked = true; } }
+    if (a.durEmergencyOps){ const eo = document.getElementById('s_dur_emergency_ops'); if (eo){ eo.checked = true; } }
+    if (a.durRoadSurface){ const rs = document.getElementById('s_dur_road_surface'); if (rs){ rs.checked = true; } }
     if (a.durOtherOn){ const b = document.getElementById('s_dur_other'); if (b){ b.value = a.durOther || ''; } }
     if (a.durUnknown){ document.getElementById('s_duration_unknown').checked = true; }
     applyInoDurOtherVisibility();   // reveal Subject to section if recovery / clean-up / free-text present
