@@ -2028,7 +2028,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 206.09</span>
+    <span class="app-version">Version 207.01</span>
   </footer>
 </div>
 
@@ -7489,7 +7489,7 @@ function renderINO(){
   const groupsOtherOn = (document.getElementById('s_groups_other_ck')||{}).checked;
   if (groupsOtherOn){ const o = get('s_groups_other'); if (o) groupList.push(o); }
   // Map "Road Steward" to "TMR Road Steward" in output
-  const mapRoadSteward = (list) => list.map(v => v === 'Road Steward' ? 'TMR Road Steward' : v);
+  const mapRoadSteward = (list) => list.map(v => v === 'Road Steward' ? 'TMR Road Steward' : v === 'Tow' ? 'tow' : v);
   const sceneList = mapRoadSteward(groupList);
   // "All emergency services" always leads the list
   const aesIdx = sceneList.indexOf('All emergency services');
