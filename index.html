@@ -1215,7 +1215,7 @@
   }
   .resp-group-label:first-child, .responder-col-card h4 + .resp-group-label { margin-top: 0; }
   .resp-grid-emergency { display: grid; grid-template-columns: repeat(4, auto); gap: 5px; justify-content: start; }
-  @media (max-width: 520px) { .resp-grid-emergency { grid-template-columns: repeat(2, auto); } }
+  @container (max-width: 300px) { .resp-grid-emergency { grid-template-columns: repeat(2, auto); } }
   .resp-more-link {
     display: inline-block; margin-top: 10px; padding: 0; border: none; background: none;
     font-size: 12px; font-weight: 600; color: var(--muted, #6b7280); cursor: pointer;
@@ -1402,7 +1402,7 @@
 
   /* ---- Responders ---- */
   .responder-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .responder-col-card { background: #fafbfa; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 13px; }
+  .responder-col-card { background: #fafbfa; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 13px; container-type: inline-size; }
   .responder-cols h4 {
     margin: 0 0 10px; font-family: var(--mono); font-size: 11px; font-weight: 600;
     letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-soft);
@@ -1531,13 +1531,6 @@
   }
   .char-count { font-family: var(--mono); }
   .char-count.over { color: #b5371f; font-weight: 600; }
-  .lc-toggle {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-family: var(--mono); font-size: 11px; color: var(--muted);
-    cursor: pointer; user-select: none; opacity: 0.75;
-  }
-  .lc-toggle:hover { opacity: 1; }
-  .lc-toggle input { width: 12px; height: 12px; margin: 0; accent-color: var(--blue); cursor: pointer; }
 
   .copy-btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -1972,8 +1965,6 @@
         </div>
         <div class="preview-meta">
           <span class="char-count" id="g_charcount">0 chars</span>
-          <label class="lc-toggle" id="s_lowercase_wrap" style="display:none;" title="Lowercase (except after a full stop)"><input type="checkbox" id="s_lowercase" onchange="setLowercasePref(this.checked); relabelInoEventOptions(); renderPreview(); markUnsavedIfSaved(); scheduleWorkingSave();"> lowercase</label>
-          <label class="lc-toggle" id="g_lowercase_wrap" style="display:none;" title="Lowercase (except after a full stop)"><input type="checkbox" id="g_lowercase" onchange="setLowercasePref(this.checked); renderPreview(); markUnsavedIfSaved(); scheduleWorkingSave();"> lowercase</label>
         </div>
         <div class="autofinal-strip" id="autoFinalStrip" style="display:none;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2v6m0 0l3-3m-3 3L9 5M5 12h14M6 12v7a1 1 0 001 1h10a1 1 0 001-1v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -2037,7 +2028,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 205.12</span>
+    <span class="app-version">Version 205.15</span>
   </footer>
 </div>
 
@@ -2224,16 +2215,7 @@ const INJURY_SEVERITY = ["Minor","Moderate","Serious","Critical","Life threateni
 
 /* ---- INO Incident Type dropdown display casing ----
    The option VALUE never changes (all output logic keys off it); only the
-   visible LABEL is recased to mirror the lowercase toggle:
-     lowercase ON  -> sentence case  ("Police Incident" -> "Police incident")
-     lowercase OFF -> title case     ("Poor visibility" -> "Poor Visibility")
-   Every word capitalises in title case so no label reads half-cased. */
-function inoLabelSentenceCase(s){
-  // Capitalise only the very first letter; lower-case the rest (word by word,
-  // preserving separators). Hyphenated words: only the first sub-word leads.
-  const lower = s.toLowerCase();
-  return lower.replace(/^[a-z]/, c => c.toUpperCase());
-}
+   visible LABEL is recased to title case for display. */
 function inoLabelTitleCase(s){
   return s.split(/(\s+)/).map(tok => {
     if (/^\s+$/.test(tok) || tok === '') return tok;
@@ -2246,8 +2228,7 @@ function inoLabelTitleCase(s){
   }).join('');
 }
 function inoRecaseLabel(s){
-  const lowercaseOn = (document.getElementById('s_lowercase')||{}).checked;
-  return lowercaseOn ? inoLabelSentenceCase(s) : inoLabelTitleCase(s);
+  return inoLabelTitleCase(s);
 }
 /* Rewrite the visible text of every real option in the INO event-type select
    and any INO event sub-type select, leaving values (and placeholders) intact. */
@@ -2482,7 +2463,6 @@ function buildGeneric(){
     </div>
     <span class="draft-note" id="g_draft_note"></span>
   `;
-  applyLowercasePref();
 }
 
 /* ---------- Build Template 2: Abandoned Vehicle (3-step wizard, v197) ---------- */
@@ -4327,14 +4307,10 @@ function withLaneDirection(clause, scope){
     : dirs;
   return `${clause} ${laneJoin(rendered)}`;
 }
-/* Case a lane-position word (Left/Centre/Right) for INO output. When the INO lowercase
-   toggle is OFF the position is capitalised (e.g. "Left"); when ON it's lower case and the
-   downstream lowercase engine leaves it as-is. Used for the "# x <pos> lane" wording so that
-   "1 x Left lane" reads with a capital in normal (non-lowercase) mode. */
+/* Case a lane-position word (Left/Centre/Right) for INO output.
+   Always capitalised: "Left", "Centre", "Right". */
 function inoLanePosCase(pos){
   const p = String(pos||'');
-  const lowercaseOn = (document.getElementById('s_lowercase')||{}).checked;
-  if (lowercaseOn) return p.toLowerCase();
   return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase();
 }
 /* Build a "<lanes> <verb> <state>" sentence for reopened/still-blocked/still-closed
@@ -4409,14 +4385,6 @@ function titleCaseLocationField(str){
 }
 
 /* Lowercase ONLY the on/off-ramp phrase(s) within a piece of text, leaving everything else
-   (proper nouns included) exactly as-is. Used as a post-pass when the lowercase toggle is on:
-   the road/cross proper nouns are protected verbatim from the main lowercase pass, then this
-   lowercases just the ramp words so "Pacific Motorway On-ramp" reads "Pacific Motorway on-ramp"
-   while "Pacific Motorway" stays untouched. */
-function lowercaseRampPhrases(text){
-  if (!text) return text;
-  return text.replace(/\b(on|off)([ \-])(ramp)\b/gi, (m) => m.toLowerCase());
-}
 
 function capitalizeSentences(text){
   if (!text) return text;
@@ -4431,110 +4399,8 @@ function capitalizeSentences(text){
   });
 }
 
-/* Force the whole message to lower case, then re-capitalise only the first letter of the
-   message, the first letter after a newline, and the first letter after a full stop + space.
-   Everything else (including text after ":" or ";") becomes lower case. URLs are preserved. */
-/* Lowercase mode (INO): force the message to lower case EXCEPT:
-   - the first letter after a full stop, newline, or the start (grammar);
-   - each line's label up to and including the first ": " (e.g. "Network Impact:");
-   - URLs;
-   - a fixed keep-list of tokens (QLDTraffic, CCTV, 131940, acronyms, road-type words); and
-   - caller-supplied proper-noun phrases (road / cross-street / suburb / congestion location).
-   Protected spans are swapped out for markers, the remainder is lower-cased, the first
-   letter of each sentence is re-capitalised, then the protected spans are restored. */
-function lowercaseExceptAfterPeriod(text, keepPhrases, capAfterLabels){
-  if (!text) return text;
-  const keeps = [];
-  const stash = (s) => { keeps.push(s); return `\u0000${keeps.length-1}\u0000`; };
 
-  // Work line by line so we can protect each line's leading label.
-  let out = text.split('\n').map(line => {
-    let work = line;
-    // 1) Protect URLs.
-    work = work.replace(/https?:\/\/\S+/gi, (u)=> stash(u));
-    // 2) Protect the line label: the header line, or everything up to the first ": ".
-    const labelMatch = work.match(/^([^:]+:\s)/);
-    if (labelMatch){
-      work = stash(labelMatch[1]) + work.slice(labelMatch[1].length);
-    } else if (/^TMR INO Incident Escalation/i.test(work)){
-      // header line has no colon — protect the fixed title, keep the (No.x …) as-is too
-      work = stash(work);
-    }
-    return work;
-  }).join('\n');
 
-  // 2b) Protect any further inline segment labels (e.g. a second label on the time line
-  //     "… Time Incident Cleared:", and the update/final variants) wherever they appear.
-  const SEGMENT_LABELS = [
-    'Time Incident Cleared:','Time Incident Occurred:','Network Impact:','Final Update:',
-    'Update:','Incident Type:','Groups Attended Scene:','Groups at Scene:',
-    'Estimated Duration to Clear:','Location:','Actions:','Contact:'
-  ].sort((a,b)=> b.length - a.length);
-  SEGMENT_LABELS.forEach(lbl => {
-    const re = new RegExp(escapeRegex(lbl), 'gi');
-    out = out.replace(re, (m)=> stash(m));
-  });
-
-  // 3) Protect caller-supplied proper-noun phrases (longest first so multi-word wins).
-  const phrases = (keepPhrases||[]).filter(Boolean)
-    .map(p => String(p).trim()).filter(p => p.length)
-    .sort((a,b)=> b.length - a.length);
-  phrases.forEach(p => {
-    const re = new RegExp(escapeRegex(p), 'g');
-    out = out.replace(re, (m)=> stash(m));
-  });
-
-  // 4) Protect the fixed keep-list tokens (whole-word, case-insensitive).
-  const KEEP_TOKENS = [
-    'QLDTraffic','CCTV','131940','Vision 6','Public SMS','TMR','INO','SEQ','TCU','TBA',
-    'VMS','VSLS','LUMS','RCIS','TRU','TMA','QPS','QAS','QFD','FCU',
-    // crash-label prefixes keep their leading capital ("Single-vehicle crash")
-    'Single-vehicle','Multi-vehicle',
-    // road-type words (the expanded abbreviations) — keep their capital
-    ...Array.from(new Set(Object.values(ROAD_ABBREV)))
-  ];
-  KEEP_TOKENS.forEach(tok => {
-    const re = new RegExp('\\b' + escapeRegex(tok) + '\\b', 'g');
-    out = out.replace(re, (m)=> stash(tok));  // restore canonical casing
-  });
-
-  // 4b) Protect lane identifiers "L1".."L9" (GEN lane tokens) so they keep their capital L.
-  out = out.replace(/\bL([1-9])\b/g, (m)=> stash(m));
-
-  // Lowercase the remaining (unprotected) text.
-  out = out.replace(/[A-Za-z]+/g, (w) => w.toLowerCase());
-  // Re-capitalise the first letter of each sentence (start, after "." + space, or newline).
-  out = out.replace(/(^|\.\s+|\n\s*)([a-z])/g, (m, pre, ch) => pre + ch.toUpperCase());
-
-  // Restore all protected spans.
-  out = out.replace(/\u0000(\d+)\u0000/g, (m, i)=> keeps[parseInt(i,10)]);
-  // Some segment VALUES must keep a capital first letter even in lowercase mode — chiefly
-  // the Incident Type (e.g. "Incident Type: Broken-down vehicle"), and the "Update:" /
-  // "Final Update:" line only when a changed incident type has been folded into it. The
-  // caller decides which labels qualify (network-impact content on a normal Update stays
-  // lower case).
-  const labels = (capAfterLabels && capAfterLabels.length) ? capAfterLabels : ['Incident Type:'];
-  const labelRe = new RegExp('((?:' + labels.map(escapeRegex).join('|') + ')\\s+)([a-z])', 'g');
-  out = out.replace(labelRe, (m, pre, ch) => pre + ch.toUpperCase());
-  return out;
-}
-function escapeRegex(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-
-/* Return the runs of consecutively capitalised words in a free-text string, so the
-   operator's proper nouns keep their leading capitals under lowercase mode.
-   "via Old Cleveland Rd" → ["Old Cleveland Rd"]; "Smith St near Depot" → ["Smith St","Depot"]. */
-function capitalisedRuns(text){
-  if (!text) return [];
-  const runs = [];
-  let cur = [];
-  // tokenise on whitespace; a token starting with an uppercase letter extends the run.
-  String(text).trim().split(/\s+/).forEach(tok => {
-    if (/^[A-Z]/.test(tok)) { cur.push(tok); }
-    else { if (cur.length) runs.push(cur.join(' ')); cur = []; }
-  });
-  if (cur.length) runs.push(cur.join(' '));
-  return runs;
-}
 
 /* Expand common road-type abbreviations to full words in the generated SMS.
    Whole-word, case-insensitive, trailing "." tolerated (e.g. "Rd." → "Road").
@@ -6748,7 +6614,6 @@ function buildINO(){
   `;
   relabelInoEventOptions();
   updateInoSegCounts();
-  applyLowercasePref();
 }
 
 /* ---- Collapsible INO segments (Option A) ---- */
@@ -7397,9 +7262,6 @@ function clearFormINO(){
   inoAllOpenAnnounced = false;      // fresh message: nothing announced yet
   clearHeldHighlight();
   buildINO();
-  // The lowercase toggle lives in the preview meta (outside the form body). A fresh message
-  // follows the remembered lowercase preference rather than force-resetting to off.
-  applyLowercasePref();
   attachLiveListeners();
   onInoLanePosChange();             // count boxes start disabled until a position is ticked
   applyInoActionsVisibility();
@@ -7460,11 +7322,9 @@ function renderINO(){
   if (seq === '__other') seq = get('s_seq_other') || 'No.1';
 
   // Proper-noun fields (road, cross-street, suburb, congestion location, opp/sec
-  // carriageway detail) are place names, so their first letter is ALWAYS capitalised —
-  // in both normal and lowercase mode — for grammatical correctness. capFirstLetter
-  // only touches the leading letter, so multi-word values keep the operator's internal
-  // casing. (Descriptive words like injury severity still follow the lowercase toggle.)
-  const lowercaseOn = (document.getElementById('s_lowercase')||{}).checked;
+  // carriageway detail) are place names, so their first letter is ALWAYS capitalised.
+  // capFirstLetter only touches the leading letter, so multi-word values keep the
+  // operator's internal casing.
   const capIf = (s) => capFirstLetter(s);
 
   const road = titleCaseLocationField(expandAbbreviations(get('s_road')));
@@ -7549,7 +7409,7 @@ function renderINO(){
     const divAvail = (document.querySelector('input[name="s_div_available"]:checked')||{}).value;
     if (divAvail === 'yes'){
       let dt = expandAbbreviations(get('s_diversion_text'));
-      if (!lowercaseOn && dt){
+      if (dt){
         const CONNECTORS = new Set(['via','to','from','towards','toward','along','and','or','the','at','near','onto','off','then','into','on']);
         dt = dt.replace(/\S+/g, (w, i) => {
           const bare = w.toLowerCase();
@@ -7999,52 +7859,7 @@ function renderINO(){
   // collapse runs of spaces within each line, then join with newlines
   let msg = capitalizeSentences(lines.map(l => l.replace(/[ \t]+/g,' ').trim()).join('\n'));
 
-  // Optional: force everything to lower case except the first letter after a full stop,
-  // the segment labels, URLs, known tokens, and proper nouns. Proper nouns come from the
-  // structured place fields (Road/Cross/Suburb/congestion) AND any capitalised word(s) the
-  // operator typed into the free-text fields and the contact name.
-  if ((document.getElementById('s_lowercase')||{}).checked){
-    // Geographic free-text is expanded in the message (Rd → Road …), so protect the
-    // EXPANDED form; the rest is protected as typed.
-    const freeText = [
-      expandAbbreviations(get('s_diversion_text')),
-      expandAbbreviations(get('s_opp_text')),
-      get('s_cctv_text'), get('s_final_note'), get('s_infra_text'),
-      get('s_groups_other'), get('s_route_other'), get('s_tcu'),
-      get('s_dur_other'), get('s_contact'), get('s_contact_ph')
-    ];
-    const keepPhrases = [
-      'INO Operations Coordinator Ph.',       // fixed contact phrase — always as written
-      road,                                   // capitalised, expanded road, e.g. "Pacific Motorway"
-      titleCaseLocationField(expandAbbreviations(get('s_cross'))),  // cross-street name (overpass/underpass kept as-typed)
-      titleCaseLocationField(expandAbbreviations(get('s_cross2'))), // second cross-street ("between A and B")
-      suburb,                                 // capitalised suburb
-      congestionRaw,                          // capitalised location of congestion
-      oppText                                 // capitalised opposite-carriageway detail
-    ];
-    // Add each run of consecutively-capitalised words from the free-text fields so the
-    // operator's proper nouns (e.g. "Old Cleveland Rd") keep their leading capitals.
-    freeText.forEach(t => { capitalisedRuns(t).forEach(r => keepPhrases.push(r)); });
-    // The contact name is always a person's name, so title-case it (capitalise each word's
-    // first letter) even if it was typed lower case, and protect that form.
-    const contactName = get('s_contact');
-    if (contactName){
-      const titled = contactName.replace(/\b([a-z])/g, (m,c)=>c.toUpperCase());
-      // replace the raw name in the assembled message so the titled form is what's protected
-      msg = msg.split(contactName).join(titled);
-      keepPhrases.push(titled);
-    }
-    // The value after each segment label leads its own clause, so its first letter is
-    // capitalised even in lowercase mode (Incident Type, Estimated Duration, Network Impact,
-    // Update / Final Update, and the Groups line — "left" → "Left", "towing" → "Towing").
-    const capAfterLabels = ['Incident Type:', 'Estimated Duration to Clear:',
-      'Network Impact:', 'Update:', 'Final Update:',
-      'Groups at Scene:', 'Groups Attended Scene:'];
-    msg = lowercaseExceptAfterPeriod(msg, keepPhrases, capAfterLabels);
-    // The road/cross proper nouns are protected verbatim above (so "Pacific Motorway" stays
-    // capitalised). Now lowercase ONLY the on/off-ramp phrase within them.
-    msg = lowercaseRampPhrases(msg);
-  }
+
 
   const out = document.getElementById('g_output_text');
   const meaningful = road||cross||suburb||url||time||eventType||groups||enRoute||duration||contact||lanes||length||congestion||nilCongestion||oppStr||diversion||infra||injuriesStr||fatYes||systems.length||trafficSignals||finalOn||inoUpdate.on;
@@ -8145,12 +7960,6 @@ function renderPreview(){
   if (t === 'ino'){ updateInoSegCounts(); applyInoCondense(); }
   if (t) updateLiveHeader(t);
   syncTopbarOffset();
-  // The lowercase toggle in the preview meta row is INO-only.
-  const lcWrap = document.getElementById('s_lowercase_wrap');
-  if (lcWrap) lcWrap.style.display = (t === 'ino') ? 'inline-flex' : 'none';
-  // Generic has its own independent lowercase toggle.
-  const gLcWrap = document.getElementById('g_lowercase_wrap');
-  if (gLcWrap) gLcWrap.style.display = (t === 'generic') ? 'inline-flex' : 'none';
   // The auto-FINAL notice is generic-only; hide it for other templates (renderGeneric re-shows it).
   if (t !== 'generic'){ const afs = document.getElementById('autoFinalStrip'); if (afs) afs.style.display = 'none'; }
   if (!t){
@@ -9627,28 +9436,7 @@ function renderGeneric(){
   // tidy: collapse double spaces, ensure single trailing period
   msg = msg.replace(/\s+/g,' ').replace(/\s+([.,])/g,'$1').trim();
 
-  // Lowercase toggle (Generic) — mirror the INO behaviour: lowercase the whole message
-  // except after full stops, protecting proper nouns (road/cross/suburb, the impact
-  // location, and any capitalised runs the operator typed into free-text fields).
-  if ((document.getElementById('g_lowercase')||{}).checked && msg){
-    // Protect the impact-statement location as it actually renders in the message — i.e.
-    // AFTER road-type expansion + title-casing (buildImpact does the same), so "bicentennial rd"
-    // → the rendered "Bicentennial Road" is matched and kept, not the raw typed form.
-    const impactLocRaw = (document.getElementById('g_impact_loc')||{value:''}).value.trim();
-    const impactLoc = titleCaseProperNoun(expandAbbreviations(impactLocRaw));
-    const hazText = (document.getElementById('g_hazard_text')||{value:''}).value.trim();
-    // Cross-street names protected individually (not the whole "between A and B" clause), so
-    // the connector words "between"/"and" follow the lowercase toggle while A and B stay capitalised.
-    const crossName1 = titleCaseLocationField(expandAbbreviations((document.getElementById('g_cross')||{value:''}).value.trim()));
-    const crossName2 = titleCaseLocationField(expandAbbreviations((document.getElementById('g_cross2')||{value:''}).value.trim()));
-    const keepPhrases = [ road, crossName1, crossName2, suburb, impactLoc ].filter(Boolean);
-    [ addinfo, hazText,
-      (document.getElementById('g_event_sub_text')||{value:''}).value
-    ].forEach(t => { capitalisedRuns(t).forEach(r => keepPhrases.push(r)); });
-    msg = lowercaseExceptAfterPeriod(msg, keepPhrases, []);
-    // Proper nouns protected verbatim above; lowercase only the on/off-ramp phrase within them.
-    msg = lowercaseRampPhrases(msg);
-  }
+
 
   const out = document.getElementById('g_output_text');
   // "empty" = nothing beyond the bare sequence prefix typed yet
@@ -10306,7 +10094,6 @@ function collectFormState(){
         congType: (document.querySelector('input[name="s_cong_type"]:checked')||{}).value || '', congPeak: !!(document.getElementById('s_cong_peak')&&document.getElementById('s_cong_peak').checked), congestion: gv('s_congestion'),
         diversion: rb('s_diversion'), divAvailable: rb('s_div_available'), diversionText: gv('s_diversion_text'),
         addlInfo: gv('s_addl_info'),
-        lowercase: (document.getElementById('s_lowercase')||{}).checked,
         actQld: rb('s_act_qld'), vision6: rb('s_vision6'), publicSms: rb('s_publicsms'),
         systems: Array.from(document.querySelectorAll('.s_sys:checked')).map(c=>c.value),
         cctv: rb('s_cctv'),
@@ -10336,7 +10123,6 @@ function collectFormState(){
   state.eventSub = (document.getElementById('g_event_sub')||{}).value || '';
   state.eventSubText = (document.getElementById('g_event_sub_text')||{}).value || '';
   state.hazardText = (document.getElementById('g_hazard_text')||{}).value || '';
-  state.lowercase = (document.getElementById('g_lowercase')||{}).checked || false;
   // crash counts + others
   document.querySelectorAll('#g_crash_others .other-row').forEach(row=>{
     state.crashOthers.push({
@@ -10719,40 +10505,7 @@ function setGenDirAbbrev(on){
   renderPreview();
 }
 
-/* ---- Shared lowercase preference (v147) ----
-   One persisted setting shared by the INO (#s_lowercase) and GEN (#g_lowercase) toggles, so a
-   chosen lowercase mode is remembered across template switches and page reloads. Defaults to OFF
-   until the operator checks it. A loaded draft's own saved lowercase value overrides this on load
-   (the draft wins), and then updates the shared pref so subsequent fresh forms follow suit. */
-const LOWERCASE_PREF_KEY = 'bmtmc_lowercase_pref_v1';
-let lowercasePref = false;
-function loadLowercasePref(){
-  try {
-    const raw = window.localStorage.getItem(LOWERCASE_PREF_KEY);
-    if (raw !== null) lowercasePref = (raw === '1');
-  } catch(e){ /* ignore */ }
-}
-function persistLowercasePref(){
-  try { window.localStorage.setItem(LOWERCASE_PREF_KEY, lowercasePref ? '1' : '0'); } catch(e){ /* ignore */ }
-}
-/* Record a new preferred value (called when either toggle changes) and keep both toggles in
-   sync so the two live previews always share one state. */
-function setLowercasePref(on){
-  lowercasePref = !!on;
-  persistLowercasePref();
-  const s = document.getElementById('s_lowercase');
-  const g = document.getElementById('g_lowercase');
-  if (s && s.checked !== lowercasePref) s.checked = lowercasePref;
-  if (g && g.checked !== lowercasePref) g.checked = lowercasePref;
-}
-/* Apply the remembered preference to whichever template's toggle is active. Called when a
-   template opens / form is built, so a fresh form reflects the last chosen mode. */
-function applyLowercasePref(){
-  const s = document.getElementById('s_lowercase');
-  const g = document.getElementById('g_lowercase');
-  if (s) s.checked = lowercasePref;
-  if (g) g.checked = lowercasePref;
-}
+
 /* Resolve the {bg,fg} for a given incident-type label. Sub-typed labels (e.g. "Debris")
    inherit their parent event's colour; unknown types fall back to the family/teal chip. */
 /* Resolve a palette KEY (e.g. 'blue', 'grey') to its {key,bg,fg} entry.
@@ -12134,7 +11887,6 @@ function applyDraft(s){
     set('s_length', a.length); set('s_congestion', a.congestion);
     if (a.diversion){ setRadio('s_diversion', a.diversion); syncRadioFlags('s_diversion'); onInoDiversionChange(); if (a.divAvailable){ setRadio('s_div_available', a.divAvailable); onInoDivAvailChange(); } set('s_diversion_text', a.diversionText); }
     if (a.addlInfo) set('s_addl_info', a.addlInfo);
-    { const lc = document.getElementById('s_lowercase'); if (lc){ lc.checked = !!a.lowercase; setLowercasePref(!!a.lowercase); } }
     relabelInoEventOptions();
     // actions
     if (a.actQld) setRadio('s_act_qld', a.actQld);
@@ -12213,8 +11965,6 @@ function applyDraft(s){
     onHazardSubChange('g');
     if (document.getElementById('g_hazard_text')) document.getElementById('g_hazard_text').value = s.hazardText || '';
   }
-  // Lowercase toggle (Generic).
-  { const lc = document.getElementById('g_lowercase'); if (lc){ lc.checked = !!s.lowercase; setLowercasePref(!!s.lowercase); } }
 
   // radios
   document.querySelectorAll('#body-generic input[type="radio"]').forEach(r=>{
@@ -12489,7 +12239,7 @@ const SCR_ROADS = [
   "Riverview - Moggill Ferry Road",
   "Moggill Road",
   "Moggill Sub-Arterial Road",
-  "Gateway Motorway",
+  "Gateway Motorway (Gateway Arterial Road)",
   "Gateway Extension Motorway",
   "Gateway Arterial Road",
   "Port Of Brisbane Motorway",
@@ -12608,6 +12358,7 @@ const SCR_SUBURBS = [
   "Wynnum West","Yamanto","Yarrabilba","Yeerongpilly","Yeronga","Yugar","Zillmere"
 ];
 let scrAcActive = {}; // {inputId: activeIndex}
+let scrAcSuppress = false;
 
 function scrAcHighlight(text, q){
   if (!q) return escAttr(text);
@@ -12617,6 +12368,7 @@ function scrAcHighlight(text, q){
 }
 
 function scrAcRender(inputId){
+  if (scrAcSuppress){ scrAcSuppress = false; return; }
   const inp = document.getElementById(inputId);
   const dd = document.getElementById('scr_ac_' + inputId);
   if (!inp || !dd) return;
@@ -12669,6 +12421,7 @@ function scrAcRender(inputId){
       e.preventDefault();
       inp.value = items[i];
       dd.classList.remove('open');
+      scrAcSuppress = true;
       inp.focus();
       inp.dispatchEvent(new Event('input', {bubbles:true}));
     });
@@ -12699,6 +12452,7 @@ function scrAcKeydown(e, inputId){
     const inp = document.getElementById(inputId);
     inp.value = items[idx].dataset.val;
     dd.classList.remove('open');
+    scrAcSuppress = true;
     inp.focus();
     inp.dispatchEvent(new Event('input', {bubbles:true}));
   } else if (e.key === 'Escape'){
@@ -12918,7 +12672,6 @@ loadEditWriteBackPref();
 loadCarryoverModePref();
 loadKeepHlPref();
 loadGenDirAbbrevPref();
-loadLowercasePref();
 loadRecents();
 loadFreqLocations();
 /* Delegated blur listener: caps→title case on all free-text inputs when setting is on.
