@@ -2028,7 +2028,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 206.02</span>
+    <span class="app-version">Version 206.03</span>
   </footer>
 </div>
 
@@ -5918,7 +5918,8 @@ function applyInoDurOtherVisibility(){
   const wrap = document.getElementById('s_dur_other_wrap');
   if (!wrap) return;
   const has = (document.getElementById('s_dur_recovery')||{}).checked
-    || (document.getElementById('s_dur_fcuqps')||{}).checked
+    || (document.getElementById('s_dur_fcu')||{}).checked
+    || (document.getElementById('s_dur_qps')||{}).checked
     || (document.getElementById('s_dur_cleanup')||{}).checked
     || !!((document.getElementById('s_dur_other')||{value:''}).value.trim());
   if (has){ wrap.style.display = 'block'; syncDurOtherBtn(true); }
@@ -6009,7 +6010,8 @@ function buildInoDuration(){
     const plural = /^Multi/.test(label);
     subjectParts.push(plural ? 'vehicle recoveries' : 'vehicle recovery');
   }
-  if ((document.getElementById('s_dur_fcuqps')||{}).checked) subjectParts.push('FCU and QPS investigation');
+  if ((document.getElementById('s_dur_fcu')||{}).checked) subjectParts.push('FCU investigation');
+  if ((document.getElementById('s_dur_qps')||{}).checked) subjectParts.push('QPS investigation');
   if ((document.getElementById('s_dur_cleanup')||{}).checked) subjectParts.push('clean-up');
   const subjectJoined = subjectParts.length <= 2 ? subjectParts.join(' and ') : subjectParts.slice(0,-1).join(', ') + ' and ' + subjectParts[subjectParts.length-1];
   const subjectClause = subjectParts.length ? 'subject to ' + subjectJoined : '';
@@ -6542,7 +6544,8 @@ function buildINO(){
       <div class="resp-group-label" style="margin-top:0;">Subject to:</div>
       <div class="check-grid">
         <label class="inline-check"><input type="checkbox" id="s_dur_recovery" onchange="onInoRecoveryChange(); renderPreview(); scheduleWorkingSave();"> Vehicle recovery</label>
-        <label class="inline-check"><input type="checkbox" id="s_dur_fcuqps" onchange="renderPreview(); scheduleWorkingSave();"> FCU and QPS investigation</label>
+        <label class="inline-check"><input type="checkbox" id="s_dur_fcu" onchange="renderPreview(); scheduleWorkingSave();"> FCU investigation</label>
+        <label class="inline-check"><input type="checkbox" id="s_dur_qps" onchange="renderPreview(); scheduleWorkingSave();"> QPS investigation</label>
         <label class="inline-check"><input type="checkbox" id="s_dur_cleanup" onchange="renderPreview(); scheduleWorkingSave();"> Clean-up</label>
       </div>
       <div style="margin-top:12px;">
@@ -10091,7 +10094,8 @@ function collectFormState(){
         durUnknown: (document.getElementById('s_duration_unknown')||{}).checked, durHH: gv('s_dur_hh'), durMM: gv('s_dur_mm'),
         durOther: gv('s_dur_other'),
         durRecovery: (document.getElementById('s_dur_recovery')||{}).checked,
-        durFcuQps: (document.getElementById('s_dur_fcuqps')||{}).checked,
+        durFcu: (document.getElementById('s_dur_fcu')||{}).checked,
+        durQps: (document.getElementById('s_dur_qps')||{}).checked,
         durCleanup: (document.getElementById('s_dur_cleanup')||{}).checked,
         contact: gv('s_contact'), contactPh: gv('s_contact_ph'),
         // Whether this message has announced (or inherited) "All lanes are now open".
@@ -11902,7 +11906,9 @@ function applyDraft(s){
     autoExpandRespMore();
     set('s_dur_hh', a.durHH); set('s_dur_mm', a.durMM);
     if (a.durRecovery){ const rc = document.getElementById('s_dur_recovery'); if (rc){ rc.checked = true; onInoRecoveryChange(); } }
-    if (a.durFcuQps){ const fq = document.getElementById('s_dur_fcuqps'); if (fq){ fq.checked = true; } }
+    if (a.durFcuQps){ const f=document.getElementById('s_dur_fcu'); if(f) f.checked=true; const q=document.getElementById('s_dur_qps'); if(q) q.checked=true; }
+    if (a.durFcu){ const f = document.getElementById('s_dur_fcu'); if (f) f.checked = true; }
+    if (a.durQps){ const q = document.getElementById('s_dur_qps'); if (q) q.checked = true; }
     if (a.durCleanup){ const cl = document.getElementById('s_dur_cleanup'); if (cl){ cl.checked = true; } }
     if (a.durOtherOn){ const b = document.getElementById('s_dur_other'); if (b){ b.value = a.durOther || ''; } }
     if (a.durUnknown){ document.getElementById('s_duration_unknown').checked = true; }
