@@ -2028,7 +2028,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 205.16</span>
+    <span class="app-version">Version 205.17</span>
   </footer>
 </div>
 
@@ -2206,7 +2206,7 @@ const CRASH_ITEMS_MORE = [
 // (Pedestrian and Cyclist deliberately excluded; they force plain "crash".)
 const CRASH_VEHICLE_KEYS = ["cars","vehicles","heavyvehicles","buses","motorcycles","escooters","ebicycles","animals","tma","trains","trams"];
 
-const RESPONDERS = ["TRU","Tow","TMA","QAS","QFD","QPS","FCU","SOC","Road Steward","Traffic Control","Emergency services","Translink response service","Mechanical services","Media","Medivac"];
+const RESPONDERS = ["TRU","Tow","TMA","QAS","QFD","QPS","FCU","SOC","Road Steward","Traffic Control","All emergency services","Translink response service","Mechanical services","Media","Medivac"];
 const RESPONDER_LOWER = {"Towing":"towing","Maintenance":"maintenance","Heavy haulage":"heavy haulage"};
 
 /* ---------- SEQ OPS / INO reference data ---------- */
@@ -5877,18 +5877,13 @@ function syncInoDurationUnknownActive(){
   if (!btn) return;
   btn.classList.toggle('active', !!(document.getElementById('s_duration_unknown')||{}).checked);
 }
-function onInoDurationTbaChange(){
-  applyDurationOverrideGrey();
-  renderPreview();
-}
-/* Grey/clear the HH-MM boxes whenever Unknown or TBA (or an "Other" free-text) overrides them. */
+/* Grey/clear the HH-MM boxes whenever Unknown (or an "Other" free-text) overrides them. */
 function applyDurationOverrideGrey(){
   const hh = document.getElementById('s_dur_hh');
   const mm = document.getElementById('s_dur_mm');
   const otherWrap = document.getElementById('s_dur_other_wrap');
   const otherShown = !!(otherWrap && otherWrap.style.display !== 'none');
   const overridden = (document.getElementById('s_duration_unknown')||{}).checked
-    || (document.getElementById('s_duration_tba')||{}).checked
     || !!((document.getElementById('s_dur_other')||{value:''}).value.trim() && otherShown);
   [hh, mm].forEach(b=>{ if(b){ b.disabled = overridden; b.style.opacity = overridden ? '0.5' : '1'; } });
   syncInoDurationQuickActive();
@@ -5903,7 +5898,6 @@ function toggleDurOther(){
   // Collapsing clears whatever lives in the Other section so it doesn't silently override.
   if (!show){
     const box = document.getElementById('s_dur_other'); if (box) box.value = '';
-    const tba = document.getElementById('s_duration_tba'); if (tba) tba.checked = false;
     const rec = document.getElementById('s_dur_recovery'); if (rec) rec.checked = false;
     onInoRecoveryChange();   // resets the "+ / −" link label and hint
   }
@@ -5919,13 +5913,13 @@ function syncDurOtherBtn(open){
   const lbl = btn.querySelector('.ml-label');
   if (lbl) lbl.textContent = open ? 'Less' : 'More';
 }
-/* Auto-reveal the Other section when a draft/working state carries TBA, recovery, or free-text. */
+/* Auto-reveal the Subject to section when a draft/working state carries recovery, FCU/QPS, clean-up, or free-text. */
 function applyInoDurOtherVisibility(){
   const wrap = document.getElementById('s_dur_other_wrap');
   if (!wrap) return;
-  const has = (document.getElementById('s_duration_tba')||{}).checked
-    || (document.getElementById('s_dur_recovery')||{}).checked
+  const has = (document.getElementById('s_dur_recovery')||{}).checked
     || (document.getElementById('s_dur_fcuqps')||{}).checked
+    || (document.getElementById('s_dur_cleanup')||{}).checked
     || !!((document.getElementById('s_dur_other')||{value:''}).value.trim());
   if (has){ wrap.style.display = 'block'; syncDurOtherBtn(true); }
 }
@@ -5935,7 +5929,7 @@ function setInoDurationQuick(mins){
   const hh = document.getElementById('s_dur_hh');
   if (!mm) return;
   // A quick-fill is a plain numeric duration, so clear any override.
-  ['s_duration_unknown','s_duration_tba'].forEach(id=>{ const c=document.getElementById(id); if(c) c.checked=false; });
+  { const c=document.getElementById('s_duration_unknown'); if(c) c.checked=false; }
   const other = document.getElementById('s_dur_other'); if (other) other.value = '';
   mm.disabled = false; mm.style.opacity = '1';
   if (hh){ hh.value = ''; }
@@ -5952,7 +5946,6 @@ function syncInoDurationQuickActive(){
   const mm = parseInt((document.getElementById('s_dur_mm')||{value:''}).value || '0', 10);
   const hh = parseInt((document.getElementById('s_dur_hh')||{value:''}).value || '0', 10);
   const overridden = (document.getElementById('s_duration_unknown')||{}).checked
-    || (document.getElementById('s_duration_tba')||{}).checked
     || !!((document.getElementById('s_dur_other')||{value:''}).value.trim());
   wrap.querySelectorAll('.dur-quick-btn').forEach(btn=>{
     if (btn.id === 's_dur_unknown_btn') return;   // Unknown drives its own active state
@@ -5972,8 +5965,7 @@ function applyDurationHhGrey(){
   const hh = document.getElementById('s_dur_hh');
   const note = document.getElementById('s_dur_hh_note');
   if (!mm || !hh) return;
-  const overridden = (document.getElementById('s_duration_unknown')||{}).checked
-    || (document.getElementById('s_duration_tba')||{}).checked;
+  const overridden = (document.getElementById('s_duration_unknown')||{}).checked;
   if (overridden) return;   // an override greys everything already
   const big = parseInt(mm.value || '0', 10) >= 60;
   if (big){ hh.disabled = true; hh.style.opacity = '0.5'; hh.value = ''; }
@@ -5984,9 +5976,9 @@ function onInoDurationBoxInput(elm){
   // digits only; MM allows up to 3 digits (e.g. 120), HH up to 2
   const isMM = elm.id === 's_dur_mm';
   elm.value = elm.value.replace(/\D/g,'').slice(0, isMM ? 3 : 2);
-  // typing a duration un-ticks Unknown / TBA
+  // typing a duration un-ticks Unknown
   if (elm.value){
-    ['s_duration_unknown','s_duration_tba'].forEach(id=>{ const c=document.getElementById(id); if(c) c.checked=false; });
+    { const c=document.getElementById('s_duration_unknown'); if(c) c.checked=false; }
     ['s_dur_hh','s_dur_mm'].forEach(id=>{ const b=document.getElementById(id); if(b){ b.disabled=false; b.style.opacity='1'; } });
   }
   applyDurationHhGrey();
@@ -5994,21 +5986,14 @@ function onInoDurationBoxInput(elm){
   renderPreview();
 }
 /* Build the duration phrase from HH/MM, e.g. "2 hours 30 minutes", "120 minutes".
-   Unknown / TBA / an "Other" free-text override the numeric duration.
-   Optionally appends "subject to vehicle recovery/recoveries" (wording follows the
-   crash type: singular → recovery, multi → recoveries). */
+   Unknown overrides the numeric duration. Subject-to clauses and free-text
+   duration are appended after the base duration. */
 function buildInoDuration(){
-  const recovery = buildInoRecoveryClause();
-  const fcuqps = buildInoFcuQpsClause();
   const otherBox = document.getElementById('s_dur_other');
-  const otherWrap = document.getElementById('s_dur_other_wrap');
-  const otherShown = !!(otherWrap && otherWrap.style.display !== 'none');
-  const otherVal = (otherBox && otherShown) ? otherBox.value.trim() : '';
+  const otherVal = otherBox ? otherBox.value.trim() : '';
   let base = '';
   const durUnk = (document.getElementById('s_duration_unknown')||{}).checked;
-  const durTba = (document.getElementById('s_duration_tba')||{}).checked;
-  if (durUnk || durTba) base = [durUnk ? 'Unknown' : '', durTba ? 'TBA' : ''].filter(Boolean).join(', ');
-  else if (otherVal) base = otherVal;
+  if (durUnk) base = 'Unknown';
   else {
     const h = parseInt((document.getElementById('s_dur_hh')||{value:''}).value || '0', 10);
     const m = parseInt((document.getElementById('s_dur_mm')||{value:''}).value || '0', 10);
@@ -6017,33 +6002,25 @@ function buildInoDuration(){
     if (m > 0) parts.push(`${m} minute${m === 1 ? '' : 's'}`);
     base = parts.join(' ');
   }
-  // Append the opt-in clauses (recovery, FCU/QPS) after the base duration. When a clause
-  // leads the field on its own, capitalise it.
-  const clauses = [recovery, fcuqps].filter(Boolean);
-  if (base && clauses.length) return `${base}, ${clauses.join(', ')}`;
-  if (clauses.length) return capFirst(clauses.join(', '));
-  return base;
-}
-/* "subject to vehicle recovery" (singular crash) / "recoveries" (multi) when opted in. */
-function buildInoRecoveryClause(){
-  const on = (document.getElementById('s_dur_recovery')||{}).checked;
-  if (!on) return '';
-  const label = inoCrashLabel('s');   // "Single-vehicle Crash" | "Multi-vehicle Crash" | "Crash"
-  const plural = /^Multi/.test(label);
-  return plural ? 'subject to vehicle recoveries' : 'subject to vehicle recovery';
+  // "Subject to" clauses: vehicle recovery, FCU/QPS investigation, clean-up
+  const subjectParts = [];
+  if ((document.getElementById('s_dur_recovery')||{}).checked){
+    const label = inoCrashLabel('s');
+    const plural = /^Multi/.test(label);
+    subjectParts.push(plural ? 'vehicle recoveries' : 'vehicle recovery');
+  }
+  if ((document.getElementById('s_dur_fcuqps')||{}).checked) subjectParts.push('FCU and QPS investigation');
+  if ((document.getElementById('s_dur_cleanup')||{}).checked) subjectParts.push('clean-up');
+  const subjectClause = subjectParts.length ? 'subject to ' + andList(subjectParts) : '';
+  // Free-text duration appended after everything else
+  const pieces = [base, subjectClause, otherVal].filter(Boolean);
+  if (!pieces.length) return '';
+  return capFirst(pieces.join(', '));
 }
 function onInoRecoveryChange(){
   const on = (document.getElementById('s_dur_recovery')||{}).checked;
   const hint = document.getElementById('s_dur_recovery_hint');
   if (hint) hint.style.display = on ? 'block' : 'none';
-  renderPreview();
-}
-/* "subject to FCU and QPS investigation" when opted in (INO duration Other option). */
-function buildInoFcuQpsClause(){
-  const on = (document.getElementById('s_dur_fcuqps')||{}).checked;
-  return on ? 'subject to FCU and QPS investigation' : '';
-}
-function onInoFcuQpsChange(){
   renderPreview();
 }
 /* Retained for backward-compat with any saved handlers; toggles the recovery checkbox. */
@@ -6522,7 +6499,7 @@ function buildINO(){
           <button type="button" class="resp-more-link" onclick="toggleRespMore('scene')"><span id="scene_resp_ml_label">More</span> <span class="ml-chev" id="scene_resp_ml_chev">▾</span><span class="resp-more-summary" id="scene_resp_summary"></span></button>
           <div class="resp-more-section" id="scene_resp_more">
             <div class="check-grid">
-              ${["Medivac","SOC","Emergency services","Translink response service"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_groups_ck" value="${r}" onchange="syncInoGroup('scene','${r}')"> ${r}</label>`).join('')}
+              ${["Medivac","SOC","All emergency services","Translink response service"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_groups_ck" value="${r}" onchange="syncInoGroup('scene','${r}')"> ${r}</label>`).join('')}
               <label class="inline-check"><input type="checkbox" id="s_groups_other_ck" onchange="onInoGroupsOtherChange()"> Other</label>
             </div>
             <input type="text" id="s_groups_other" placeholder="Other groups (e.g. SES)" style="display:none;margin-top:8px;">
@@ -6545,7 +6522,7 @@ function buildINO(){
           <button type="button" class="resp-more-link" onclick="toggleRespMore('route')"><span id="route_resp_ml_label">More</span> <span class="ml-chev" id="route_resp_ml_chev">▾</span><span class="resp-more-summary" id="route_resp_summary"></span></button>
           <div class="resp-more-section" id="route_resp_more">
             <div class="check-grid">
-              ${["Medivac","SOC","Emergency services","Translink response service"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_route_ck" value="${r}" onchange="syncInoGroup('route','${r}')"> ${r}</label>`).join('')}
+              ${["Medivac","SOC","All emergency services","Translink response service"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_route_ck" value="${r}" onchange="syncInoGroup('route','${r}')"> ${r}</label>`).join('')}
               <label class="inline-check"><input type="checkbox" id="s_route_other_ck" onchange="onInoRouteOtherChange()"> Other</label>
             </div>
             <input type="text" id="s_route_other" placeholder="Other (proceeding)" style="display:none;margin-top:8px;">
@@ -6574,18 +6551,14 @@ function buildINO(){
         <button type="button" class="dur-quick-btn" onclick="setInoDurationQuick(30)">30 min</button>
         <button type="button" class="dur-quick-btn" onclick="setInoDurationQuick(60)">60 min</button>
       </div>
-      <div class="check-grid" style="margin-top:10px;">
-        <button type="button" class="moreless-btn" id="s_dur_other_btn" aria-expanded="false" onclick="toggleDurOther()"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button>
+      <div class="resp-group-label" style="margin-top:14px;">Subject to:</div>
+      <div class="check-grid">
+        <label class="inline-check"><input type="checkbox" id="s_dur_recovery" onchange="onInoRecoveryChange(); renderPreview(); scheduleWorkingSave();"> Vehicle recovery</label>
+        <label class="inline-check"><input type="checkbox" id="s_dur_fcuqps" onchange="renderPreview(); scheduleWorkingSave();"> FCU and QPS investigation</label>
+        <label class="inline-check"><input type="checkbox" id="s_dur_cleanup" onchange="renderPreview(); scheduleWorkingSave();"> Clean-up</label>
       </div>
-      <div id="s_dur_other_wrap" style="display:none;margin-top:8px;">
-        <div class="check-grid">
-          <label class="inline-check"><input type="checkbox" id="s_duration_tba" onchange="onInoDurationTbaChange()"> TBA</label>
-          <label class="inline-check"><input type="checkbox" id="s_dur_recovery" onchange="onInoRecoveryChange(); scheduleWorkingSave();"> Subject to vehicle recovery</label>
-          <label class="inline-check"><input type="checkbox" id="s_dur_fcuqps" onchange="onInoFcuQpsChange(); scheduleWorkingSave();"> Subject to FCU and QPS investigation</label>
-        </div>
-        <input type="text" id="s_dur_other" placeholder="Free-text duration" style="margin-top:8px;" oninput="onInoDurationOtherInput()">
-        <p class="hint" id="s_dur_recovery_hint" style="display:none;"></p>
-      </div>
+      <input type="text" id="s_dur_other" placeholder="Free-text duration" style="margin-top:8px;" oninput="onInoDurationOtherInput()">
+      <p class="hint" id="s_dur_recovery_hint" style="display:none;"></p>
       </div>
     </div>
 
@@ -9473,7 +9446,7 @@ function syncResponder(which, value){
 
 /* INO Groups at scene / En route are mutually exclusive per value, same as Generic. */
 /* Responder More/Less toggle for scene and route columns */
-const RESP_MORE_VALUES = ['Medivac','SOC','Emergency services','Translink response service'];
+const RESP_MORE_VALUES = ['Medivac','SOC','All emergency services','Translink response service'];
 function toggleRespMore(col, forceOpen){
   const section = document.getElementById(col + '_resp_more');
   const label = document.getElementById(col + '_resp_ml_label');
@@ -10101,11 +10074,10 @@ function collectFormState(){
         routeList: Array.from(document.querySelectorAll('.s_route_ck:checked')).map(c=>c.value),
         routeOther: (document.getElementById('s_route_other_ck')||{}).checked, routeOtherText: gv('s_route_other'),
         durUnknown: (document.getElementById('s_duration_unknown')||{}).checked, durHH: gv('s_dur_hh'), durMM: gv('s_dur_mm'),
-        durTba: (document.getElementById('s_duration_tba')||{}).checked,
-        durOtherOn: (((document.getElementById('s_dur_other_wrap')||{}).style||{}).display !== 'none') && !!gv('s_dur_other'),
         durOther: gv('s_dur_other'),
         durRecovery: (document.getElementById('s_dur_recovery')||{}).checked,
         durFcuQps: (document.getElementById('s_dur_fcuqps')||{}).checked,
+        durCleanup: (document.getElementById('s_dur_cleanup')||{}).checked,
         contact: gv('s_contact'), contactPh: gv('s_contact_ph'),
         // Whether this message has announced (or inherited) "All lanes are now open".
         allOpenAnnounced: inoMessageAnnouncesAllOpen()
@@ -11916,10 +11888,10 @@ function applyDraft(s){
     set('s_dur_hh', a.durHH); set('s_dur_mm', a.durMM);
     if (a.durRecovery){ const rc = document.getElementById('s_dur_recovery'); if (rc){ rc.checked = true; onInoRecoveryChange(); } }
     if (a.durFcuQps){ const fq = document.getElementById('s_dur_fcuqps'); if (fq){ fq.checked = true; } }
+    if (a.durCleanup){ const cl = document.getElementById('s_dur_cleanup'); if (cl){ cl.checked = true; } }
     if (a.durOtherOn){ const b = document.getElementById('s_dur_other'); if (b){ b.value = a.durOther || ''; } }
     if (a.durUnknown){ document.getElementById('s_duration_unknown').checked = true; }
-    if (a.durTba){ const t = document.getElementById('s_duration_tba'); if (t) t.checked = true; }
-    applyInoDurOtherVisibility();   // reveal Other section if TBA / recovery / free-text present
+    applyInoDurOtherVisibility();   // reveal Subject to section if recovery / clean-up / free-text present
     applyDurationOverrideGrey();
     set('s_contact', a.contact); set('s_contact_ph', a.contactPh);
     // reveal cleared-time field + apply greying if FINAL (without overwriting restored cleared time)
