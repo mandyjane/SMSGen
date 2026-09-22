@@ -2028,7 +2028,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 207.03</span>
+    <span class="app-version">Version 207.04</span>
   </footer>
 </div>
 
@@ -6169,10 +6169,10 @@ function buildINO(){
       <input type="text" id="s_seq_other" placeholder="Custom number label" style="display:none;margin-top:8px;" oninput="applyInoActionsVisibility(); applyInoTimeAutoVisibility(); renderPreview();">
       <div id="s_final_extra" style="display:none;margin-top:10px;">
         <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
-          <label class="inline-check"><input type="checkbox" id="s_final_all_open" onchange="renderPreview(); scheduleWorkingSave();"> All lanes open</label>
-          <label class="inline-check" id="s_congestion_clear_wrap"><input type="checkbox" id="s_congestion_clear" onchange="renderPreview(); scheduleWorkingSave();"> Congestion clear <span class="fld-help" tabindex="0" role="button" aria-label="What this does" data-tip="Generates &ldquo;nil congestion&rdquo; in the Network Impact line instead of the residual-congestion wording.">?</span></label>
+          <label class="inline-check"><input type="checkbox" id="s_final_all_open" onchange="autoSwitchDiversionOnFinal(); renderPreview(); scheduleWorkingSave();"> All lanes open</label>
+          <label class="inline-check" id="s_congestion_clear_wrap"><input type="checkbox" id="s_congestion_clear" onchange="autoSwitchDiversionOnFinal(); renderPreview(); scheduleWorkingSave();"> Congestion clear <span class="fld-help" tabindex="0" role="button" aria-label="What this does" data-tip="Generates &ldquo;nil congestion&rdquo; in the Network Impact line instead of the residual-congestion wording.">?</span></label>
           <div id="s_final_reinstate_wrap" style="display:none;">
-            <label class="inline-check"><input type="checkbox" id="s_final_reinstate" onchange="onInoReinstateChange()"> Summarise impact <span class="fld-help" tabindex="0" role="button" aria-label="What this does" data-tip="Rewrites the &ldquo;Network Impact:&rdquo; line in past tense, referencing the lanes in place before the incident cleared. Reads &ldquo;All lanes were blocked&rdquo; if a closure was used on any escalation, otherwise names the lanes (e.g. &ldquo;Left lane was blocked&rdquo;). Applies to No.2+ FINAL close-outs.">?</span></label>
+            <label class="inline-check"><input type="checkbox" id="s_final_reinstate" onchange="autoSwitchDiversionOnFinal(); onInoReinstateChange();"> Summarise impact <span class="fld-help" tabindex="0" role="button" aria-label="What this does" data-tip="Rewrites the &ldquo;Network Impact:&rdquo; line in past tense, referencing the lanes in place before the incident cleared. Reads &ldquo;All lanes were blocked&rdquo; if a closure was used on any escalation, otherwise names the lanes (e.g. &ldquo;Left lane was blocked&rdquo;). Applies to No.2+ FINAL close-outs.">?</span></label>
           </div>
         </div>
         <div id="s_final_reinstate_wrap_hints" style="display:none;">
@@ -6418,10 +6418,17 @@ function buildINO(){
         </div>
         <div style="margin-top:10px;margin-bottom:12px;">
           <button type="button" class="link-btn" id="s_cong_more_btn" aria-expanded="false" style="font-size:13.5px;" onclick="var w=document.getElementById('s_cong_more_wrap');var show=w.style.display==='none';w.style.display=show?'flex':'none';this.querySelector('.ml-chev').textContent=show?'\u25be':'\u25b8';this.setAttribute('aria-expanded',show)"><span class="ml-chev">\u25b8</span> Additional info</button>
-          <div class="check-grid" id="s_cong_more_wrap" style="display:none;margin-top:8px;">
-            <label class="inline-check"><input type="radio" class="desel-radio" name="s_cong_type" value="localised" onclick="toggleDeselectableRadio(this)" onchange="renderPreview()"> Localised</label>
-            <label class="inline-check"><input type="radio" class="desel-radio" name="s_cong_type" value="residual" onclick="toggleDeselectableRadio(this)" onchange="renderPreview()"> Residual</label>
-            <label class="inline-check"><input type="checkbox" id="s_cong_peak" onchange="renderPreview(); scheduleWorkingSave();"> AM/PM peak</label>
+          <div class="check-grid" id="s_cong_more_wrap" style="display:none;margin-top:8px;align-items:flex-end;">
+            <label class="inline-check"><input type="checkbox" id="s_cong_localised" onchange="renderPreview(); scheduleWorkingSave();"> Localised</label>
+            <label class="inline-check"><input type="checkbox" id="s_cong_residual" onchange="renderPreview(); scheduleWorkingSave();"> Residual</label>
+            <span style="width:1px;height:24px;background:var(--line-strong,#c4ccc7);margin:0 4px;align-self:center;"></span>
+            <div style="display:flex;flex-direction:column;gap:3px;">
+              <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted,#5f6863);">Including</span>
+              <div class="check-grid">
+                <label class="inline-check"><input type="radio" class="desel-radio" name="s_cong_peak" value="am" onclick="toggleDeselectableRadio(this)" onchange="renderPreview(); scheduleWorkingSave();"> AM peak</label>
+                <label class="inline-check"><input type="radio" class="desel-radio" name="s_cong_peak" value="pm" onclick="toggleDeselectableRadio(this)" onchange="renderPreview(); scheduleWorkingSave();"> PM peak</label>
+              </div>
+            </div>
           </div>
         </div>
         <div class="field" style="margin-bottom:0;">
@@ -7230,6 +7237,18 @@ function onTimeBoxInput(elm, nextId){
   renderPreview();
 }
 
+
+/* When any of the FINAL close-out options (All lanes open, Congestion clear, Summarise impact)
+   are ticked, auto-switch Diversion to "No" — the incident is clearing, diversions no longer apply. */
+function autoSwitchDiversionOnFinal(){
+  const allOpen = (document.getElementById('s_final_all_open')||{}).checked;
+  const congClear = (document.getElementById('s_congestion_clear')||{}).checked;
+  const summarise = (document.getElementById('s_final_reinstate')||{}).checked;
+  if (allOpen || congClear || summarise){
+    const divNo = document.querySelector('input[name="s_diversion"][value="no"]');
+    if (divNo && !divNo.checked){ divNo.checked = true; onInoDiversionChange(); }
+  }
+}
 function onInoFinalChange(){
   const on = document.getElementById('s_final').checked;
   const extra = document.getElementById('s_final_extra');
@@ -7490,9 +7509,11 @@ function renderINO(){
   // Map "Road Steward" to "TMR Road Steward" in output
   const mapRoadSteward = (list) => list.map(v => v === 'Road Steward' ? 'TMR Road Steward' : v === 'Tow' ? 'tow' : v);
   const sceneList = mapRoadSteward(groupList);
-  // "All emergency services" always leads the list
+  // "All emergency services" always leads the list, "tow" always last
   const aesIdx = sceneList.indexOf('All emergency services');
   if (aesIdx > 0) { sceneList.splice(aesIdx, 1); sceneList.unshift('All emergency services'); }
+  const towIdx = sceneList.findIndex(g => g.toLowerCase() === 'tow');
+  if (towIdx >= 0 && towIdx < sceneList.length - 1) { sceneList.splice(towIdx, 1); sceneList.push('tow'); }
   const routeList = mapRoadSteward(Array.from(document.querySelectorAll('.s_route_ck:checked')).map(c=>c.value));
   const routeOtherOn = (document.getElementById('s_route_other_ck')||{}).checked;
   if (routeOtherOn){ const o = get('s_route_other'); if (o) routeList.push(o); }
@@ -7675,19 +7696,21 @@ function renderINO(){
   // of congestion from Exit 20"; if "Congestion clear" is ticked it becomes "Nil
   // congestion" instead.
   // Congestion type (localised/residual) and peak modifiers
-  const congTypeEl = document.querySelector('input[name="s_cong_type"]:checked');
-  let congType = congTypeEl ? congTypeEl.value : '';
-  const congPeak = document.getElementById('s_cong_peak') && document.getElementById('s_cong_peak').checked;
+  const congLocalised = (document.getElementById('s_cong_localised')||{}).checked;
+  const congResidual = (document.getElementById('s_cong_residual')||{}).checked;
+  let congType = [congLocalised ? 'localised' : '', congResidual ? 'residual' : ''].filter(Boolean).join(' ');
+  const congPeakEl = document.querySelector('input[name="s_cong_peak"]:checked');
+  const congPeak = congPeakEl ? congPeakEl.value : '';
   // FINAL auto-selects residual
   if (finalOn && !congestionClear && !congType){
     congType = 'residual';
-    const resRadio = document.querySelector('input[name="s_cong_type"][value="residual"]');
-    if (resRadio){ resRadio.checked = true; resRadio._wasChecked = true; }
+    const resCk = document.getElementById('s_cong_residual');
+    if (resCk){ resCk.checked = true; }
   }
   const unitLabel = (typeof inoLengthUnit !== 'undefined' && inoLengthUnit === 'm') ? 'm' : 'km';
   const lengthStr = length ? `${length} ${unitLabel}` : '';
   const congTypeWord = congType ? ` ${congType}` : '';
-  const peakSuffix = congPeak ? ' including AM/PM peak' : '';
+  const peakSuffix = congPeak ? ` including ${congPeak.toUpperCase()} peak` : '';
   const lengthCongPlain = lengthStr
     ? [ `${lengthStr} of${congTypeWord} congestion${peakSuffix}`, congestion ].filter(Boolean).join(' ')
     : congestion;
@@ -7714,7 +7737,7 @@ function renderINO(){
     if (finalAllOpen){
       const dirs = readLaneDirections('.s_lane_dir');
       const dirWord = (dirs.length && !dirs.includes('unknown')) ? inoDirectionWord(dirs) : '';
-      const openClause = dirWord ? `All ${dirWord} lanes now open` : 'All lanes now open';
+      const openClause = dirWord ? `All ${dirWord} lanes open` : 'All lanes open';
       niBits = [openClause, lengthCong].filter(Boolean);
     } else if (closedEverFinal && isSeqFinal && finalReinstate){
       // Closure anywhere in the series (or on this FINAL) → past-tense "All lanes were closed",
@@ -7884,6 +7907,11 @@ function renderINO(){
     // Road Steward is included in sceneList/fullRouteList so it merges naturally.
     const currentAll = sceneList.concat(fullRouteList);
     const allGroups = mergeGroupLists(inoPriorGroups, currentAll);
+    // Sort: "All emergency services" first, "tow" last
+    const aesI = allGroups.findIndex(g => g === 'All emergency services');
+    if (aesI > 0) { allGroups.splice(aesI, 1); allGroups.unshift('All emergency services'); }
+    const towI = allGroups.findIndex(g => g.toLowerCase() === 'tow');
+    if (towI >= 0) { allGroups.splice(towI, 1); allGroups.push('tow'); }
     const merged = andList(allGroups);
     groupsLine = `${groupsLabel}: ${merged || 'nil'}.`;
   } else if (groups && enRoute){
@@ -10140,7 +10168,7 @@ function collectFormState(){
         oppText: gv('s_opp_text'), oppComma: !!(document.getElementById('s_opp_comma')&&document.getElementById('s_opp_comma').checked),
         congestionYN: rb('s_congestion_yn'),
         length: gv('s_length'), lengthUnit: (typeof inoLengthUnit !== 'undefined') ? inoLengthUnit : 'km',
-        congType: (document.querySelector('input[name="s_cong_type"]:checked')||{}).value || '', congPeak: !!(document.getElementById('s_cong_peak')&&document.getElementById('s_cong_peak').checked), congestion: gv('s_congestion'),
+        congLocalised: !!(document.getElementById('s_cong_localised')||{}).checked, congResidual: !!(document.getElementById('s_cong_residual')||{}).checked, congPeakVal: (document.querySelector('input[name="s_cong_peak"]:checked')||{}).value || '', congestion: gv('s_congestion'),
         diversion: rb('s_diversion'), divAvailable: rb('s_div_available'), diversionText: gv('s_diversion_text'),
         addlInfo: gv('s_addl_info'),
         actQld: rb('s_act_qld'), vision6: rb('s_vision6'), publicSms: rb('s_publicsms'),
@@ -11934,6 +11962,16 @@ function applyDraft(s){
     { const oc = document.getElementById('s_opp_comma'); if (oc && a.oppComma !== undefined) oc.checked = !!a.oppComma; }
     if (a.congestionYN){ setRadio('s_congestion_yn', a.congestionYN); syncRadioFlags('s_congestion_yn'); onInoCongestionChange(); }
     set('s_length', a.length); set('s_congestion', a.congestion);
+    if (a.congLocalised){ const cl = document.getElementById('s_cong_localised'); if (cl) cl.checked = true; }
+    if (a.congResidual){ const cr = document.getElementById('s_cong_residual'); if (cr) cr.checked = true; }
+    if (a.congPeakVal){ setRadio('s_cong_peak', a.congPeakVal); }
+    // Legacy: old congType radio → map to checkboxes
+    if (a.congType && !a.congLocalised && !a.congResidual){
+      if (a.congType === 'localised'){ const cl = document.getElementById('s_cong_localised'); if (cl) cl.checked = true; }
+      if (a.congType === 'residual'){ const cr = document.getElementById('s_cong_residual'); if (cr) cr.checked = true; }
+    }
+    // Legacy: old congPeak boolean → map to AM peak (best guess)
+    if (a.congPeak && !a.congPeakVal){ setRadio('s_cong_peak', 'am'); }
     if (a.diversion){ setRadio('s_diversion', a.diversion); syncRadioFlags('s_diversion'); onInoDiversionChange(); if (a.divAvailable){ setRadio('s_div_available', a.divAvailable); onInoDivAvailChange(); } set('s_diversion_text', a.diversionText); }
     if (a.addlInfo) set('s_addl_info', a.addlInfo);
     relabelInoEventOptions();
