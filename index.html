@@ -2028,7 +2028,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 207.08</span>
+    <span class="app-version">Version 207.09</span>
   </footer>
 </div>
 
@@ -5251,8 +5251,23 @@ function onInoCongestionChange(){
   renderPreview();
   scheduleWorkingSave();
 }
-function onInoDiversionChange(){
-  const yes = (document.querySelector('input[name="s_diversion"]:checked')||{}).value === 'yes';
+/* v207.09: userChange = true only for a real switch (operator click or FINAL auto-switch).
+   Draft/working-form restore calls this with no args, so saved Additional information is
+   never wiped on load. auto = true when a FINAL option flipped Diversion to No. */
+let inoAddlClearedVal = '';
+function onInoDiversionChange(userChange, auto){
+  const divVal = (document.querySelector('input[name="s_diversion"]:checked')||{}).value;
+  const yes = divVal === 'yes';
+  if (userChange && divVal === 'no'){
+    const addl = document.getElementById('s_addl_info');
+    if (addl && addl.value.trim()){
+      inoAddlClearedVal = addl.value;
+      addl.value = '';
+      showInoAddlClearedNote(auto ? 'Cleared because Diversion auto-set to No.' : 'Cleared because Diversion set to No.');
+    }
+  } else {
+    hideInoAddlClearedNote();
+  }
   const detail = document.getElementById('s_diversion_detail');
   if (detail) detail.style.display = yes ? 'block' : 'none';
   if (!yes){
@@ -5262,6 +5277,24 @@ function onInoDiversionChange(){
     if (wrap) wrap.style.display = 'none';
     document.querySelectorAll('input[name="s_div_available"]').forEach(r => { r.checked = false; });
   }
+  renderPreview();
+  scheduleWorkingSave();
+}
+function showInoAddlClearedNote(msg){
+  const n = document.getElementById('s_addl_cleared_note');
+  const t = document.getElementById('s_addl_cleared_txt');
+  if (t) t.textContent = msg;
+  if (n) n.style.display = 'flex';
+}
+function hideInoAddlClearedNote(){
+  const n = document.getElementById('s_addl_cleared_note');
+  if (n) n.style.display = 'none';
+}
+function undoInoAddlClear(){
+  const addl = document.getElementById('s_addl_info');
+  if (addl) addl.value = inoAddlClearedVal;
+  inoAddlClearedVal = '';
+  hideInoAddlClearedNote();
   renderPreview();
   scheduleWorkingSave();
 }
@@ -6450,8 +6483,8 @@ function buildINO(){
     <div class="field" id="s_diversion_wrap">
       <span class="field-label">Diversion required?</span>
       <div class="check-grid">
-        <label class="inline-check"><input type="radio" name="s_diversion" value="yes" onchange="onInoDiversionChange()"> Yes</label>
-        <label class="inline-check"><input type="radio" name="s_diversion" value="no" onchange="onInoDiversionChange()"> No</label>
+        <label class="inline-check"><input type="radio" name="s_diversion" value="yes" onchange="onInoDiversionChange(true)"> Yes</label>
+        <label class="inline-check"><input type="radio" name="s_diversion" value="no" onchange="onInoDiversionChange(true)"> No</label>
       </div>
       <div id="s_diversion_detail" style="display:none;margin-top:10px;">
         <div class="field" style="margin-bottom:8px;">
@@ -6470,7 +6503,11 @@ function buildINO(){
 
     <div class="field">
       <span class="field-label">Additional information</span>
-      <input type="text" id="s_addl_info" placeholder="Free text — appended to the end of the message" oninput="renderPreview(); scheduleWorkingSave();">
+      <input type="text" id="s_addl_info" placeholder="Free text — appended to the end of the message" oninput="hideInoAddlClearedNote(); renderPreview(); scheduleWorkingSave();">
+      <div id="s_addl_cleared_note" role="status" style="display:none;align-items:center;gap:8px;margin-top:6px;font-size:12.5px;color:var(--muted,#6b7280);">
+        <span id="s_addl_cleared_txt">Cleared because Diversion set to No.</span>
+        <button type="button" class="link-btn" style="font-size:12.5px;" onclick="undoInoAddlClear()">Undo</button>
+      </div>
     </div>
 
     </div>
@@ -7288,7 +7325,7 @@ function autoSwitchDiversionOnFinal(){
   const summarise = (document.getElementById('s_final_reinstate')||{}).checked;
   if (allOpen || congClear || summarise){
     const divNo = document.querySelector('input[name="s_diversion"][value="no"]');
-    if (divNo && !divNo.checked){ divNo.checked = true; onInoDiversionChange(); }
+    if (divNo && !divNo.checked){ divNo.checked = true; onInoDiversionChange(true, true); }
   }
 }
 function onInoFinalChange(){
