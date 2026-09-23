@@ -2028,7 +2028,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 207.10</span>
+    <span class="app-version">Version 207.11</span>
   </footer>
 </div>
 
@@ -8034,7 +8034,7 @@ function renderINO(){
   }
   lines.push(groupsLine);
   if (!finalOn) lines.push(`Estimated Duration to Clear: ${duration || '[insert]'}.`);
-  lines.push(`Contact: INO Operations Coordinator Ph: ${contactPh} (${contact || '[insert name]'}).`);
+  lines.push(`Contact: INO Operations Coordinator Ph. ${contactPh} (${contact || '[insert name]'}).`);
 
   // collapse runs of spaces within each line, then join with newlines
   let msg = capitalizeSentences(lines.map(l => l.replace(/[ \t]+/g,' ').trim()).join('\n'));
