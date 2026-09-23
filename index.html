@@ -1164,6 +1164,14 @@
   .time-row { display: flex; align-items: center; gap: 8px; }
   .time-box { width: 64px; text-align: center; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
   .time-box.narrow { width: 58px; }
+  /* v207.15: compact "Join" separator switch beside the Additional information label */
+  .addl-label-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .addl-label-row .field-label { margin-bottom:0; }
+  .addl-sep { display:inline-flex; align-items:center; gap:4px; margin-left:auto; }
+  .addl-sep-lbl { font-family: var(--mono); font-size:10px; letter-spacing:0.06em; text-transform:uppercase; color: var(--ink-soft); margin-right:2px; }
+  .addl-sep-btn { font: inherit; font-size:11.5px; line-height:1; height:22px; min-width:26px; padding:0 7px; border-radius:6px;
+    border:1px solid var(--line, #d9dee3); background:transparent; color: var(--ink-soft); cursor:pointer; }
+  .addl-sep-btn.on { background: var(--accent-soft, #e3f1ec); border-color: transparent; color: var(--ink, #1a1f24); font-weight:600; }
   .time-colon { font-family: var(--mono); font-weight: 600; color: var(--ink-soft); }
   .time-unit { font-family: var(--mono); font-size: 12px; color: var(--muted); }
   .field-disabled { opacity: 0.45; pointer-events: none; }
@@ -2031,7 +2039,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 207.14</span>
+    <span class="app-version">Version 207.16</span>
   </footer>
 </div>
 
@@ -3896,6 +3904,21 @@ function groupsFromInoState(state){
   if (io.routeOther && io.routeOtherText && io.routeOtherText.trim()) out.push(io.routeOtherText.trim());
   return out;
 }
+/* v207.16: true on an update when the lane record (positions, per-lane counts, impact type)
+   is identical to the immediately preceding message's — the lanes clause then reads
+   "remain(s) <verb>" ("Northbound lanes remain blocked"). All/Road closed/Nil have their own
+   remain/now wording elsewhere. */
+function inoLanesUnchangedFromPrev(){
+  if (!isInoUpdateContext() || !inoPrevLaneInfo) return false;
+  const cur = laneInfoFromInoForm();
+  const prev = inoPrevLaneInfo;
+  if (!cur.state || cur.all || prev.all) return false;
+  if ((prev.state || '') !== cur.state) return false;
+  const a = (prev.pos || []).slice().sort().join('|'), b = (cur.pos || []).slice().sort().join('|');
+  if (a !== b) return false;
+  const norm = c => JSON.stringify(Object.keys(c || {}).sort().map(k => [k, String(c[k])]));
+  return norm(prev.counts) === norm(cur.counts);
+}
 function isInoUpdateContext(){
   if (Array.isArray(inoPrevLanes)) return true;   // advanced/updated from a prior message
   if (inoUpdate.on) return true;
@@ -4968,7 +4991,8 @@ function buildLanesP(prefix){
         if (verb){
           const dirs0 = readLaneDirections('.s_lane_dir');
           const dirWord0 = (dirs0.length && !dirs0.includes('unknown')) ? inoDirectionWord(dirs0) : '';
-          return capFirstLetter([dirWord0, 'lanes', verb].filter(Boolean).join(' '));
+          const rem0 = inoLanesUnchangedFromPrev() ? 'remain' : '';
+          return capFirstLetter([dirWord0, 'lanes', rem0, verb].filter(Boolean).join(' '));
         } }
       return '';
     }
@@ -4982,19 +5006,22 @@ function buildLanesP(prefix){
     const dirs = readLaneDirections('.s_lane_dir');
     const dirWord = (dirs.length && !dirs.includes('unknown')) ? inoDirectionWord(dirs) : '';
     let laneStr;
+    // v207.16: unchanged from the previous message → "remain(s)" before the verb.
+    const totalLanes = withCount.reduce((t, p) => t + (p.n || 1), 0);
+    const remWord = inoLanesUnchangedFromPrev() ? (totalLanes > 1 ? 'remain' : 'remains') : '';
     if (anyCount){
       // With counts: "Two left and one centre lanes blocked northbound"
       laneStr = laneJoin(withCount.map(p => p.n
         ? `${capNumWord(p.n).toLowerCase()} ${p.pos} lane${p.n > 1 ? 's' : ''}`
         : `${p.pos} lane`
       ));
-      const full = [laneStr, effectiveVerb, dirWord].filter(Boolean).join(' ');
+      const full = [laneStr, remWord, effectiveVerb, dirWord].filter(Boolean).join(' ');
       return capFirstLetter(full);
     } else {
       // Without counts: "Centre and right northbound lanes blocked"
       const names = withCount.map(p => p.pos);
       const posStr = laneJoin(names);
-      const full = [posStr, dirWord, 'lane' + (names.length > 1 ? 's' : ''), effectiveVerb].filter(Boolean).join(' ');
+      const full = [posStr, dirWord, 'lane' + (names.length > 1 ? 's' : ''), remWord, effectiveVerb].filter(Boolean).join(' ');
       return capFirstLetter(full);
     }
   }
@@ -6222,6 +6249,16 @@ function buildINO(){
         <label class="inline-check shrink"><input type="checkbox" id="s_final" onchange="onInoFinalChange()"> FINAL</label>
       </div>
       </div>
+      <div id="s_upd_wrap" style="display:none;margin-top:12px;">
+        <span class="field-label" style="margin-bottom:5px;">Update time</span>
+        <div class="time-row" style="align-items:center;flex-wrap:wrap;">
+          <input type="text" id="s_upd_hh" class="time-box narrow" inputmode="numeric" maxlength="2" placeholder="HH" oninput="onTimeBoxInput(this,'s_upd_mm'); onInoUpdTimeInput();">
+          <span class="time-colon">:</span>
+          <input type="text" id="s_upd_mm" class="time-box narrow" inputmode="numeric" maxlength="2" placeholder="MM" oninput="onTimeBoxInput(this); onInoUpdTimeInput();">
+          <button type="button" class="dur-quick-btn" onclick="setInoUpdTimeNow()">Now</button>
+          <span class="hint" style="margin:0;">Set automatically on Next escalation</span>
+        </div>
+      </div>
       <input type="text" id="s_seq_other" placeholder="Custom number label" style="display:none;margin-top:8px;" oninput="applyInoActionsVisibility(); applyInoTimeAutoVisibility(); renderPreview();">
       <div id="s_final_extra" style="display:none;margin-top:10px;">
         <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
@@ -6519,7 +6556,16 @@ function buildINO(){
     </div>
 
     <div class="field">
-      <span class="field-label">Additional information</span>
+      <div class="addl-label-row">
+        <span class="field-label">Additional information</span>
+        <div class="addl-sep" role="group" aria-label="Join with">
+          <span class="addl-sep-lbl">Join</span>
+          <button type="button" class="addl-sep-btn on" data-sep="." aria-label="Full stop" title="Full stop — new sentence" onclick="setInoAddlSep(this.dataset.sep)">.</button>
+          <button type="button" class="addl-sep-btn" data-sep=";" aria-label="Semicolon" title="Semicolon — continues the sentence" onclick="setInoAddlSep(this.dataset.sep)">;</button>
+          <button type="button" class="addl-sep-btn" data-sep="none" aria-label="None" title="No separator — continues the sentence" onclick="setInoAddlSep(this.dataset.sep)">none</button>
+        </div>
+      </div>
+      <input type="hidden" id="s_addl_sep" value=".">
       <input type="text" id="s_addl_info" placeholder="Free text — appended to the end of the message" oninput="hideInoAddlClearedNote(); renderPreview(); scheduleWorkingSave();">
       <div id="s_addl_cleared_note" role="status" style="display:none;align-items:center;gap:8px;margin-top:6px;font-size:12.5px;color:var(--muted,#6b7280);">
         <span id="s_addl_cleared_txt">Cleared because Diversion set to No.</span>
@@ -7360,6 +7406,7 @@ function autoSwitchDiversionOnFinal(el){
 }
 function onInoFinalChange(){
   const on = document.getElementById('s_final').checked;
+  applyInoUpdTimeVisibility();
   const extra = document.getElementById('s_final_extra');
   if (extra) extra.style.display = on ? 'block' : 'none';
   applyInoFinalReinstateVisibility();
@@ -7401,8 +7448,58 @@ function onInoTypeUpdateChange(){
   scheduleWorkingSave();
 }
 
+/* v207.15: editable UPDATE time under Escalation number. inoUpdate.time stays the source of
+   truth; the boxes mirror it. Shown only while an UPDATE is active and FINAL is off. */
+function syncInoUpdTimeFields(){
+  const wrap = document.getElementById('s_upd_wrap');
+  if (!wrap) return;
+  const hh = document.getElementById('s_upd_hh'), mm = document.getElementById('s_upd_mm');
+  const m = /^(\d{1,2}):(\d{1,2})$/.exec(inoUpdate.time || '');
+  if (hh && mm){ hh.value = m ? m[1] : ''; mm.value = m ? m[2] : ''; }
+  applyInoUpdTimeVisibility();
+}
+function applyInoUpdTimeVisibility(){
+  const wrap = document.getElementById('s_upd_wrap');
+  if (!wrap) return;
+  const finalOn = (document.getElementById('s_final')||{}).checked;
+  wrap.style.display = (inoUpdate.on && !finalOn) ? 'block' : 'none';
+}
+function onInoUpdTimeInput(){
+  const hh = (document.getElementById('s_upd_hh')||{value:''}).value;
+  const mm = (document.getElementById('s_upd_mm')||{value:''}).value;
+  inoUpdate.time = (hh && mm) ? `${hh.padStart(2,'0')}:${mm.padStart(2,'0')}` : '[insert time]';
+  renderPreview();
+  scheduleWorkingSave();
+}
+function setInoUpdTimeNow(){
+  const t = nowHHMM();
+  inoUpdate.time = `${t.hh}:${t.mm}`;
+  syncInoUpdTimeFields();
+  renderPreview();
+  scheduleWorkingSave();
+}
+/* v207.15: Additional information separator — "." (new sentence, default), ";" or "none". */
+function setInoAddlSep(v){
+  const inp = document.getElementById('s_addl_sep');
+  if (inp) inp.value = v || '.';
+  document.querySelectorAll('.addl-sep-btn').forEach(b => b.classList.toggle('on', b.dataset.sep === (v || '.')));
+  renderPreview();
+  scheduleWorkingSave();
+}
+function joinInoAddlInfo(base, addl){
+  if (!addl) return base;
+  if (!base) return addl;
+  const sep = (document.getElementById('s_addl_sep')||{value:'.'}).value || '.';
+  if (sep === '.') return `${base}. ${addl}`;
+  // Continuation: drop a leading capital on an ordinary word ("Traffic" → "traffic");
+  // acronyms/all-caps ("QPS") stay as typed.
+  const cont = /^[A-Z][a-z]/.test(addl) ? addl.charAt(0).toLowerCase() + addl.slice(1) : addl;
+  return sep === ';' ? `${base}; ${cont}` : `${base} ${cont}`;
+}
+
 /* lock Time incident occurred when UPDATE active — kept in the SMS but not editable */
 function applyInoTimeLock(){
+  syncInoUpdTimeFields();
   const off = inoUpdate.on;
   const hh = document.getElementById('s_time_hh');
   const mm = document.getElementById('s_time_mm');
@@ -7932,7 +8029,7 @@ function renderINO(){
     if (isNo1Final && finalNote) niBits.push(finalNote);
     const mainImpact = niBits.length ? niBits.join('; ') : '[impact]';
     let fullImpact = diversion ? `${mainImpact}; ${diversion}` : mainImpact;
-    if (addlInfo) fullImpact = `${fullImpact}. ${addlInfo}`;
+    if (addlInfo) fullImpact = joinInoAddlInfo(fullImpact, addlInfo);
     lines.push(`Network Impact: ${fullImpact}.`);
 
     // ----- No.# FINAL only: a separate "Final Update:" line -----
@@ -7976,7 +8073,7 @@ function renderINO(){
     if (reopenPair) netBits.unshift(reopenPair);
     const netMain = netBits.join('; ');
     let netFull = diversion ? `${netMain}; ${diversion}` : netMain;
-    if (addlInfo) netFull = netFull ? `${netFull}. ${addlInfo}` : addlInfo;
+    if (addlInfo) netFull = joinInoAddlInfo(netFull, addlInfo);
     // Register clickable sub-parts of this line.
     regSeg(laneClause, 's_lanes_field');
     regSeg(inoReopenedStr, 's_reopen_wrap');
@@ -8037,14 +8134,10 @@ function renderINO(){
     groupsLine = `${groupsLabel}: ${merged || 'nil'}.`;
     if (departed) groupsLine += `\n${departed} departed.`;
   } else if (groups && enRoute){
-    const hasAllEmerg = sceneList.includes('All emergency services');
-    const sceneClause = hasAllEmerg ? groups : `${groups} at scene`;
-    groupsLine = `${groupsLabel}: ${sceneClause}. ${enRoute} ${routeSuffix}.`;
+    // v207.15: no "at scene" suffix — the label already says "Groups at Scene".
+    groupsLine = `${groupsLabel}: ${groups}. ${enRoute} ${routeSuffix}.`;
   } else if (groups){
-    const hasAllEmerg = sceneList.includes('All emergency services');
-    groupsLine = hasAllEmerg
-      ? `${groupsLabel}: ${groups}.`
-      : `${groupsLabel}: ${groups} at scene.`;
+    groupsLine = `${groupsLabel}: ${groups}.`;
   } else if (enRoute){
     // En route only — no scene groups
     groupsLine = `${groupsLabel}: ${enRoute} ${routeSuffix}.`;
@@ -10294,6 +10387,7 @@ function collectFormState(){
         congLocalised: !!(document.getElementById('s_cong_localised')||{}).checked, congResidual: !!(document.getElementById('s_cong_residual')||{}).checked, congPeakVal: (document.querySelector('input[name="s_cong_peak"]:checked')||{}).value || '', congestion: gv('s_congestion'),
         diversion: rb('s_diversion'), divAvailable: rb('s_div_available'), diversionText: gv('s_diversion_text'),
         addlInfo: gv('s_addl_info'),
+        addlSep: gv('s_addl_sep') || '.',
         actQld: rb('s_act_qld'), vision6: rb('s_vision6'), publicSms: rb('s_publicsms'),
         systems: Array.from(document.querySelectorAll('.s_sys:checked')).map(c=>c.value),
         cctv: rb('s_cctv'),
@@ -12102,6 +12196,8 @@ function applyDraft(s){
     if (a.congPeak && !a.congPeakVal){ setRadio('s_cong_peak', 'am'); }
     if (a.diversion){ setRadio('s_diversion', a.diversion); syncRadioFlags('s_diversion'); onInoDiversionChange(); if (a.divAvailable){ setRadio('s_div_available', a.divAvailable); onInoDivAvailChange(); } set('s_diversion_text', a.diversionText); }
     if (a.addlInfo) set('s_addl_info', a.addlInfo);
+    { const sv = a.addlSep || '.'; const si = document.getElementById('s_addl_sep'); if (si) si.value = sv;
+      document.querySelectorAll('.addl-sep-btn').forEach(b => b.classList.toggle('on', b.dataset.sep === sv)); }
     if (a.injQas){ const q = document.getElementById('s_inj_qas'); if (q) q.checked = true; }
         relabelInoEventOptions();
     // actions
