@@ -1015,6 +1015,9 @@
     background: var(--teal-soft); border-color: var(--teal); color: var(--teal-deep); font-weight: 600;
   }
   .check-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  /* v207.13: two-column variant (Estimated duration "Subject to" list). */
+  .check-grid.check-grid--2col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .check-grid.check-grid--2col > .inline-check { min-width: 0; }
 
   /* Impact type row: Closed is set apart (gap + vertical divider) and styled danger-red so it
      reads as a whole-carriageway closure distinct from the per-lane Blocked/Affected states. */
@@ -2028,7 +2031,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 207.11</span>
+    <span class="app-version">Version 207.13</span>
   </footer>
 </div>
 
@@ -4956,7 +4959,14 @@ function buildLanesP(prefix){
     // No positions ticked — still show impact type + direction
     if (!posEls.length){
       if (unknownDir) return '';
-      { const verb = stateStr === 'laneclosed' ? 'closed' : stateStr; if (verb) return withLaneDirection(capFirstLetter(verb), '.s_lane_dir'); }
+      // v207.12: no positions → "Northbound lanes blocked" (direction before "lanes"),
+      // or "Lanes blocked" with no direction. Was "Blocked northbound".
+      { const verb = stateStr === 'laneclosed' ? 'closed' : stateStr;
+        if (verb){
+          const dirs0 = readLaneDirections('.s_lane_dir');
+          const dirWord0 = (dirs0.length && !dirs0.includes('unknown')) ? inoDirectionWord(dirs0) : '';
+          return capFirstLetter([dirWord0, 'lanes', verb].filter(Boolean).join(' '));
+        } }
       return '';
     }
 
@@ -6000,6 +6010,8 @@ function applyInoDurOtherVisibility(){
     || (document.getElementById('s_dur_cleanup')||{}).checked
     || (document.getElementById('s_dur_emergency_ops')||{}).checked
     || (document.getElementById('s_dur_road_surface')||{}).checked
+    || (document.getElementById('s_dur_infra_inspect')||{}).checked
+    || (document.getElementById('s_dur_make_safe')||{}).checked
     || !!((document.getElementById('s_dur_other')||{value:''}).value.trim());
   if (has){ wrap.style.display = 'block'; syncDurOtherBtn(true); }
 }
@@ -6092,6 +6104,8 @@ function buildInoDuration(){
   if ((document.getElementById('s_dur_cleanup')||{}).checked) subjectParts.push('clean-up');
   if ((document.getElementById('s_dur_emergency_ops')||{}).checked) subjectParts.push('emergency services operation');
   if ((document.getElementById('s_dur_road_surface')||{}).checked) subjectParts.push('road surface assessment');
+  if ((document.getElementById('s_dur_infra_inspect')||{}).checked) subjectParts.push('infrastructure inspection');
+  if ((document.getElementById('s_dur_make_safe')||{}).checked) subjectParts.push('make safe');
   const subjectJoined = subjectParts.length <= 2 ? subjectParts.join(' and ') : subjectParts.slice(0,-1).join(', ') + ' and ' + subjectParts[subjectParts.length-1];
   const subjectClause = subjectParts.length ? 'subject to ' + subjectJoined : '';
   // Free-text duration appended after everything else
@@ -6674,13 +6688,15 @@ function buildINO(){
       <div class="field-summary" id="s_dur_summary"></div>
       <div class="field-controls">
       <div class="resp-group-label" style="margin-top:0;">Subject to:</div>
-      <div class="check-grid">
+      <div class="check-grid check-grid--2col">
         <label class="inline-check"><input type="checkbox" id="s_dur_recovery" onchange="onInoRecoveryChange(); renderPreview(); scheduleWorkingSave();"> Vehicle recovery</label>
         <label class="inline-check"><input type="checkbox" id="s_dur_fcu" onchange="renderPreview(); scheduleWorkingSave();"> FCU investigation</label>
         <label class="inline-check"><input type="checkbox" id="s_dur_qps" onchange="renderPreview(); scheduleWorkingSave();"> QPS investigation</label>
         <label class="inline-check"><input type="checkbox" id="s_dur_cleanup" onchange="renderPreview(); scheduleWorkingSave();"> Clean-up</label>
         <label class="inline-check"><input type="checkbox" id="s_dur_emergency_ops" onchange="renderPreview(); scheduleWorkingSave();"> Emergency services operation</label>
         <label class="inline-check"><input type="checkbox" id="s_dur_road_surface" onchange="renderPreview(); scheduleWorkingSave();"> Road surface assessment</label>
+        <label class="inline-check"><input type="checkbox" id="s_dur_infra_inspect" onchange="renderPreview(); scheduleWorkingSave();"> Infrastructure inspection</label>
+        <label class="inline-check"><input type="checkbox" id="s_dur_make_safe" onchange="renderPreview(); scheduleWorkingSave();"> Make safe</label>
       </div>
       <input type="text" id="s_dur_other" placeholder="Free-text duration" style="margin-top:10px;" oninput="onInoDurationOtherInput()">
       <p class="hint" id="s_dur_recovery_hint" style="display:none;"></p>
@@ -10292,6 +10308,8 @@ function collectFormState(){
         durCleanup: (document.getElementById('s_dur_cleanup')||{}).checked,
         durEmergencyOps: (document.getElementById('s_dur_emergency_ops')||{}).checked,
         durRoadSurface: (document.getElementById('s_dur_road_surface')||{}).checked,
+        durInfraInspect: (document.getElementById('s_dur_infra_inspect')||{}).checked,
+        durMakeSafe: (document.getElementById('s_dur_make_safe')||{}).checked,
         contact: gv('s_contact'), contactPh: gv('s_contact_ph'),
         // Whether this message has announced (or inherited) "All lanes are now open".
         allOpenAnnounced: inoMessageAnnouncesAllOpen()
@@ -12120,6 +12138,8 @@ function applyDraft(s){
     if (a.durCleanup){ const cl = document.getElementById('s_dur_cleanup'); if (cl){ cl.checked = true; } }
     if (a.durEmergencyOps){ const eo = document.getElementById('s_dur_emergency_ops'); if (eo){ eo.checked = true; } }
     if (a.durRoadSurface){ const rs = document.getElementById('s_dur_road_surface'); if (rs){ rs.checked = true; } }
+    if (a.durInfraInspect){ const ii = document.getElementById('s_dur_infra_inspect'); if (ii){ ii.checked = true; } }
+    if (a.durMakeSafe){ const ms = document.getElementById('s_dur_make_safe'); if (ms){ ms.checked = true; } }
     if (a.durOtherOn){ const b = document.getElementById('s_dur_other'); if (b){ b.value = a.durOther || ''; } }
     if (a.durUnknown){ document.getElementById('s_duration_unknown').checked = true; }
     applyInoDurOtherVisibility();   // reveal Subject to section if recovery / clean-up / free-text present
