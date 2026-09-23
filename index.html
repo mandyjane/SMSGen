@@ -2031,7 +2031,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 207.13</span>
+    <span class="app-version">Version 207.14</span>
   </footer>
 </div>
 
@@ -4363,7 +4363,10 @@ function laneStateSentence(positions, verbSingular, verbPlural, stateWord){
    e.g. "duke Street" → "Duke Street", "1 x major injuries" → "1 x Major injuries". */
 function capFirstLetter(str){
   if (!str) return str;
-  return str.replace(/[a-zA-Z]/, c => c.toUpperCase());
+  // v207.14: capitalise the first letter only if no digit comes before it, so "1x serious
+  // injury" stays "1x" (was "1X"). Leading punctuation/spaces are still skipped, so words
+  // like "(smith" in diversion text still become "(Smith".
+  return str.replace(/^([^A-Za-z0-9]*)([a-z])/, (m, lead, c) => lead + c.toUpperCase());
 }
 /* Title-case a place name for display/fields: capitalise the first letter of each word,
    leaving the rest as typed ("ipswich mwy" → "Ipswich Mwy"; "Eight Mile Plains" unchanged).
