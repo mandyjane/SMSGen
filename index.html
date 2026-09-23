@@ -2041,7 +2041,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 207.18</span>
+    <span class="app-version">Version 207.19</span>
   </footer>
 </div>
 
@@ -6516,10 +6516,19 @@ function buildINO(){
         <span id="s_oppsec_chev">▸</span> Additional info
       </button>
       <div id="s_oppsec_body" style="display:none;margin-top:10px;">
-        <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--muted,#6b7280);margin-bottom:8px;">Number of lanes open
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--muted,#6b7280);">Number of lanes open
           <input type="number" id="s_open_lane_count" min="1" max="10" placeholder="#" style="width:48px;padding:4px 6px;font-size:13px;border:1px solid var(--line-strong,#d1d5db);border-radius:5px;text-align:center;" oninput="onOpenLaneCountChange(); renderPreview(); scheduleWorkingSave();">
         </label>
-        <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted,#6b7280);margin-bottom:8px;cursor:pointer;"><input type="checkbox" id="s_opp_comma" checked onchange="renderPreview(); scheduleWorkingSave();" style="accent-color:var(--blue,#1a5fc7);"> Add comma</label>
+        <div class="addl-sep" id="s_opp_sep_group" role="group" aria-label="Join with">
+          <span class="addl-sep-lbl">Join</span>
+          <button type="button" class="addl-sep-btn" data-sep="." aria-label="Full stop" title="Full stop — new sentence" onclick="setInoOppSep(this.dataset.sep)">.</button>
+          <button type="button" class="addl-sep-btn on" data-sep="," aria-label="Comma" title="Comma — continues the sentence" onclick="setInoOppSep(this.dataset.sep)">,</button>
+          <button type="button" class="addl-sep-btn" data-sep=";" aria-label="Semicolon" title="Semicolon — continues the sentence" onclick="setInoOppSep(this.dataset.sep)">;</button>
+          <button type="button" class="addl-sep-btn" data-sep="none" aria-label="None" title="No separator — continues the sentence" onclick="setInoOppSep(this.dataset.sep)">none</button>
+        </div>
+        </div>
+        <input type="hidden" id="s_opp_sep" value=",">
         <input type="text" id="s_opp_text" placeholder="Additional information" oninput="renderPreview(); scheduleWorkingSave();">
       </div>
     </div>
@@ -6588,9 +6597,10 @@ function buildINO(){
     <div class="field">
       <div class="addl-label-row">
         <span class="field-label">Additional information</span>
-        <div class="addl-sep" role="group" aria-label="Join with">
+        <div class="addl-sep" id="s_addl_sep_group" role="group" aria-label="Join with">
           <span class="addl-sep-lbl">Join</span>
           <button type="button" class="addl-sep-btn on" data-sep="." aria-label="Full stop" title="Full stop — new sentence" onclick="setInoAddlSep(this.dataset.sep)">.</button>
+          <button type="button" class="addl-sep-btn" data-sep="," aria-label="Comma" title="Comma — continues the sentence" onclick="setInoAddlSep(this.dataset.sep)">,</button>
           <button type="button" class="addl-sep-btn" data-sep=";" aria-label="Semicolon" title="Semicolon — continues the sentence" onclick="setInoAddlSep(this.dataset.sep)">;</button>
           <button type="button" class="addl-sep-btn" data-sep="none" aria-label="None" title="No separator — continues the sentence" onclick="setInoAddlSep(this.dataset.sep)">none</button>
         </div>
@@ -7513,19 +7523,38 @@ function setInoUpdTimeNow(){
 function setInoAddlSep(v){
   const inp = document.getElementById('s_addl_sep');
   if (inp) inp.value = v || '.';
-  document.querySelectorAll('.addl-sep-btn').forEach(b => b.classList.toggle('on', b.dataset.sep === (v || '.')));
+  syncInoSepButtons('s_addl_sep_group', v || '.');
   renderPreview();
   scheduleWorkingSave();
+}
+function syncInoSepButtons(groupId, v){
+  const g = document.getElementById(groupId);
+  if (g) g.querySelectorAll('.addl-sep-btn').forEach(b => b.classList.toggle('on', b.dataset.sep === v));
+}
+/* v207.19: lane "Additional info" join (replaces the old "Add comma" checkbox). Default ",". */
+function setInoOppSep(v){
+  const inp = document.getElementById('s_opp_sep');
+  if (inp) inp.value = v || ',';
+  syncInoSepButtons('s_opp_sep_group', v || ',');
+  renderPreview();
+  scheduleWorkingSave();
+}
+/* Shared continuation rule: drop a leading capital on an ordinary word; all-caps stays. */
+function inoContinuation(t){ return /^[A-Z][a-z]/.test(t) ? t.charAt(0).toLowerCase() + t.slice(1) : t; }
+function inoJoinWith(sep, base, t){
+  if (!t) return base;
+  if (sep === '.') return `${base}. ${t}`;
+  const c = inoContinuation(t);
+  if (sep === ',') return `${base}, ${c}`;
+  if (sep === ';') return `${base}; ${c}`;
+  return `${base} ${c}`;
 }
 function joinInoAddlInfo(base, addl){
   if (!addl) return base;
   if (!base) return addl;
   const sep = (document.getElementById('s_addl_sep')||{value:'.'}).value || '.';
-  if (sep === '.') return `${base}. ${addl}`;
-  // Continuation: drop a leading capital on an ordinary word ("Traffic" → "traffic");
-  // acronyms/all-caps ("QPS") stay as typed.
-  const cont = /^[A-Z][a-z]/.test(addl) ? addl.charAt(0).toLowerCase() + addl.slice(1) : addl;
-  return sep === ';' ? `${base}; ${cont}` : `${base} ${cont}`;
+  // v207.19: "," added. Continuations drop a leading capital on an ordinary word.
+  return inoJoinWith(sep, base, addl);
 }
 
 /* lock Time incident occurred when UPDATE active — kept in the SMS but not editable */
@@ -7694,8 +7723,10 @@ function renderINO(){
   // Additional info: single free-text box. Appended directly to the lane clause.
   // Comma prefix controlled by checkbox.
   const oppRaw = expandAbbreviations(get('s_opp_text'));
-  const oppComma = (document.getElementById('s_opp_comma')||{}).checked;
-  const oppStr = oppRaw ? (oppComma ? `, ${oppRaw}` : ` ${oppRaw}`) : '';
+  // v207.19: Join switch (. , ; none) replaces "Add comma". oppStr is appended directly to
+  // the lane clause, so build it as the separator + text (inoJoinWith on an empty-marker base).
+  const oppSep = (document.getElementById('s_opp_sep')||{value:','}).value || ',';
+  const oppStr = oppRaw ? inoJoinWith(oppSep, '\u0000', oppRaw).slice(1) : '';
   const diversionVal = (document.querySelector('input[name="s_diversion"]:checked')||{}).value;
   let diversion = '';
   if (diversionVal === 'yes'){
@@ -10481,7 +10512,7 @@ function collectFormState(){
         laneAll: (document.getElementById('s_lane_all')||{}).checked,
         laneUnknown: (document.getElementById('s_lane_unknown')||{}).checked,
         laneNil: (document.getElementById('s_lane_nil')||{}).checked,
-        oppText: gv('s_opp_text'), oppComma: !!(document.getElementById('s_opp_comma')&&document.getElementById('s_opp_comma').checked),
+        oppText: gv('s_opp_text'), oppSep: gv('s_opp_sep') || ',',
         congestionYN: rb('s_congestion_yn'),
         length: gv('s_length'), lengthUnit: (typeof inoLengthUnit !== 'undefined') ? inoLengthUnit : 'km',
         congLocalised: !!(document.getElementById('s_cong_localised')||{}).checked, congResidual: !!(document.getElementById('s_cong_residual')||{}).checked, congPeakVal: (document.querySelector('input[name="s_cong_peak"]:checked')||{}).value || '', congestion: gv('s_congestion'),
@@ -12286,7 +12317,10 @@ function applyDraft(s){
       oppVal = [a.oppText, a.secText].filter(Boolean).join('; ');
     }
     if (oppVal){ set('s_opp_text', oppVal); toggleInoOppSec(true); }
-    { const oc = document.getElementById('s_opp_comma'); if (oc && a.oppComma !== undefined) oc.checked = !!a.oppComma; }
+    { // v207.19: legacy drafts stored oppComma (true → ",", false → "none")
+      const sv = a.oppSep || (a.oppComma === false ? 'none' : ',');
+      const si = document.getElementById('s_opp_sep'); if (si) si.value = sv;
+      syncInoSepButtons('s_opp_sep_group', sv); }
     if (a.congestionYN){ setRadio('s_congestion_yn', a.congestionYN); syncRadioFlags('s_congestion_yn'); onInoCongestionChange(); }
     set('s_length', a.length); set('s_congestion', a.congestion);
     if (a.congLocalised){ const cl = document.getElementById('s_cong_localised'); if (cl) cl.checked = true; }
@@ -12302,7 +12336,7 @@ function applyDraft(s){
     if (a.diversion){ setRadio('s_diversion', a.diversion); syncRadioFlags('s_diversion'); onInoDiversionChange(); if (a.divAvailable){ setRadio('s_div_available', a.divAvailable); onInoDivAvailChange(); } set('s_diversion_text', a.diversionText); }
     if (a.addlInfo) set('s_addl_info', a.addlInfo);
     { const sv = a.addlSep || '.'; const si = document.getElementById('s_addl_sep'); if (si) si.value = sv;
-      document.querySelectorAll('.addl-sep-btn').forEach(b => b.classList.toggle('on', b.dataset.sep === sv)); }
+      syncInoSepButtons('s_addl_sep_group', sv); }
     if (a.injQas){ const q = document.getElementById('s_inj_qas'); if (q) q.checked = true; }
         relabelInoEventOptions();
     // actions
