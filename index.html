@@ -1164,6 +1164,8 @@
   .time-row { display: flex; align-items: center; gap: 8px; }
   .time-box { width: 64px; text-align: center; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
   .time-box.narrow { width: 58px; }
+  /* v207.17: breathing room between the Departed block and the Estimated duration divider */
+  #s_dur_field { margin-top: 18px; padding-top: 16px; }
   /* v207.15: compact "Join" separator switch beside the Additional information label */
   .addl-label-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
   .addl-label-row .field-label { margin-bottom:0; }
@@ -2039,7 +2041,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 207.16</span>
+    <span class="app-version">Version 207.17</span>
   </footer>
 </div>
 
@@ -3767,6 +3769,34 @@ let inoPeakLaneInfo = null;
    escalation of the current incident. On a FINAL, "Groups Attended Scene" lists the union of
    these and the current message's groups. Reset on a fresh message. */
 let inoPriorGroups = [];
+/* v207.17: the immediately preceding message's responders, split by column, so an UPDATE can
+   report only what changed ("QAS at scene; TMA proceeding; QFD departed"). Display-mapped
+   names (Road Steward → TMR Road Steward, Tow → tow). null = no previous message known. */
+let inoPrevGroupSnap = null;
+function inoGroupDisplayMap(v){ return v === 'Road Steward' ? 'TMR Road Steward' : (v === 'Tow' ? 'tow' : v); }
+function inoGroupSnapFromForm(){
+  const cks = cls => Array.from(document.querySelectorAll('.' + cls + ':checked')).map(c => inoGroupDisplayMap(c.value));
+  const other = (ckId, txtId) => {
+    if (!(document.getElementById(ckId)||{}).checked) return [];
+    const t = ((document.getElementById(txtId)||{}).value || '').trim();
+    return t ? [t] : [];
+  };
+  return {
+    scene: cks('s_groups_ck').concat(other('s_groups_other_ck','s_groups_other')),
+    route: cks('s_route_ck').concat(other('s_route_other_ck','s_route_other')),
+    departed: cks('s_departed_ck').concat(other('s_departed_other_ck','s_departed_other'))
+  };
+}
+function inoGroupSnapFromState(state){
+  const io = (state && state.ino) || {};
+  const other = (on, txt) => (on && txt && String(txt).trim()) ? [String(txt).trim()] : [];
+  return {
+    scene: (io.groupsList||[]).map(inoGroupDisplayMap).concat(other(io.groupsOther, io.groupsOtherText)),
+    route: (io.routeList||[]).map(inoGroupDisplayMap).concat(other(io.routeOther, io.routeOtherText)),
+    departed: (io.departedList||[]).map(inoGroupDisplayMap).concat(other(io.departedOther, io.departedOtherText))
+  };
+}
+function cloneGroupSnap(s){ return s ? { scene:(s.scene||[]).slice(), route:(s.route||[]).slice(), departed:(s.departed||[]).slice() } : null; }
 /* Once an INO message has announced "All lanes are now open", later escalations of the
    same incident must not mention lanes at all (no lane clause, no reopen note). This flag
    records that the all-open announcement has already been made; it is set when advancing
@@ -7520,6 +7550,7 @@ function clearFormINO(){
   inoClosedEverSelected = false;
   inoPeakLaneInfo = null;
   inoPriorGroups = [];
+  inoPrevGroupSnap = null;
   inoAllOpenAnnounced = false;      // fresh message: nothing announced yet
   clearHeldHighlight();
   buildINO();
@@ -8073,6 +8104,25 @@ function renderINO(){
     if (reopenPair) netBits.unshift(reopenPair);
     const netMain = netBits.join('; ');
     let netFull = diversion ? `${netMain}; ${diversion}` : netMain;
+    // v207.17: in an UPDATE, responder changes since the previous message go at the end of the
+    // Update line (the separate Groups at Scene line is dropped). Only NEW info is reported:
+    // newly at scene (incl. previously proceeding), newly proceeding, newly departed.
+    if (isUpdateContext){
+      const prev = inoPrevGroupSnap || { scene:[], route:[], departed:[] };
+      const has = (list, g) => list.some(x => String(x).toLowerCase() === String(g).toLowerCase());
+      const newScene = sceneList.filter(g => !has(prev.scene, g));
+      const newRoute = fullRouteList.filter(g => !has(prev.route, g) && !has(prev.scene, g));
+      const newDep = departedList.filter(g => !has(prev.departed, g));
+      const grpBits = [];
+      if (newScene.length) grpBits.push(`${andList(newScene)} at scene`);
+      if (newRoute.length) grpBits.push(`${andList(newRoute)} ${routeSuffix}`);
+      if (newDep.length) grpBits.push(`${andList(newDep)} departed`);
+      if (grpBits.length){
+        const grpStr = grpBits.join('; ');
+        netFull = netFull ? `${netFull}; ${grpStr}` : grpStr;
+        grpBits.forEach(b => regSeg(b, 's_groups_field'));
+      }
+    }
     if (addlInfo) netFull = joinInoAddlInfo(netFull, addlInfo);
     // Register clickable sub-parts of this line.
     regSeg(laneClause, 's_lanes_field');
@@ -8133,19 +8183,21 @@ function renderINO(){
     const merged = andList(allGroups);
     groupsLine = `${groupsLabel}: ${merged || 'nil'}.`;
     if (departed) groupsLine += `\n${departed} departed.`;
-  } else if (groups && enRoute){
-    // v207.15: no "at scene" suffix — the label already says "Groups at Scene".
-    groupsLine = `${groupsLabel}: ${groups}. ${enRoute} ${routeSuffix}.`;
-  } else if (groups){
-    groupsLine = `${groupsLabel}: ${groups}.`;
-  } else if (enRoute){
-    // En route only — no scene groups
-    groupsLine = `${groupsLabel}: ${enRoute} ${routeSuffix}.`;
+  } else if (isUpdateContext){
+    // v207.17: UPDATE — no Groups at Scene line (changes are on the Update line).
+    groupsLine = '';
   } else {
-    groupsLine = `${groupsLabel}: nil.`;
+    // No.1: scene groups, then proceeding, then departed (v207.17), each its own sentence.
+    // v207.15: no "at scene" suffix — the label already says "Groups at Scene".
+    const gParts = [];
+    if (groups) gParts.push(`${groups}.`);
+    if (enRoute) gParts.push(`${enRoute} ${routeSuffix}.`);
+    if (departed) gParts.push(`${departed} departed.`);
+    groupsLine = `${groupsLabel}: ${gParts.length ? gParts.join(' ') : 'nil.'}`;
   }
-  lines.push(groupsLine);
-  if (!finalOn) lines.push(`Estimated Duration to Clear: ${duration || '[insert]'}.`);
+  if (groupsLine) lines.push(groupsLine);
+  // v207.17: Estimated Duration to Clear is left out of UPDATE messages.
+  if (!finalOn && !isUpdateContext) lines.push(`Estimated Duration to Clear: ${duration || '[insert]'}.`);
   lines.push(`Contact: INO Operations Coordinator Ph. ${contactPh} (${contact || '[insert name]'}).`);
 
   // collapse runs of spaces within each line, then join with newlines
@@ -9060,6 +9112,7 @@ function nextEscalation(){
     // Accumulate this message's responder groups (scene + en route + "Other") into the
     // running prior-groups set so a later FINAL can list everyone who ever attended.
     inoPriorGroups = mergeGroupLists(inoPriorGroups, currentInoGroupList());
+    inoPrevGroupSnap = inoGroupSnapFromForm();
     advanceInoSequence();
     const tm = nowHHMM();
     inoUpdate = { on: true, time: `${tm.hh}:${tm.mm}` };
@@ -10353,6 +10406,7 @@ function collectFormState(){
         reinstateClosedEver: !!inoClosedEverSelected,
         reinstatePeakLaneInfo: inoPeakLaneInfo ? { pos:(inoPeakLaneInfo.pos||[]).slice(), counts:Object.assign({},inoPeakLaneInfo.counts||{}), state:inoPeakLaneInfo.state||'', total:inoPeakLaneInfo.total||0, unioned:!!inoPeakLaneInfo.unioned } : null,
         priorGroups: (inoPriorGroups||[]).slice(),
+        prevGroupSnap: cloneGroupSnap(inoPrevGroupSnap),
         finalNote: gv('s_final_note'),
         typeUpdate: (document.getElementById('s_type_update')||{}).checked,
         road: gv('s_road'),
@@ -10534,8 +10588,10 @@ function restoreWorkingForm(){
         ? { pos:(io.reinstatePeakLaneInfo.pos||[]).slice(), counts:Object.assign({},io.reinstatePeakLaneInfo.counts||{}), state:io.reinstatePeakLaneInfo.state||'', total:io.reinstatePeakLaneInfo.total||laneTotal(io.reinstatePeakLaneInfo), unioned:!!io.reinstatePeakLaneInfo.unioned }
         : null;
       inoPriorGroups = Array.isArray(io.priorGroups) ? io.priorGroups.slice() : [];
+      inoPrevGroupSnap = cloneGroupSnap(io.prevGroupSnap);
     } else {
       inoPrevLaneInfo = null; inoClosedEverSelected = false; inoPeakLaneInfo = null; inoPriorGroups = [];
+      inoPrevGroupSnap = null;
     }
     _restoringWorking = false;
   } catch (e) { _restoringWorking = false; }
@@ -11048,8 +11104,10 @@ function loadDraftById(id){
       ? { pos:(io.reinstatePeakLaneInfo.pos||[]).slice(), counts:Object.assign({},io.reinstatePeakLaneInfo.counts||{}), state:io.reinstatePeakLaneInfo.state||'', total:io.reinstatePeakLaneInfo.total||laneTotal(io.reinstatePeakLaneInfo), unioned:!!io.reinstatePeakLaneInfo.unioned }
       : null;
     inoPriorGroups = Array.isArray(io.priorGroups) ? io.priorGroups.slice() : [];
+    inoPrevGroupSnap = cloneGroupSnap(io.prevGroupSnap);
   } else {
     inoPrevLaneInfo = null; inoClosedEverSelected = false;
+    inoPrevGroupSnap = null;
   }
   // Restore the draft's own "all lanes open" announcement state so a loaded close-out
   // still reads with lane wording suppressed exactly as saved.
@@ -11141,6 +11199,7 @@ function updateDraftById(id){
     // The draft being advanced becomes a prior escalation: seed prior-groups with its saved
     // history plus its own scene/route groups, so a later FINAL lists everyone.
     inoPriorGroups = mergeGroupLists(Array.isArray(io.priorGroups) ? io.priorGroups : [], groupsFromInoState(draft.state));
+    inoPrevGroupSnap = inoGroupSnapFromState(draft.state);
   }
   openTemplateCard(tmpl);
   applyDraft(draft.state);
