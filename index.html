@@ -2041,7 +2041,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 207.17</span>
+    <span class="app-version">Version 207.18</span>
   </footer>
 </div>
 
@@ -6731,28 +6731,29 @@ function buildINO(){
     <div id="s_departed_wrap" style="display:none;margin-top:10px;">
       <div class="responder-col-card" style="container-type:inline-size;">
         <h4 style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-soft,#38423e);margin-bottom:10px;"><span style="width:6px;height:6px;border-radius:50%;background:#95a5a6;display:inline-block;"></span> Departed</h4>
+        <p class="hint" id="s_departed_empty" style="display:none;margin:0;">Tick groups under At scene to mark them departed.</p>
         <div class="resp-group-label">Emergency</div>
         <div class="check-grid resp-grid-emergency">
-          ${["QPS","QAS","QFD","FCU"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_departed_ck" value="${r}" onchange="renderPreview(); scheduleWorkingSave();"> ${r}</label>`).join('')}
+          ${["QPS","QAS","QFD","FCU"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_departed_ck" value="${r}" onchange="onInoDepartedChange(this)"> ${r}</label>`).join('')}
         </div>
         <div class="resp-group-label">Traffic &amp; Road</div>
         <div class="check-grid">
-          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="TRU" onchange="renderPreview(); scheduleWorkingSave();"> TRU</label>
-          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="TMA" onchange="renderPreview(); scheduleWorkingSave();"> TMA</label>
-          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="Road Steward" onchange="renderPreview(); scheduleWorkingSave();"> Road Steward</label>
-          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="Traffic Control" onchange="renderPreview(); scheduleWorkingSave();"> Traffic Control</label>
+          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="TRU" onchange="onInoDepartedChange(this)"> TRU</label>
+          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="TMA" onchange="onInoDepartedChange(this)"> TMA</label>
+          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="Road Steward" onchange="onInoDepartedChange(this)"> Road Steward</label>
+          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="Traffic Control" onchange="onInoDepartedChange(this)"> Traffic Control</label>
         </div>
         <div class="resp-group-label">Support</div>
         <div class="check-grid">
-          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="Tow" onchange="renderPreview(); scheduleWorkingSave();"> Tow</label>
-          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="Media" onchange="renderPreview(); scheduleWorkingSave();"> Media</label>
-          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="Mechanical services" onchange="renderPreview(); scheduleWorkingSave();"> Mechanical services</label>
+          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="Tow" onchange="onInoDepartedChange(this)"> Tow</label>
+          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="Media" onchange="onInoDepartedChange(this)"> Media</label>
+          <label class="inline-check"><input type="checkbox" class="s_departed_ck" value="Mechanical services" onchange="onInoDepartedChange(this)"> Mechanical services</label>
         </div>
-        <div class="check-grid" style="margin-top:8px;">
+        <div class="check-grid" id="s_departed_more_row" style="margin-top:8px;display:none;">
           <button type="button" class="moreless-btn" id="s_departed_more_btn" aria-expanded="false" onclick="toggleMoreless('s_departed')"><span class="ml-label">More</span> <span class="ml-chev">\u25be</span></button>
         </div>
         <div class="check-grid moreless-extra" id="s_departed_extra" data-open-display="flex" style="display:none;margin-top:8px;">
-          ${["Medivac","SOC","All emergency services","Translink response service"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_departed_ck" value="${r}" onchange="renderPreview(); scheduleWorkingSave();"> ${r}</label>`).join('')}
+          ${["Medivac","SOC","All emergency services","Translink response service"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_departed_ck" value="${r}" onchange="onInoDepartedChange(this)"> ${r}</label>`).join('')}
           <label class="inline-check"><input type="checkbox" id="s_departed_other_ck" onchange="document.getElementById('s_departed_other').style.display=this.checked?'block':'none'; renderPreview(); scheduleWorkingSave();"> Other</label>
         </div>
         <input type="text" id="s_departed_other" placeholder="Other (departed)" style="display:none;margin-top:8px;" oninput="renderPreview(); scheduleWorkingSave();">
@@ -7740,6 +7741,7 @@ function renderINO(){
   };
 
   // Resolution
+  applyInoDepartedOptions();
   const groupList = Array.from(document.querySelectorAll('.s_groups_ck:checked')).map(c=>c.value);
   const groupsOtherOn = (document.getElementById('s_groups_other_ck')||{}).checked;
   if (groupsOtherOn){ const o = get('s_groups_other'); if (o) groupList.push(o); }
@@ -9881,9 +9883,53 @@ function syncInoGroup(which, value){
     document.querySelectorAll('.'+otherCls).forEach(c=>{
       if (c.value === value && c.checked) c.checked = false;
     });
+    // v207.18: back at scene → no longer departed
+    if (which === 'scene') document.querySelectorAll('.s_departed_ck').forEach(c=>{ if (c.value === value) c.checked = false; });
   }
   updateAllRespSummaries();
   renderPreview();
+  scheduleWorkingSave();
+}
+/* v207.18: ticking Departed moves the group off At scene. */
+function onInoDepartedChange(el){
+  if (el && el.checked){
+    document.querySelectorAll('.s_groups_ck').forEach(c=>{ if (c.value === el.value) c.checked = false; });
+    updateAllRespSummaries();
+  }
+  renderPreview();
+  scheduleWorkingSave();
+}
+/* v207.18: the Departed box only offers groups ticked At scene (plus any already marked
+   departed, so they can be unticked). Headings/rows with nothing to show are hidden; the
+   More row is dropped because the list is already filtered. Runs on every INO render. */
+function applyInoDepartedOptions(){
+  const wrap = document.getElementById('s_departed_wrap');
+  if (!wrap) return;
+  const scene = new Set(Array.from(document.querySelectorAll('.s_groups_ck:checked')).map(c=>c.value));
+  let any = false;
+  wrap.querySelectorAll('.s_departed_ck').forEach(c=>{
+    const show = scene.has(c.value) || c.checked;
+    const lbl = c.closest('label'); if (lbl) lbl.style.display = show ? '' : 'none';
+    if (show) any = true;
+  });
+  const oCk = document.getElementById('s_departed_other_ck');
+  if (oCk){
+    const showO = !!(document.getElementById('s_groups_other_ck')||{}).checked || oCk.checked;
+    const lbl = oCk.closest('label'); if (lbl) lbl.style.display = showO ? '' : 'none';
+    if (showO) any = true;
+    const oTxt = document.getElementById('s_departed_other');
+    if (oTxt) oTxt.style.display = (showO && oCk.checked) ? 'block' : 'none';
+  }
+  // Hide empty grids and their headings
+  wrap.querySelectorAll('.check-grid').forEach(g=>{
+    if (g.id === 's_departed_more_row') return;
+    const vis = Array.from(g.querySelectorAll('label')).some(l => l.style.display !== 'none');
+    g.style.display = vis ? (g.id === 's_departed_extra' ? 'flex' : '') : 'none';
+    const prev = g.previousElementSibling;
+    if (prev && prev.classList.contains('resp-group-label')) prev.style.display = vis ? '' : 'none';
+  });
+  const empty = document.getElementById('s_departed_empty');
+  if (empty) empty.style.display = any ? 'none' : 'block';
 }
 
 /* ---------- Remaining delays toggle ---------- */
