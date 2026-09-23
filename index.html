@@ -2028,7 +2028,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 207.09</span>
+    <span class="app-version">Version 207.10</span>
   </footer>
 </div>
 
@@ -6208,10 +6208,10 @@ function buildINO(){
       <input type="text" id="s_seq_other" placeholder="Custom number label" style="display:none;margin-top:8px;" oninput="applyInoActionsVisibility(); applyInoTimeAutoVisibility(); renderPreview();">
       <div id="s_final_extra" style="display:none;margin-top:10px;">
         <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
-          <label class="inline-check"><input type="checkbox" id="s_final_all_open" onchange="autoSwitchDiversionOnFinal(); renderPreview(); scheduleWorkingSave();"> All lanes open</label>
-          <label class="inline-check" id="s_congestion_clear_wrap"><input type="checkbox" id="s_congestion_clear" onchange="autoSwitchDiversionOnFinal(); renderPreview(); scheduleWorkingSave();"> Congestion clear <span class="fld-help" tabindex="0" role="button" aria-label="What this does" data-tip="Generates &ldquo;nil congestion&rdquo; in the Network Impact line instead of the residual-congestion wording.">?</span></label>
+          <label class="inline-check"><input type="checkbox" id="s_final_all_open" onchange="autoSwitchDiversionOnFinal(this); renderPreview(); scheduleWorkingSave();"> All lanes open</label>
+          <label class="inline-check" id="s_congestion_clear_wrap"><input type="checkbox" id="s_congestion_clear" onchange="autoSwitchDiversionOnFinal(this); renderPreview(); scheduleWorkingSave();"> Congestion clear <span class="fld-help" tabindex="0" role="button" aria-label="What this does" data-tip="Generates &ldquo;nil congestion&rdquo; in the Network Impact line instead of the residual-congestion wording.">?</span></label>
           <div id="s_final_reinstate_wrap" style="display:none;">
-            <label class="inline-check"><input type="checkbox" id="s_final_reinstate" onchange="autoSwitchDiversionOnFinal(); onInoReinstateChange();"> Summarise impact <span class="fld-help" tabindex="0" role="button" aria-label="What this does" data-tip="Rewrites the &ldquo;Network Impact:&rdquo; line in past tense, referencing the lanes in place before the incident cleared. Reads &ldquo;All lanes were blocked&rdquo; if a closure was used on any escalation, otherwise names the lanes (e.g. &ldquo;Left lane was blocked&rdquo;). Applies to No.2+ FINAL close-outs.">?</span></label>
+            <label class="inline-check"><input type="checkbox" id="s_final_reinstate" onchange="autoSwitchDiversionOnFinal(this); onInoReinstateChange();"> Summarise impact <span class="fld-help" tabindex="0" role="button" aria-label="What this does" data-tip="Rewrites the &ldquo;Network Impact:&rdquo; line in past tense, referencing the lanes in place before the incident cleared. Reads &ldquo;All lanes were blocked&rdquo; if a closure was used on any escalation, otherwise names the lanes (e.g. &ldquo;Left lane was blocked&rdquo;). Applies to No.2+ FINAL close-outs.">?</span></label>
           </div>
         </div>
         <div id="s_final_reinstate_wrap_hints" style="display:none;">
@@ -7319,13 +7319,24 @@ function onTimeBoxInput(elm, nextId){
 
 /* When any of the FINAL close-out options (All lanes open, Congestion clear, Summarise impact)
    are ticked, auto-switch Diversion to "No" — the incident is clearing, diversions no longer apply. */
-function autoSwitchDiversionOnFinal(){
+function autoSwitchDiversionOnFinal(el){
   const allOpen = (document.getElementById('s_final_all_open')||{}).checked;
   const congClear = (document.getElementById('s_congestion_clear')||{}).checked;
   const summarise = (document.getElementById('s_final_reinstate')||{}).checked;
   if (allOpen || congClear || summarise){
     const divNo = document.querySelector('input[name="s_diversion"][value="no"]');
     if (divNo && !divNo.checked){ divNo.checked = true; onInoDiversionChange(true, true); }
+    // v207.10: Diversion was already No (typically carried over from the previous
+    // escalation), so the switch above doesn't fire — still clear Additional information,
+    // but only on the tick itself (not on unticking, and not on restore).
+    else if (divNo && divNo.checked && el && el.checked){
+      const addl = document.getElementById('s_addl_info');
+      if (addl && addl.value.trim()){
+        inoAddlClearedVal = addl.value;
+        addl.value = '';
+        showInoAddlClearedNote('Cleared because Diversion is No on a FINAL close-out.');
+      }
+    }
   }
 }
 function onInoFinalChange(){
