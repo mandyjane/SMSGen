@@ -2098,7 +2098,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.10</span>
+    <span class="app-version">Version 208.13</span>
   </footer>
 </div>
 
@@ -2935,9 +2935,9 @@ function buildBCC(){
       <div class="check-grid" style="align-items:center;">
         ${["North","South","East","West"].map(d=>`<label class="inline-check"><input type="checkbox" class="b_dir" value="${d}" onchange="renderPreview()"> ${d}</label>`).join('')}
         <button type="button" class="moreless-btn" id="b_dir_more_btn" aria-expanded="false" onclick="toggleMoreless('b_dir')"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button>
-        <span class="moreless-extra" id="b_dir_extra" style="display:none;">
-          ${["Both directions","All directions"].map(d=>`<label class="inline-check"><input type="checkbox" class="b_dir" value="${d}" onchange="renderPreview()"> ${d}</label>`).join('')}
-        </span>
+      </div>
+      <div class="check-grid moreless-extra" id="b_dir_extra" data-open-display="flex" style="display:none;margin-top:8px;">
+        ${["Both directions","All directions"].map(d=>`<label class="inline-check"><input type="checkbox" class="b_dir" value="${d}" onchange="renderPreview()"> ${d}</label>`).join('')}
       </div>
       <p class="hint">Combine e.g. North + East → “northeastbound”.</p>
     </div>
@@ -3625,7 +3625,7 @@ function bccImpact(){
 }
 function bccInjury(){
   const v = (document.querySelector('input[name="b_inj"]:checked')||{}).value || '';
-  if (v === 'no') return 'nil injuries';
+  if (v === 'no') return 'Nil injuries';   // v208.12: capitalised like the other cells
   if (v === 'unknown') return 'Unknown, awaiting further details';
   if (v !== 'yes') return '';
   const counts = {};
@@ -3637,12 +3637,24 @@ function bccInjury(){
   const bits = injuryOrder.filter(k=>counts[k]).map(k=>{ const n = counts[k]; return `${n}x ${k.toLowerCase()} ${n === 1 ? 'injury' : 'injuries'}`; });
   if (counts['Fatality']){
     const n = counts['Fatality'];
-    bits.push(`${n} x ${n === 1 ? 'fatality' : 'fatalities'}`);
+    bits.push(`${n}x ${n === 1 ? 'fatality' : 'fatalities'}`);   // v208.12: "1x" (no space), matching injuries
   }
   return bits.length ? bits.join(', ') : 'Injuries';
 }
 /* The 12 rows, in template order. */
+/* v208.13: a cell holding more than one sentence ends with a full stop
+   ("TRU at scene. Maintenance en route." / "Diversions in place Hassall St. No delays.").
+   Single-sentence cells are left as they are. */
+function bccCellStops(v){
+  if (typeof v !== 'string') return v;
+  const t = v.trim();
+  if (!t || /[.!?]$/.test(t)) return t;
+  return /[.!?]\s+\S/.test(t) ? t + '.' : t;
+}
 function bccRows(){
+  return bccRowsRaw().map(([k, v]) => [k, bccCellStops(v)]);
+}
+function bccRowsRaw(){
   return [
     ['BMTMC Reference',        ((document.getElementById('b_ref')||{}).value||'').trim()],
     ['Advice Number',          ((document.getElementById('b_advice')||{}).value||'').trim()],
@@ -12853,6 +12865,8 @@ function applyDraft(s){
     set('b_cross_pos', a.crossPos); onBccPosChange(); set('b_cross_pos_other', a.crossPosOther);
     set('b_cross', a.cross); set('b_suburb', a.suburb);
     setCks('.b_dir', a.dir);
+    // v208.11: open More when a saved direction is Both/All directions
+    toggleMoreless('b_dir', !!document.querySelector('#b_dir_extra .b_dir:checked'));
 
     set('b_lanes_prefix', a.lanesPrefix);
     setRad('b_lane_state', a.laneState);
