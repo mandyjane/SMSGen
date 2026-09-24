@@ -1629,6 +1629,18 @@
     .resp-cols > div:first-child { border-top:0; padding-top:0; }
   }
   .bcc-suffix { margin-top:10px; padding-top:9px; border-top:1px solid var(--line); }
+  /* v208.06: BCC two-column responders, En route/Proceeding heading switch, Departed box */
+  .resp-cols.resp-cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .bcc-route-hd { display:flex; align-items:center; gap:6px; }
+  .bcc-route-opt { font: inherit; background:none; border:none; padding:0; cursor:pointer; letter-spacing: inherit; text-transform: inherit;
+    color: #a3aaa6; font-weight:500; }
+  .bcc-route-opt.on { color: var(--ink, #1a1f24); font-weight:700; text-decoration: underline; text-underline-offset:3px; text-decoration-thickness:2px; }
+  .bcc-route-opt:hover:not(.on) { color: var(--ink-soft, #5f6863); }
+  .bcc-route-opt:focus-visible { outline:2px solid var(--blue,#1a5fc7); outline-offset:2px; border-radius:3px; }
+  .bcc-route-sl { color:#c4ccc7; font-weight:400; }
+  .bcc-dep-toggle { display:inline-flex; align-items:center; gap:6px; font-size:13.5px; margin-top:12px; }
+  .bcc-dep-box { margin-top:8px; padding:12px 14px; border:1px solid var(--line); border-radius:10px; background:#fafbfa; }
+  .bcc-dep-box .check-grid { margin-top:0; }
   .bcc-unit { position:relative; flex:1 1 0; }
   .bcc-unit input { width:100%; padding-right:44px; }
   .bcc-unit span { position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:11px; color:var(--muted); pointer-events:none; }
@@ -2080,7 +2092,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.03</span>
+    <span class="app-version">Version 208.06</span>
   </footer>
 </div>
 
@@ -2930,7 +2942,7 @@ function buildBCC(){
 
       <span class="field-label" style="margin-top:4px;">Impact type</span>
       <div class="check-grid impact-type-row">
-        ${["Blocked","Impacted"].map(x=>`<label class="inline-check"><input type="radio" class="desel-radio" name="b_lane_state" value="${x}" onclick="toggleImpactRadio(this)" onchange="onBccLaneStateChange()"> ${x}</label>`).join('')}
+        ${["Blocked","Impacted","Affected"].map(x=>`<label class="inline-check"><input type="radio" class="desel-radio" name="b_lane_state" value="${x}" onclick="toggleImpactRadio(this)" onchange="onBccLaneStateChange()"> ${x}</label>`).join('')}
         <span class="impact-type-divider" aria-hidden="true"></span>
         <label class="inline-check impact-closed"><input type="radio" class="desel-radio" name="b_lane_state" value="Closed" onclick="toggleImpactRadio(this)" onchange="onBccLaneStateChange()"><i class="ti ti-ban impact-closed-ico" aria-hidden="true"></i> Closed</label>
       </div>
@@ -2964,31 +2976,38 @@ function buildBCC(){
       <input type="text" id="b_action_other" placeholder="Other action taken" style="margin-top:8px;">
     </div>
 
-    <!-- Responders -->
-    <div class="field">
+    <!-- Responders (v208.06: At scene | En route/Proceeding, Departed collapsible + filtered) -->
+    <div class="field" id="b_resp_field">
       <span class="field-label">Responders</span>
-      <div class="resp-cols">
+      <div class="resp-cols resp-cols-2">
         <div>
           <span class="field-label">At scene</span>
           ${BCC_RESPONDERS.map(r=>`<label class="inline-check"><input type="checkbox" class="b_resp_scene" value="${r}" onchange="syncBccResponder('scene','${r}')"> ${r}</label>`).join('')}
           <div id="b_resp_custom_scene"></div><button type="button" class="link-btn bcc-other-add" id="b_resp_other_btn_scene" onclick="openBccOtherResp('scene')">+ Other</button><div class="bcc-other-row" id="b_resp_other_row_scene" style="display:none;"><input type="text" id="b_resp_other_txt_scene" placeholder="Other responder" onkeydown="onBccOtherRespKey(event, 'scene')"><button type="button" class="dur-quick-btn" onclick="addBccOtherResp('scene')">Add</button></div>
         </div>
         <div>
-          <span class="field-label">En route</span>
+          <div class="bcc-route-hd field-label" role="radiogroup" aria-label="En route wording">
+            <button type="button" class="bcc-route-opt on" data-v="en route" role="radio" aria-checked="true" onclick="setBccRouteSuffix('en route')">En route</button>
+            <span class="bcc-route-sl" aria-hidden="true">/</span>
+            <button type="button" class="bcc-route-opt" data-v="proceeding" role="radio" aria-checked="false" onclick="setBccRouteSuffix('proceeding')">Proceeding</button>
+          </div>
           ${BCC_RESPONDERS.map(r=>`<label class="inline-check"><input type="checkbox" class="b_resp_route" value="${r}" onchange="syncBccResponder('route','${r}')"> ${r}</label>`).join('')}
           <div id="b_resp_custom_route"></div><button type="button" class="link-btn bcc-other-add" id="b_resp_other_btn_route" onclick="openBccOtherResp('route')">+ Other</button><div class="bcc-other-row" id="b_resp_other_row_route" style="display:none;"><input type="text" id="b_resp_other_txt_route" placeholder="Other responder" onkeydown="onBccOtherRespKey(event, 'route')"><button type="button" class="dur-quick-btn" onclick="addBccOtherResp('route')">Add</button></div>
-          <div class="bcc-suffix">
-            <label class="inline-check"><input type="radio" name="b_route_suffix" value="en route" checked onchange="renderPreview()"> en route</label>
-            <label class="inline-check"><input type="radio" name="b_route_suffix" value="proceeding" onchange="renderPreview()"> proceeding</label>
+          <div style="display:none;">
+            <input type="radio" name="b_route_suffix" value="en route" checked onchange="renderPreview()">
+            <input type="radio" name="b_route_suffix" value="proceeding" onchange="renderPreview()">
           </div>
         </div>
-        <div>
-          <span class="field-label">Departed</span>
+      </div>
+      <button type="button" class="link-btn bcc-dep-toggle" id="b_departed_toggle" aria-expanded="false" onclick="toggleBccDeparted()"><span class="ml-chev">\u25b8</span> Departed</button>
+      <div class="bcc-dep-box" id="b_departed_wrap" style="display:none;">
+        <p class="hint" id="b_departed_empty" style="margin:0;">Tick responders At scene or En route to mark them departed.</p>
+        <div class="check-grid" id="b_departed_grid">
           ${BCC_RESPONDERS.map(r=>`<label class="inline-check"><input type="checkbox" class="b_resp_departed" value="${r}" onchange="syncBccResponder('departed','${r}')"> ${r}</label>`).join('')}
-          <div id="b_resp_custom_departed"></div><button type="button" class="link-btn bcc-other-add" id="b_resp_other_btn_departed" onclick="openBccOtherResp('departed')">+ Other</button><div class="bcc-other-row" id="b_resp_other_row_departed" style="display:none;"><input type="text" id="b_resp_other_txt_departed" placeholder="Other responder" onkeydown="onBccOtherRespKey(event, 'departed')"><button type="button" class="dur-quick-btn" onclick="addBccOtherResp('departed')">Add</button></div>
+          <span id="b_resp_custom_departed" style="display:contents;"></span>
         </div>
       </div>
-      <p class="hint">A responder can sit in only one column — ticking it elsewhere moves it.</p>
+      <p class="hint">A responder can sit in only one place — ticking it elsewhere moves it.</p>
     </div>
 
     <!-- Impact -->
@@ -3244,11 +3263,67 @@ function removeBccCustomResp(idx){
   renderBccCustomResp();
   renderPreview(); scheduleWorkingSave();
 }
+/* v208.06: En route / Proceeding heading switch (drives the hidden b_route_suffix radios). */
+function setBccRouteSuffix(v){
+  const r = document.querySelector(`input[name="b_route_suffix"][value="${v}"]`);
+  if (r) r.checked = true;
+  syncBccRouteHeading();
+  renderPreview(); scheduleWorkingSave();
+}
+function syncBccRouteHeading(){
+  const v = (document.querySelector('input[name="b_route_suffix"]:checked')||{}).value || 'en route';
+  document.querySelectorAll('.bcc-route-opt').forEach(b => {
+    const on = b.dataset.v === v;
+    b.classList.toggle('on', on); b.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+}
+/* v208.06: Departed is a collapsible section that only offers responders ticked At scene or
+   En route (plus anyone already departed). Unticking Departed puts them back where they were. */
+let bccDepartedFrom = {};
+let bccDepartedUserToggled = false;
+function toggleBccDeparted(force){
+  const wrap = document.getElementById('b_departed_wrap');
+  const btn = document.getElementById('b_departed_toggle');
+  if (!wrap || !btn) return;
+  const show = (typeof force === 'boolean') ? force : wrap.style.display === 'none';
+  if (typeof force !== 'boolean') bccDepartedUserToggled = true;
+  wrap.style.display = show ? 'block' : 'none';
+  btn.setAttribute('aria-expanded', show ? 'true' : 'false');
+  const ch = btn.querySelector('.ml-chev'); if (ch) ch.textContent = show ? '\u25be' : '\u25b8';
+}
+function applyBccDepartedOptions(){
+  const wrap = document.getElementById('b_departed_wrap');
+  if (!wrap) return;
+  const here = new Set(Array.from(document.querySelectorAll('.b_resp_scene:checked, .b_resp_route:checked')).map(c => c.value.toLowerCase()));
+  let any = false, anyDeparted = false;
+  wrap.querySelectorAll('.b_resp_departed').forEach(c => {
+    const show = here.has(c.value.toLowerCase()) || c.checked;
+    const host = c.closest('.bcc-other-item') || c.closest('label');
+    if (host) host.style.display = show ? '' : 'none';
+    if (show) any = true;
+    if (c.checked) anyDeparted = true;
+  });
+  const empty = document.getElementById('b_departed_empty');
+  if (empty) empty.style.display = any ? 'none' : 'block';
+  if (anyDeparted && !bccDepartedUserToggled) toggleBccDeparted(true);
+  syncBccRouteHeading();
+}
 function syncBccResponder(col, name){
   const cols = { scene:'b_resp_scene', route:'b_resp_route', departed:'b_resp_departed' };
   // v208.03: match by value in JS (Other names can contain quotes)
   const find = cls => Array.from(document.querySelectorAll('.' + cls)).find(c => c.value === name);
   const src = find(cols[col]);
+  if (col === 'departed' && src){
+    if (src.checked){
+      const was = ['scene','route'].find(k => { const o = find(cols[k]); return o && o.checked; });
+      if (was) bccDepartedFrom[name.toLowerCase()] = was;
+    } else {
+      const back = bccDepartedFrom[name.toLowerCase()];
+      const o = back && find(cols[back]);
+      if (o) o.checked = true;
+      delete bccDepartedFrom[name.toLowerCase()];
+    }
+  }
   if (src && src.checked){
     Object.keys(cols).forEach(k=>{
       if (k === col) return;
@@ -3318,9 +3393,19 @@ function bccLocation(){
   return [main, suburb].filter(Boolean).join(', ');
 }
 function bccDirection(){
-  const picked = Array.from(document.querySelectorAll('.b_dir:checked')).map(c=>c.value);
-  // Same combining logic as INO: North+East → "northeastbound". Not abbreviated.
-  return directionPhrase(picked);
+  // v208.04: BCC's checkboxes carry bare compass words ("North"), but directionPhrase expects
+  // "Northbound" values — so it output "north". Build the "-bound" word here: one compass
+  // direction → "Northbound"; a N/S + E/W pair → "Northeastbound"; anything else joined with
+  // "and". Both/All directions follow after " / " as before. Capitalised for the table cell.
+  const picked = Array.from(document.querySelectorAll('.b_dir:checked')).map(c=>c.value.toLowerCase());
+  const ns = picked.filter(d => d === 'north' || d === 'south');
+  const ew = picked.filter(d => d === 'east' || d === 'west');
+  const extras = picked.filter(d => d === 'both directions' || d === 'all directions');
+  let compass = '';
+  if (ns.length === 1 && ew.length === 1) compass = `${ns[0]}${ew[0]}bound`;
+  else compass = ns.concat(ew).map(d => `${d}bound`).join(' and ');
+  const out = [compass, extras.join(' and ')].filter(Boolean).join(' / ');
+  return out ? out.charAt(0).toUpperCase() + out.slice(1) : '';
 }
 function bccLanes(){
   const prefix = ((document.getElementById('b_lanes_prefix')||{}).value||'').trim();
@@ -3333,7 +3418,8 @@ function bccLanes(){
   // with the Impact type (defaults to affected). Prefix still prepends. Short-circuits above the
   // subject/state assembly since it's mutually exclusive with All/Unknown/specific lanes/Closed.
   if (nil){
-    const verb = (state === 'blocked') ? 'blocked' : 'affected';
+    // v208.05: Impacted → "impacted"; new Affected option → "affected"; none → "affected" (as before)
+    const verb = (state === 'blocked' || state === 'impacted') ? state : 'affected';
     return [prefix, `Nil lanes ${verb}`].filter(Boolean).join(' ').trim();
   }
   const nums = Array.from(document.querySelectorAll('.b_lane_num:checked')).map(c=>c.value);
@@ -3467,6 +3553,7 @@ function escapeHtml(x){
   return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function renderBCC(){
+  applyBccDepartedOptions();   // v208.06
   const out = document.getElementById('g_output_text');
   if (!out) return;
   out.classList.remove('empty');
@@ -3574,6 +3661,7 @@ function flashCopied(msg){
 }
 function clearFormBCC(){
   bccCustomResp = [];
+  bccDepartedFrom = {}; bccDepartedUserToggled = false;
   bccUpdateNum = 2;
   buildBCC();
   attachLiveListeners();
