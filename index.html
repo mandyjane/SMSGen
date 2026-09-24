@@ -1185,6 +1185,7 @@
   .lb-whole.on { background: var(--accent-soft, #e3f1ec); border-color: transparent; font-weight:600; }
   .lb-whole-road.on { background: rgba(120,40,40,.13); color:#7b241c; }
   .lb-mode-link { margin-left:auto; font-size:12px !important; font-weight:500 !important; }
+  .lb-back-link { display:inline-flex; align-items:center; gap:4px; }
   /* v207.17: breathing room between the Departed block and the Estimated duration divider */
   #s_dur_field { margin-top: 18px; padding-top: 16px; }
   /* v207.15: compact "Join" separator switch beside the Additional information label */
@@ -2062,7 +2063,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 207.22</span>
+    <span class="app-version">Version 207.24</span>
   </footer>
 </div>
 
@@ -4186,6 +4187,14 @@ function onInoInjUpdateChange(el){
   renderPreview();
   scheduleWorkingSave();
 }
+/* v207.23: "Diversions lifted." on a FINAL when diversions had been available — either on the
+   previous message (inoPrevDivAvail) or earlier in this one before Diversion switched to No. */
+let inoPrevDivAvail = '';
+let inoDivAvailBeforeNo = false;
+function inoDiversionsWereAvailable(){
+  return inoPrevDivAvail === 'yes' || inoDivAvailBeforeNo
+    || (document.querySelector('input[name="s_div_available"]:checked')||{}).value === 'yes';
+}
 function isInoUpdateContext(){
   if (Array.isArray(inoPrevLanes)) return true;   // advanced/updated from a prior message
   if (inoUpdate.on) return true;
@@ -5587,6 +5596,9 @@ function onInoDiversionChange(userChange, auto){
     if (box) box.value = '';
     const wrap = document.getElementById('demo_div_via_wrap');
     if (wrap) wrap.style.display = 'none';
+    // v207.23: remember that diversions were available before this switch to No, so a FINAL
+    // can report "Diversions lifted." (restore paths pass no userChange, so they don't count).
+    if (userChange && (document.querySelector('input[name="s_div_available"]:checked')||{}).value === 'yes') inoDivAvailBeforeNo = true;
     document.querySelectorAll('input[name="s_div_available"]').forEach(r => { r.checked = false; });
   }
   renderPreview();
@@ -6534,7 +6546,7 @@ function buildINO(){
       <input type="text" id="s_seq_other" placeholder="Custom number label" style="display:none;margin-top:8px;" oninput="applyInoActionsVisibility(); applyInoTimeAutoVisibility(); renderPreview();">
       <div id="s_final_extra" style="display:none;margin-top:10px;">
         <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
-          <label class="inline-check"><input type="checkbox" id="s_final_all_open" onchange="autoSwitchDiversionOnFinal(this); renderPreview(); scheduleWorkingSave();"> All lanes open</label>
+          <label class="inline-check"><input type="checkbox" id="s_final_all_open" onchange="autoSwitchDiversionOnFinal(this); renderPreview(); scheduleWorkingSave();"> <span id="s_final_all_open_lbl">All lanes open</span></label>
           <label class="inline-check" id="s_congestion_clear_wrap"><input type="checkbox" id="s_congestion_clear" onchange="autoSwitchDiversionOnFinal(this); renderPreview(); scheduleWorkingSave();"> Congestion clear <span class="fld-help" tabindex="0" role="button" aria-label="What this does" data-tip="Generates &ldquo;nil congestion&rdquo; in the Network Impact line instead of the residual-congestion wording.">?</span></label>
           <div id="s_final_reinstate_wrap" style="display:none;">
             <label class="inline-check"><input type="checkbox" id="s_final_reinstate" onchange="autoSwitchDiversionOnFinal(this); onInoReinstateChange();"> Summarise impact <span class="fld-help" tabindex="0" role="button" aria-label="What this does" data-tip="Rewrites the &ldquo;Network Impact:&rdquo; line in past tense, referencing the lanes in place before the incident cleared. Reads &ldquo;All lanes were blocked&rdquo; if a closure was used on any escalation, otherwise names the lanes (e.g. &ldquo;Left lane was blocked&rdquo;). Applies to No.2+ FINAL close-outs.">?</span></label>
@@ -6708,6 +6720,7 @@ function buildINO(){
     <div class="field" id="s_lanes_field">
       <div class="field-condense-head">
         <span class="field-label" style="margin:0;">Impact on lanes</span>
+        <button type="button" class="link-btn lb-mode-link lb-back-link" onclick="setInoLaneMode(true)"><i class="ti ti-layout-grid" aria-hidden="true"></i> Switch to lane board</button>
         <button type="button" class="field-edit-pill" id="s_lanes_edit" style="display:none;" onclick="editInoField('s_lanes_field')"><i class="ti ti-pencil" style="font-size:12px;" aria-hidden="true"></i>Edit</button>
       </div>
       <div class="field-summary" id="s_lanes_summary"></div>
@@ -6753,7 +6766,6 @@ function buildINO(){
         <label class="inline-check impact-closed"><input type="radio" class="desel-radio" name="s_lane_state" value="RoadClosed" onclick="toggleDeselectableRadio(this)" onchange="onInoLaneStateChange()"><i class="ti ti-ban impact-closed-ico" aria-hidden="true"></i> Closed</label>
       </div>
       <p class="hint" id="s_closed_note" style="display:none;">Generates "Road closed [direction]".</p>
-      <button type="button" class="link-btn" style="margin-top:8px;" onclick="setInoLaneMode(true)">Use lane board</button>
     </div>
     </div>
 
@@ -7841,7 +7853,7 @@ function clearFormINO(){
   inoPeakLaneInfo = null;
   inoPriorGroups = [];
   inoPrevGroupSnap = null;
-  inoBoard = emptyBoard(); inoPrevBoard = null; inoPrevInj = null; inoInjUpdOverride = null;
+  inoBoard = emptyBoard(); inoPrevBoard = null; inoPrevInj = null; inoInjUpdOverride = null; inoPrevDivAvail = ''; inoDivAvailBeforeNo = false;
   inoAllOpenAnnounced = false;      // fresh message: nothing announced yet
   clearHeldHighlight();
   buildINO();
@@ -7864,6 +7876,8 @@ function buildNetworkImpact(lanePart, congPart, divPart){
 }
 
 function renderINO(){
+  { const l = document.getElementById('s_final_all_open_lbl');
+    if (l) l.textContent = inoDiversionsWereAvailable() ? 'Diversions lifted. All lanes open' : 'All lanes open'; }
   if (inoBoardMode()) syncBoardToClassic();
   renderInoBoard();
   if (!document.getElementById('s_road')) return;
@@ -8301,7 +8315,9 @@ function renderINO(){
     if (finalAllOpen){
       const dirs = readLaneDirections('.s_lane_dir');
       const dirWord = (dirs.length && !dirs.includes('unknown')) ? inoDirectionWord(dirs) : '';
-      const openClause = dirWord ? `All ${dirWord} lanes open` : 'All lanes open';
+      // v207.23: "now open"; prefixed "Diversions lifted." when diversions had been available.
+      const openClause0 = dirWord ? `All ${dirWord} lanes now open` : 'All lanes now open';
+      const openClause = inoDiversionsWereAvailable() ? `Diversions lifted. ${openClause0}` : openClause0;
       niBits = [openClause, lengthCong].filter(Boolean);
     } else if (closedEverFinal && isSeqFinal && finalReinstate){
       // Closure anywhere in the series (or on this FINAL) → past-tense "All lanes were closed",
@@ -9430,6 +9446,8 @@ function nextEscalation(){
     inoPrevGroupSnap = inoGroupSnapFromForm();
     inoPrevBoard = inoBoardMode() ? cloneBoard(inoBoard) : boardFromClassicForm();
     inoPrevInj = inoInjSnapFromForm(); inoInjUpdOverride = null;
+    inoPrevDivAvail = (document.querySelector('input[name="s_div_available"]:checked')||{}).value || (inoDivAvailBeforeNo ? 'yes' : '');
+    inoDivAvailBeforeNo = false;
     { const iu = document.getElementById('s_inj_update'); if (iu) iu.checked = false; }
     advanceInoSequence();
     const tm = nowHHMM();
@@ -10771,6 +10789,7 @@ function collectFormState(){
         priorGroups: (inoPriorGroups||[]).slice(),
         prevGroupSnap: cloneGroupSnap(inoPrevGroupSnap),
         prevBoard: cloneBoard(inoPrevBoard),
+        prevDivAvail: inoPrevDivAvail || '', divAvailBeforeNo: !!inoDivAvailBeforeNo,
         prevInj: inoPrevInj ? { val: inoPrevInj.val, sev: Object.assign({}, inoPrevInj.sev) } : null,
         finalNote: gv('s_final_note'),
         typeUpdate: (document.getElementById('s_type_update')||{}).checked,
@@ -10957,9 +10976,10 @@ function restoreWorkingForm(){
       inoPrevGroupSnap = cloneGroupSnap(io.prevGroupSnap);
       inoPrevBoard = io.prevBoard ? cloneBoard(io.prevBoard) : boardFromLaneInfo(inoPrevLaneInfo);
       inoPrevInj = io.prevInj || null;
+      inoPrevDivAvail = io.prevDivAvail || ''; inoDivAvailBeforeNo = !!io.divAvailBeforeNo;
     } else {
       inoPrevLaneInfo = null; inoClosedEverSelected = false; inoPeakLaneInfo = null; inoPriorGroups = [];
-      inoPrevGroupSnap = null; inoPrevBoard = null; inoPrevInj = null;
+      inoPrevGroupSnap = null; inoPrevBoard = null; inoPrevInj = null; inoPrevDivAvail = ''; inoDivAvailBeforeNo = false;
     }
     _restoringWorking = false;
   } catch (e) { _restoringWorking = false; }
@@ -11475,9 +11495,10 @@ function loadDraftById(id){
     inoPrevGroupSnap = cloneGroupSnap(io.prevGroupSnap);
     inoPrevBoard = io.prevBoard ? cloneBoard(io.prevBoard) : boardFromLaneInfo(inoPrevLaneInfo);
     inoPrevInj = io.prevInj || null;
+    inoPrevDivAvail = io.prevDivAvail || ''; inoDivAvailBeforeNo = !!io.divAvailBeforeNo;
   } else {
     inoPrevLaneInfo = null; inoClosedEverSelected = false;
-    inoPrevGroupSnap = null; inoPrevBoard = null; inoPrevInj = null;
+    inoPrevGroupSnap = null; inoPrevBoard = null; inoPrevInj = null; inoPrevDivAvail = ''; inoDivAvailBeforeNo = false;
   }
   // Restore the draft's own "all lanes open" announcement state so a loaded close-out
   // still reads with lane wording suppressed exactly as saved.
@@ -11572,6 +11593,7 @@ function updateDraftById(id){
     inoPrevGroupSnap = inoGroupSnapFromState(draft.state);
     inoPrevBoard = boardFromState(io);
     inoPrevInj = inoInjSnapFromState(io); inoInjUpdOverride = null;
+    inoPrevDivAvail = io.divAvailable || ''; inoDivAvailBeforeNo = false;
   }
   openTemplateCard(tmpl);
   applyDraft(draft.state);
