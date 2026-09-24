@@ -1164,6 +1164,14 @@
   .time-row { display: flex; align-items: center; gap: 8px; }
   .time-box { width: 64px; text-align: center; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
   .time-box.narrow { width: 58px; }
+  /* v208.03: BCC Other responders */
+  .bcc-other-item { display:flex; align-items:center; gap:2px; }
+  .bcc-other-item > .inline-check { flex:1; min-width:0; }
+  .bcc-other-del { font: inherit; font-size:14px; line-height:1; width:22px; height:22px; padding:0; border:none; background:transparent; color: var(--ink-soft); cursor:pointer; border-radius:4px; }
+  .bcc-other-del:hover { background: var(--line, #eef0f2); color: var(--ink, #1a1f24); }
+  .bcc-other-add { display:block; font-size:12.5px; margin-top:6px; }
+  .bcc-other-row { display:flex; gap:6px; align-items:center; margin-top:6px; }
+  .bcc-other-row input { flex:1; min-width:0; }
   /* v207.20: INO lane board */
   .lb-cycle-hint { margin-left:auto; font-size:11px; color: var(--ink-soft); }
   .lane-board { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:8px; }
@@ -1190,6 +1198,10 @@
     font: inherit; font-size:12px; font-weight:500; color: var(--blue, #1a5fc7); text-decoration: underline;
     text-underline-offset: 3px; cursor:pointer; white-space:nowrap; }
   .lb-switch:hover { text-decoration-thickness: 2px; }
+  /* v207.28: classic lane controls sit inside a wrapper, so they missed the section's
+     first-field spacing (4px vs 12px) and jumped up when switching modes. Match the board. */
+  .ino-seg-body > #s_lane_classic:first-child > .field:first-child,
+  .ino-seg-body > #s_board_field:first-child + #s_lane_classic > .field:first-child { border-top: none; padding-top: 12px; }
   .lb-switch:focus-visible { outline:2px solid var(--blue, #1a5fc7); outline-offset:2px; border-radius:3px; }
   /* v207.17: breathing room between the Departed block and the Estimated duration divider */
   #s_dur_field { margin-top: 18px; padding-top: 16px; }
@@ -2068,7 +2080,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 207.26</span>
+    <span class="app-version">Version 208.03</span>
   </footer>
 </div>
 
@@ -2893,7 +2905,10 @@ function buildBCC(){
         <input type="text" id="b_cross" class="grow" placeholder="Intersecting road / street">
       </div>
       <input type="text" id="b_cross_pos_other" placeholder="Custom position wording" style="display:none;margin-top:8px;">
-      <input type="text" id="b_suburb" placeholder="Suburb" style="margin-top:8px;">
+      <div class="scr-ac-wrap" style="margin-top:8px;">
+      <input type="text" id="b_suburb" placeholder="Suburb (e.g. Eight Mile Plains)" autocomplete="off">
+      <div class="scr-ac-list" id="scr_ac_b_suburb"></div>
+      </div>
     </div>
 
     <!-- Direction -->
@@ -2956,10 +2971,12 @@ function buildBCC(){
         <div>
           <span class="field-label">At scene</span>
           ${BCC_RESPONDERS.map(r=>`<label class="inline-check"><input type="checkbox" class="b_resp_scene" value="${r}" onchange="syncBccResponder('scene','${r}')"> ${r}</label>`).join('')}
+          <div id="b_resp_custom_scene"></div><button type="button" class="link-btn bcc-other-add" id="b_resp_other_btn_scene" onclick="openBccOtherResp('scene')">+ Other</button><div class="bcc-other-row" id="b_resp_other_row_scene" style="display:none;"><input type="text" id="b_resp_other_txt_scene" placeholder="Other responder" onkeydown="onBccOtherRespKey(event, 'scene')"><button type="button" class="dur-quick-btn" onclick="addBccOtherResp('scene')">Add</button></div>
         </div>
         <div>
           <span class="field-label">En route</span>
           ${BCC_RESPONDERS.map(r=>`<label class="inline-check"><input type="checkbox" class="b_resp_route" value="${r}" onchange="syncBccResponder('route','${r}')"> ${r}</label>`).join('')}
+          <div id="b_resp_custom_route"></div><button type="button" class="link-btn bcc-other-add" id="b_resp_other_btn_route" onclick="openBccOtherResp('route')">+ Other</button><div class="bcc-other-row" id="b_resp_other_row_route" style="display:none;"><input type="text" id="b_resp_other_txt_route" placeholder="Other responder" onkeydown="onBccOtherRespKey(event, 'route')"><button type="button" class="dur-quick-btn" onclick="addBccOtherResp('route')">Add</button></div>
           <div class="bcc-suffix">
             <label class="inline-check"><input type="radio" name="b_route_suffix" value="en route" checked onchange="renderPreview()"> en route</label>
             <label class="inline-check"><input type="radio" name="b_route_suffix" value="proceeding" onchange="renderPreview()"> proceeding</label>
@@ -2968,6 +2985,7 @@ function buildBCC(){
         <div>
           <span class="field-label">Departed</span>
           ${BCC_RESPONDERS.map(r=>`<label class="inline-check"><input type="checkbox" class="b_resp_departed" value="${r}" onchange="syncBccResponder('departed','${r}')"> ${r}</label>`).join('')}
+          <div id="b_resp_custom_departed"></div><button type="button" class="link-btn bcc-other-add" id="b_resp_other_btn_departed" onclick="openBccOtherResp('departed')">+ Other</button><div class="bcc-other-row" id="b_resp_other_row_departed" style="display:none;"><input type="text" id="b_resp_other_txt_departed" placeholder="Other responder" onkeydown="onBccOtherRespKey(event, 'departed')"><button type="button" class="dur-quick-btn" onclick="addBccOtherResp('departed')">Add</button></div>
         </div>
       </div>
       <p class="hint">A responder can sit in only one column — ticking it elsewhere moves it.</p>
@@ -3035,7 +3053,7 @@ function buildBCC(){
 
 
 /* ---------- BCC: responder list (INO order, FCU moved above Maintenance) ---------- */
-const BCC_RESPONDERS = ["TRU","TMA","Towing","QPS","QAS","QFD","TQ","FCU","Maintenance","Heavy haulage","Road Steward"];
+const BCC_RESPONDERS = ["TRU","TMA","Towing","QPS","QAS","QFD","TQ","FCU","Maintenance","Heavy haulage","Road Steward","Media","Energex","Traffic Control"];   // v208.03: + Media, Energex, Traffic Control
 const BCC_SEVERITY = ["Minor","Moderate","Serious","Critical","Life threatening","Medical episode","Fatality"];
 
 /* Stage drives subject suffix, Advice Number, and the Next Update default. */
@@ -3155,13 +3173,86 @@ function applyBccLaneAllGrey(){
   if (closedLab) closedLab.style.opacity = nil ? '0.45' : '';
 }
 /* A responder sits in exactly one column. */
+/* v208.03: BCC SLAM "Other" responders. Each is added in one column and also offered further
+   along the incident: En route → At scene → Departed. So an Other added in En route appears
+   in all three, one added in At scene appears in At scene + Departed, and one added in
+   Departed stays there. It's ticked in the column it was added; the one-column rule
+   (syncBccResponder) still applies. × removes it (shown in its origin column). */
+let bccCustomResp = [];   // [{ name, origin: 'route'|'scene'|'departed' }]
+const BCC_RESP_RANK = { route:0, scene:1, departed:2 };
+const BCC_RESP_CLS  = { scene:'b_resp_scene', route:'b_resp_route', departed:'b_resp_departed' };
+function bccEsc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function renderBccCustomResp(){
+  // remember current ticks for customs
+  const ticked = {};
+  Object.keys(BCC_RESP_CLS).forEach(col => {
+    document.querySelectorAll(`#b_resp_custom_${col} .${BCC_RESP_CLS[col]}:checked`).forEach(c => { ticked[c.value.toLowerCase()] = col; });
+  });
+  Object.keys(BCC_RESP_CLS).forEach(col => {
+    const box = document.getElementById(`b_resp_custom_${col}`);
+    if (!box) return;
+    box.innerHTML = bccCustomResp
+      .filter(x => BCC_RESP_RANK[col] >= BCC_RESP_RANK[x.origin])
+      .map((x, i) => {
+        const idx = bccCustomResp.indexOf(x);
+        const on = ticked[x.name.toLowerCase()] === col;
+        const del = (x.origin === col)
+          ? `<button type="button" class="bcc-other-del" title="Remove ${bccEsc(x.name)}" aria-label="Remove ${bccEsc(x.name)}" onclick="removeBccCustomResp(${idx})">\u00d7</button>` : '';
+        return `<span class="bcc-other-item"><label class="inline-check"><input type="checkbox" class="${BCC_RESP_CLS[col]}" value="${bccEsc(x.name)}" ${on ? 'checked' : ''} onchange="syncBccResponder('${col}', this.value)"> ${bccEsc(x.name)}</label>${del}</span>`;
+      }).join('');
+  });
+}
+function openBccOtherResp(col){
+  const row = document.getElementById(`b_resp_other_row_${col}`);
+  const btn = document.getElementById(`b_resp_other_btn_${col}`);
+  if (row){ row.style.display = 'flex'; const inp = row.querySelector('input'); if (inp){ inp.value = ''; inp.focus(); } }
+  if (btn) btn.style.display = 'none';
+}
+function closeBccOtherResp(col){
+  const row = document.getElementById(`b_resp_other_row_${col}`);
+  const btn = document.getElementById(`b_resp_other_btn_${col}`);
+  if (row) row.style.display = 'none';
+  if (btn) btn.style.display = '';
+}
+function addBccOtherResp(col){
+  const inp = document.getElementById(`b_resp_other_txt_${col}`);
+  const name = ((inp && inp.value) || '').trim();
+  closeBccOtherResp(col);
+  if (!name) return;
+  const lo = name.toLowerCase();
+  const std = BCC_RESPONDERS.find(r => r.toLowerCase() === lo);
+  const existing = bccCustomResp.find(x => x.name.toLowerCase() === lo);
+  let value = std || (existing && existing.name);
+  if (!value){
+    bccCustomResp.push({ name, origin: col });
+    value = name;
+    renderBccCustomResp();
+  } else if (existing && BCC_RESP_RANK[col] < BCC_RESP_RANK[existing.origin]){
+    existing.origin = col;   // typed earlier in the incident → offer it from here on
+    renderBccCustomResp();
+  }
+  const ck = Array.from(document.querySelectorAll('.' + BCC_RESP_CLS[col])).find(c => c.value.toLowerCase() === value.toLowerCase());
+  if (ck){ ck.checked = true; syncBccResponder(col, ck.value); }
+  else { renderPreview(); scheduleWorkingSave(); }
+}
+function onBccOtherRespKey(e, col){
+  if (e.key === 'Enter'){ e.preventDefault(); addBccOtherResp(col); }
+  else if (e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); closeBccOtherResp(col); }   // don't let Esc close the template
+}
+function removeBccCustomResp(idx){
+  bccCustomResp.splice(idx, 1);
+  renderBccCustomResp();
+  renderPreview(); scheduleWorkingSave();
+}
 function syncBccResponder(col, name){
   const cols = { scene:'b_resp_scene', route:'b_resp_route', departed:'b_resp_departed' };
-  const src = document.querySelector(`.${cols[col]}[value="${name}"]`);
+  // v208.03: match by value in JS (Other names can contain quotes)
+  const find = cls => Array.from(document.querySelectorAll('.' + cls)).find(c => c.value === name);
+  const src = find(cols[col]);
   if (src && src.checked){
     Object.keys(cols).forEach(k=>{
       if (k === col) return;
-      const other = document.querySelector(`.${cols[k]}[value="${name}"]`);
+      const other = find(cols[k]);
       if (other) other.checked = false;
     });
   }
@@ -3330,7 +3421,7 @@ function bccRows(){
     ['BMTMC Reference',        ((document.getElementById('b_ref')||{}).value||'').trim()],
     ['Advice Number',          ((document.getElementById('b_advice')||{}).value||'').trim()],
     ['Reason for Escalation',  bccReason()],
-    ['Incident Type',          buildEventTypeP('b')],
+    ['Incident Type',          capFirstLetter(buildEventTypeP('b') || '')],   // v208.02: "Crash"
     ['Location of Incident',   bccLocation()],
     ['Direction of Travel',    bccDirection()],
     ['Lanes Impacted',         bccLanes()],
@@ -3482,6 +3573,7 @@ function flashCopied(msg){
   setTimeout(()=>{ if (n.textContent === msg) n.textContent = ''; }, 2600);
 }
 function clearFormBCC(){
+  bccCustomResp = [];
   bccUpdateNum = 2;
   buildBCC();
   attachLiveListeners();
@@ -5140,6 +5232,9 @@ function buildEventTypeP(prefix){
       const name = row.querySelector(`.${prefix}_crash_other_name`).value.trim();
       const n = parseInt(row.querySelector(`.${prefix}_crash_other_num`).value,10);
       if (name && n && n>0){ parts.push(`${n}x ${pluralise(name, n).toLowerCase()}`); }
+      // v208.02: BCC SLAM — an Other item with no count still generates, as typed
+      // ("car v building"). INO/GEN still need a count.
+      else if (name && prefix === 'b' && !(n > 0)){ parts.push(name); }
     });
     // INO: the leading word reflects how many vehicles are involved.
     const label = (prefix === 's') ? inoCrashLabel(prefix) : 'crash';
@@ -8784,7 +8879,10 @@ function decoratePreviewSegments(t){
   if (previewEditing){ setPreviewMode(t, true); return; }
   // A frozen "keep highlighted" diff owns the innerHTML; don't overwrite it with
   // segment spans. Segments become clickable again on the next clean render.
-  if (heldDiff.active && heldDiff.before){ setPreviewMode(t, false); out.classList.remove('clickable'); return; }
+  // v207.27: in held mode we still work out the segment map (below) and keep it on the element,
+  // so a click can be resolved by character offset without replacing the diff HTML.
+  const holdMode = !!(heldDiff.active && heldDiff.before);
+  out._segMarks = null;
   const text = out.textContent;
   // Build a list of {start,end,seg} spans by locating each mapped field value.
   const marks = [];
@@ -8902,6 +9000,11 @@ function decoratePreviewSegments(t){
     });
   }
   marks.sort((a,b)=>a.start-b.start);
+  if (holdMode){
+    out._segMarks = { text, marks };
+    setPreviewMode(t, false);
+    return;
+  }
   let html = '', cursor = 0;
   marks.forEach(m => {
     html += escapeHtml(text.slice(cursor, m.start));
@@ -8934,12 +9037,46 @@ function setPreviewMode(t, editing){
 }
 
 /* Click a segment → jump to its field and flash it 3× (blue INO / teal GEN). */
+/* v207.27: character offset of a click inside the preview (text nodes only). */
+function previewClickOffset(out, e){
+  let node = null, off = 0;
+  if (document.caretRangeFromPoint){
+    const r = document.caretRangeFromPoint(e.clientX, e.clientY);
+    if (r){ node = r.startContainer; off = r.startOffset; }
+  } else if (document.caretPositionFromPoint){
+    const p = document.caretPositionFromPoint(e.clientX, e.clientY);
+    if (p){ node = p.offsetNode; off = p.offset; }
+  }
+  if (!node || !out.contains(node)) return -1;
+  const walker = document.createTreeWalker(out, NodeFilter.SHOW_TEXT);
+  let total = 0, n;
+  while ((n = walker.nextNode())){
+    if (n === node) return total + off;
+    total += n.nodeValue.length;
+  }
+  return -1;
+}
 function onPreviewSegmentClick(e){
   if (previewEditing) return;
-  const seg = e.target.closest('.seg');
-  if (!seg) return;
+  // Let the operator select/copy text without being whisked away to a field.
+  const sel = window.getSelection && window.getSelection();
+  if (sel && !sel.isCollapsed && String(sel).trim()) return;
   const t = activeTemplate();
-  const key = seg.getAttribute('data-seg') || '';
+  let key = '';
+  const seg = e.target.closest('.seg');
+  if (seg) key = seg.getAttribute('data-seg') || '';
+  else {
+    // "Keep highlighted" mode: the diff owns the HTML, so resolve the click by offset.
+    const out = document.getElementById('g_output_text');
+    const map = out && out._segMarks;
+    if (!map) return;
+    const pos = previewClickOffset(out, e);
+    if (pos < 0 || out.textContent !== map.text) return;
+    const hit = map.marks.find(m => pos >= m.start && pos < m.end);
+    if (!hit) return;
+    key = hit.seg;
+  }
+  if (!key) return;
   let flashId = null;
   if (key.indexOf('line:') === 0){
     const label = key.slice(5);
@@ -8955,6 +9092,8 @@ function onPreviewSegmentClick(e){
     flashId = map ? map.flashId : null;
   }
   if (!flashId) return;
+  // v207.27: with the lane board on, lane targets live on the board.
+  if (t === 'ino' && inoBoardMode() && ['s_lanes_field','s_reopen_wrap','s_impacttype_field','s_lanes_wrap'].includes(flashId)) flashId = 's_board_field';
   let field = document.getElementById(flashId);
   // Graceful fallback: some jump targets (e.g. Vehicles field) only exist for certain incident
   // types. Fall back to the incident section so the click still lands somewhere sensible.
@@ -10737,6 +10876,7 @@ function collectFormState(){
         laneUnknown: (document.getElementById('b_lane_unknown')||{}).checked,
         laneNil: (document.getElementById('b_lane_nil')||{}).checked,
         actions: cks('.b_action'), actionOther: gv('b_action_other'),
+        respCustom: bccCustomResp.map(x => ({ name: x.name, origin: x.origin })),
         respScene: cks('.b_resp_scene'), respRoute: cks('.b_resp_route'), respDeparted: cks('.b_resp_departed'),
         routeSuffix: rbn('b_route_suffix'),
         div: rbn('b_div'), divText: gv('b_div_text'),
@@ -12483,6 +12623,8 @@ function applyDraft(s){
     applyBccLaneAllGrey();
 
     setCks('.b_action', a.actions); set('b_action_other', a.actionOther);
+    bccCustomResp = Array.isArray(a.respCustom) ? a.respCustom.map(x => ({ name: x.name, origin: x.origin })) : [];
+    renderBccCustomResp();
     setCks('.b_resp_scene',    a.respScene);
     setCks('.b_resp_route',    a.respRoute);
     setCks('.b_resp_departed', a.respDeparted);
@@ -13078,7 +13220,7 @@ const SCR_ROADS = [
 ];
 
 const SCR_ROAD_IDS = ['g_road','av_road','s_road','tts_road'];
-const SCR_SUBURB_IDS = ['g_suburb','av_suburb','s_suburb','tts_suburb'];
+const SCR_SUBURB_IDS = ['g_suburb','av_suburb','s_suburb','tts_suburb','b_suburb'];
 const SCR_SUBURBS = [
   "Acacia Ridge","Albany Creek","Albion","Alderley","Alexandra Hills","Algester","Amberley","Amity",
   "Annerley","Anstead","Arana Hills","Archerfield","Armstrong Creek","Ascot","Ashgrove","Ashwell",
@@ -13280,7 +13422,7 @@ const RECENT_LIMIT = 15;
 // Which inputs share each recent-value pool, and which datalist they point at.
 const RECENT_FIELDS = {
   road:   { list: 'dl_road',   ids: ['g_road','av_road','s_road','tts_road'] },
-  suburb: { list: 'dl_suburb', ids: ['g_suburb','av_suburb','s_suburb','tts_suburb'] },
+  suburb: { list: 'dl_suburb', ids: ['g_suburb','av_suburb','s_suburb','tts_suburb','b_suburb'] },
   cross:  { list: 'dl_cross',  ids: ['g_cross','s_cross'] }
 };
 
@@ -13336,7 +13478,7 @@ function pushRecent(kind, val, quiet){
 function captureRecentsFromForm(){
   const g = id => { const e = document.getElementById(id); return e ? e.value : ''; };
   ['g_road','av_road','s_road'].forEach(id=> pushRecent('road', g(id), true));
-  ['g_suburb','av_suburb','s_suburb'].forEach(id=> pushRecent('suburb', g(id), true));
+  ['g_suburb','av_suburb','s_suburb','b_suburb'].forEach(id=> pushRecent('suburb', g(id), true));
   ['g_cross','s_cross'].forEach(id=> pushRecent('cross', g(id), true));
   persistRecents();
   renderDatalists();
