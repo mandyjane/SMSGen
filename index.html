@@ -2062,7 +2062,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 207.20</span>
+    <span class="app-version">Version 207.22</span>
   </footer>
 </div>
 
@@ -2239,7 +2239,7 @@ const CRASH_ITEMS_MORE = [
   {key:"trams", singular:"Tram", plural:"Trams"}
 ];
 // Named vehicle types that count toward the INO "Singular/Multi-vehicle" label.
-// (Pedestrian and Cyclist deliberately excluded; they force plain "crash".)
+// (Pedestrian and Cyclist deliberately excluded — they don't count as vehicles.)
 const CRASH_VEHICLE_KEYS = ["cars","vehicles","heavyvehicles","buses","motorcycles","escooters","ebicycles","animals","tma","trains","trams"];
 
 const RESPONDERS = ["TRU","Tow","TMA","QAS","QFD","QPS","FCU","SOC","Road Steward","Traffic Control","All emergency services","Translink response service","Mechanical services","Media","Medivac"];
@@ -4148,6 +4148,44 @@ function buildInoBoardClause(){
 }
 /* =================== end lane board =================== */
 
+/* v207.22: "Injury update". On updates/FINAL, the injury text can lead with "injury severity
+   updated to" (severity mix changed) or "injuries updated to" (only the number changed, or
+   injuries newly confirmed). It ticks itself when the injuries differ from the previous
+   message (inoPrevInj) and unticks when they match again; a manual tick/untick sticks until
+   the injuries change again (inoInjUpdOverride, reset whenever the injury signature changes). */
+let inoPrevInj = null;            // { val:'yes'|'no'|'unknown'|'', sev:{minor:1,...} }
+let inoInjUpdOverride = null;     // null = automatic; true/false = operator's choice
+let inoInjLastSig = null;
+function inoInjSnapFromForm(){
+  const val = (document.querySelector('input[name="s_inj"]:checked')||{}).value || '';
+  const sev = {};
+  if (val === 'yes') document.querySelectorAll('#s_inj_rows .inj-row .s_inj_sev').forEach(s => {
+    const k = (s.value || '').toLowerCase(); if (k) sev[k] = (sev[k] || 0) + 1; });
+  return { val, sev };
+}
+function inoInjSnapFromState(io){
+  if (!io) return null;
+  const val = io.inj || '';
+  const sev = {};
+  if (val === 'yes') (io.injRows || []).forEach(r => { const k = String((r && r.sev) || '').toLowerCase(); if (k) sev[k] = (sev[k] || 0) + 1; });
+  return { val, sev };
+}
+function inoInjSig(s){ return s ? s.val + '|' + Object.keys(s.sev).sort().map(k => k + ':' + s.sev[k]).join(',') : ''; }
+/* 'severity' | 'count' | '' (no change / not comparable) */
+function inoInjChangeKind(prev, cur){
+  if (!prev || !cur || cur.val !== 'yes') return '';
+  if (inoInjSig(prev) === inoInjSig(cur)) return '';
+  if (prev.val !== 'yes') return 'count';
+  const pk = Object.keys(prev.sev).sort().join(','), ck = Object.keys(cur.sev).sort().join(',');
+  if (pk !== ck) return 'severity';
+  const tot = s => Object.values(s.sev).reduce((a, b) => a + b, 0);
+  return tot(prev) !== tot(cur) ? 'count' : 'severity';
+}
+function onInoInjUpdateChange(el){
+  inoInjUpdOverride = !!el.checked;
+  renderPreview();
+  scheduleWorkingSave();
+}
 function isInoUpdateContext(){
   if (Array.isArray(inoPrevLanes)) return true;   // advanced/updated from a prior message
   if (inoUpdate.on) return true;
@@ -4961,7 +4999,7 @@ function applyInoCrashOtherLabelVisibility(){
 }
 /* INO crash label: "Single-vehicle Crash" / "Multi-vehicle Crash" / "Crash".
    With lowercase ON the trailing "Crash" is lower-cased ("Single-vehicle crash");
-   with lowercase OFF it's capitalised. Rules: a pedestrian (1+) forces plain "Crash".
+   with lowercase OFF it's capitalised. Rules: pedestrians aren't counted as vehicles (v207.21).
    Custom "other" items default to "Crash" unless the operator opts into Singular/Multi
    via the radios. Otherwise the named-vehicle total decides: 1 → Single-vehicle,
    2+ → Multi-vehicle, 0 → Crash. */
@@ -4969,10 +5007,9 @@ function inoCrashLabel(prefix){
   const crashWord = 'crash';
   const single = `Single-vehicle ${crashWord}`;
   const multi  = `Multi-vehicle ${crashWord}`;
-  // pedestrian overrides everything
-  const pedEl = document.getElementById(`${prefix}_crash_pedestrians`);
-  const peds = pedEl ? parseInt(pedEl.value,10) : 0;
-  if (peds && peds > 0) return 'crash';
+  // v207.21: pedestrians no longer force plain "crash" — they simply don't count as
+  // vehicles, so "1x car; 1x pedestrian" reads "Single-vehicle crash". With pedestrians and
+  // no vehicle at all the total is 0 and the label falls through to plain "crash".
 
   // total of the named vehicle types (excludes pedestrian)
   let vehTotal = 0;
@@ -6630,6 +6667,7 @@ function buildINO(){
         <div id="s_inj_rows" style="margin-top:10px;display:flex;flex-direction:column;gap:8px;"></div>
         <div style="margin-top:10px;">
           <label class="inline-check"><input type="checkbox" id="s_inj_qas" onchange="renderPreview(); scheduleWorkingSave();"> Transported by QAS</label>
+          <label class="inline-check" id="s_inj_upd_wrap" style="display:none;"><input type="checkbox" id="s_inj_update" onclick="onInoInjUpdateChange(this)"> Injury update <span id="s_inj_upd_auto" class="hint" style="margin:0 0 0 2px;font-size:11px;"></span></label>
         </div>
       </div>
     </div>
@@ -7803,7 +7841,7 @@ function clearFormINO(){
   inoPeakLaneInfo = null;
   inoPriorGroups = [];
   inoPrevGroupSnap = null;
-  inoBoard = emptyBoard(); inoPrevBoard = null;
+  inoBoard = emptyBoard(); inoPrevBoard = null; inoPrevInj = null; inoInjUpdOverride = null;
   inoAllOpenAnnounced = false;      // fresh message: nothing announced yet
   clearHeldHighlight();
   buildINO();
@@ -8067,6 +8105,22 @@ function renderINO(){
     else if (injVal === 'unknown') injBit = 'awaiting QAS assessment to confirm injuries';
     else if (injVal === 'no') injBit = 'nil injuries';
     if (injBit && injVal === 'yes' && (document.getElementById('s_inj_qas')||{}).checked) injBit += ' transported by QAS';
+    { // v207.22: Injury update
+      const updCtx = isInoUpdateContext();
+      const wrap = document.getElementById('s_inj_upd_wrap');
+      const ck = document.getElementById('s_inj_update');
+      const autoTag = document.getElementById('s_inj_upd_auto');
+      if (wrap) wrap.style.display = updCtx ? '' : 'none';
+      const cur = inoInjSnapFromForm();
+      const sig = inoInjSig(cur);
+      if (sig !== inoInjLastSig){ inoInjUpdOverride = null; inoInjLastSig = sig; }
+      const kind = updCtx ? inoInjChangeKind(inoPrevInj, cur) : '';
+      if (ck && updCtx && inoInjUpdOverride === null && inoPrevInj) ck.checked = !!kind;
+      if (autoTag) autoTag.textContent = (ck && ck.checked && inoInjUpdOverride === null && kind) ? 'auto' : '';
+      if (ck && ck.checked && updCtx && injBit && injVal === 'yes'){
+        injBit = (kind === 'count' ? 'injuries updated to ' : 'injury severity updated to ') + injBit;
+      }
+    }
     if (fatYes){ const fc = parseInt(fatCount,10) || 0; fatBit = fc === 1 ? '1x fatality' : `${fc}x fatalities`; }
     else if (fatVal === 'unknown') fatBit = '';   // Unknown fatalities are omitted from the SMS
     else if (fatVal === 'no') fatBit = 'nil fatalities';
@@ -9375,6 +9429,8 @@ function nextEscalation(){
     inoPriorGroups = mergeGroupLists(inoPriorGroups, currentInoGroupList());
     inoPrevGroupSnap = inoGroupSnapFromForm();
     inoPrevBoard = inoBoardMode() ? cloneBoard(inoBoard) : boardFromClassicForm();
+    inoPrevInj = inoInjSnapFromForm(); inoInjUpdOverride = null;
+    { const iu = document.getElementById('s_inj_update'); if (iu) iu.checked = false; }
     advanceInoSequence();
     const tm = nowHHMM();
     inoUpdate = { on: true, time: `${tm.hh}:${tm.mm}` };
@@ -10694,6 +10750,7 @@ function collectFormState(){
   if (tmpl === 'ino'){
     const rb = name => { const el=document.querySelector(`input[name="${name}"]:checked`); return el?el.value:''; };
     const injQas = !!(document.getElementById('s_inj_qas')||{}).checked;
+    const injUpd = !!(document.getElementById('s_inj_update')||{}).checked;
     const injRows = Array.from(document.querySelectorAll('#s_inj_rows .inj-row')).map(r=>({
       sev: r.querySelector('.s_inj_sev').value
     }));
@@ -10714,6 +10771,7 @@ function collectFormState(){
         priorGroups: (inoPriorGroups||[]).slice(),
         prevGroupSnap: cloneGroupSnap(inoPrevGroupSnap),
         prevBoard: cloneBoard(inoPrevBoard),
+        prevInj: inoPrevInj ? { val: inoPrevInj.val, sev: Object.assign({}, inoPrevInj.sev) } : null,
         finalNote: gv('s_final_note'),
         typeUpdate: (document.getElementById('s_type_update')||{}).checked,
         road: gv('s_road'),
@@ -10729,7 +10787,7 @@ function collectFormState(){
         crashCounts, crashOthers,
         crashOtherLabel: rb('s_crash_otherlabel_opt'),
         infra: rb('s_infra'), infraText: gv('s_infra_text'),
-        inj: rb('s_inj'), injCount: gv('s_inj_count'), injRows,
+        inj: rb('s_inj'), injCount: gv('s_inj_count'), injRows, injQas, injUpd,
         fat: rb('s_fat'), fatCount: gv('s_fat_count'),
         lanePos: Array.from(document.querySelectorAll('.s_lane_pos:checked')).map(c=>c.value),
         laneCounts: (function(){ const o={}; document.querySelectorAll('.s_lane_pos_num').forEach(el=>{ if(el.value) o[el.dataset.pos]=el.value; }); return o; })(),
@@ -10898,9 +10956,10 @@ function restoreWorkingForm(){
       inoPriorGroups = Array.isArray(io.priorGroups) ? io.priorGroups.slice() : [];
       inoPrevGroupSnap = cloneGroupSnap(io.prevGroupSnap);
       inoPrevBoard = io.prevBoard ? cloneBoard(io.prevBoard) : boardFromLaneInfo(inoPrevLaneInfo);
+      inoPrevInj = io.prevInj || null;
     } else {
       inoPrevLaneInfo = null; inoClosedEverSelected = false; inoPeakLaneInfo = null; inoPriorGroups = [];
-      inoPrevGroupSnap = null; inoPrevBoard = null;
+      inoPrevGroupSnap = null; inoPrevBoard = null; inoPrevInj = null;
     }
     _restoringWorking = false;
   } catch (e) { _restoringWorking = false; }
@@ -11415,9 +11474,10 @@ function loadDraftById(id){
     inoPriorGroups = Array.isArray(io.priorGroups) ? io.priorGroups.slice() : [];
     inoPrevGroupSnap = cloneGroupSnap(io.prevGroupSnap);
     inoPrevBoard = io.prevBoard ? cloneBoard(io.prevBoard) : boardFromLaneInfo(inoPrevLaneInfo);
+    inoPrevInj = io.prevInj || null;
   } else {
     inoPrevLaneInfo = null; inoClosedEverSelected = false;
-    inoPrevGroupSnap = null; inoPrevBoard = null;
+    inoPrevGroupSnap = null; inoPrevBoard = null; inoPrevInj = null;
   }
   // Restore the draft's own "all lanes open" announcement state so a loaded close-out
   // still reads with lane wording suppressed exactly as saved.
@@ -11511,6 +11571,7 @@ function updateDraftById(id){
     inoPriorGroups = mergeGroupLists(Array.isArray(io.priorGroups) ? io.priorGroups : [], groupsFromInoState(draft.state));
     inoPrevGroupSnap = inoGroupSnapFromState(draft.state);
     inoPrevBoard = boardFromState(io);
+    inoPrevInj = inoInjSnapFromState(io); inoInjUpdOverride = null;
   }
   openTemplateCard(tmpl);
   applyDraft(draft.state);
@@ -12152,8 +12213,9 @@ function inoEventDetailFromState(a){
     const n = parseInt(o.num, 10);
     if (o.name && n && n > 0) parts.push(`${n} x ${pluralise(o.name.trim(), n)}`);
   });
-  // Classify the leading word the same way the message does.
-  const peds = parseInt(counts['s_crash_pedestrians'], 10) || 0;
+  // Classify the leading word the same way the message does (v207.21: pedestrians don't
+  // override; they just aren't counted as vehicles).
+  const peds = 0;
   let vehTotal = 0;
   CRASH_VEHICLE_KEYS.forEach(key=>{ const n = parseInt(counts['s_crash_' + key], 10); if (n && n > 0) vehTotal += n; });
   let label = 'Crash';
@@ -12573,6 +12635,7 @@ function applyDraft(s){
     { const sv = a.addlSep || '.'; const si = document.getElementById('s_addl_sep'); if (si) si.value = sv;
       syncInoSepButtons('s_addl_sep_group', sv); }
     if (a.injQas){ const q = document.getElementById('s_inj_qas'); if (q) q.checked = true; }
+    { const iu = document.getElementById('s_inj_update'); if (iu) iu.checked = !!a.injUpd; }
         relabelInoEventOptions();
     // actions
     if (a.actQld) setRadio('s_act_qld', a.actQld);
