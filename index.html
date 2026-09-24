@@ -1193,6 +1193,12 @@
   .lb-whole.on { background: var(--accent-soft, #e3f1ec); border-color: transparent; font-weight:600; }
   .lb-whole-road.on { background: rgba(120,40,40,.13); color:#7b241c; }
   .lb-mode-link { margin-left:auto; font-size:12px !important; font-weight:500 !important; }
+  /* v208.09: lane board extras — divider between lane shortcuts and Road closed; BCC lane count + Affected */
+  .lb-divider { width:1px; height:22px; background: var(--line-strong, #c4ccc7); margin:0 2px; }
+  .lb-affected { background: rgba(120,90,200,.09); border-color: rgba(120,90,200,.5); } .lb-affected .lb-state { color:#5b3fb0; }
+  .lb-count-row { display:flex; align-items:center; gap:6px; margin-bottom:8px; font-size:12.5px; }
+  .lb-count-lbl { color: var(--ink-soft); font-family: var(--mono); font-size:11px; letter-spacing:.07em; text-transform:uppercase; margin-right:2px; }
+  .lb-step { font: inherit; width:26px; height:26px; padding:0; border-radius:6px; border:1px solid var(--line, #d9dee3); background:transparent; cursor:pointer; }
   /* v207.25: lane board / classic switch — underlined link with swap icon, identical in both modes */
   .lb-switch { margin-left:auto; display:inline-flex; align-items:center; gap:5px; background:none; border:none; padding:0;
     font: inherit; font-size:12px; font-weight:500; color: var(--blue, #1a5fc7); text-decoration: underline;
@@ -2092,7 +2098,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.06</span>
+    <span class="app-version">Version 208.10</span>
   </footer>
 </div>
 
@@ -2933,12 +2939,31 @@ function buildBCC(){
           ${["Both directions","All directions"].map(d=>`<label class="inline-check"><input type="checkbox" class="b_dir" value="${d}" onchange="renderPreview()"> ${d}</label>`).join('')}
         </span>
       </div>
-      <p class="hint">Combine e.g. North + East → “northeastbound”. Same as INO.</p>
+      <p class="hint">Combine e.g. North + East → “northeastbound”.</p>
     </div>
 
     <!-- Lanes Impacted -->
-    <div class="field">
-      <span class="field-label">Lanes Impacted</span>
+    <div class="field" id="b_lanes_field">
+      <div class="addl-label-row">
+        <span class="field-label">Lanes Impacted</span>
+        <button type="button" class="lb-switch" id="b_lane_mode_switch" onclick="setBccLaneMode(!bccBoardMode())"><span aria-hidden="true">\u21c4</span> Switch to classic controls</button>
+      </div>
+      <div id="b_board_wrap">
+        <div class="lb-count-row"><span class="lb-count-lbl">Lanes</span>
+          <button type="button" class="lb-step" aria-label="Fewer lanes" onclick="bccBoardSetCount(-1)">\u2212</button>
+          <b id="b_board_n">3</b>
+          <button type="button" class="lb-step" aria-label="More lanes" onclick="bccBoardSetCount(1)">+</button>
+        </div>
+        <div class="lane-board" id="b_board_tiles"></div>
+        <div class="lane-board-actions">
+          <button type="button" class="lb-whole" id="b_board_all" onclick="bccBoardAll()"><i class="ti ti-barrier-block" aria-hidden="true"></i> All</button>
+          <button type="button" class="lb-whole" id="b_board_nil" onclick="bccBoardNil()"><i class="ti ti-circle-off" aria-hidden="true"></i> Nil</button>
+          <span class="lb-divider" aria-hidden="true"></span>
+          <button type="button" class="lb-whole lb-whole-road" id="b_board_road" onclick="bccBoardToggleRoad()"><i class="ti ti-ban" aria-hidden="true"></i> Road closed</button>
+          <span class="lb-cycle-hint">Tap a lane: Open \u2192 Blocked \u2192 Impacted \u2192 Affected \u2192 Closed</span>
+        </div>
+      </div>
+      <div id="b_lane_classic" style="display:none;">
 
       <span class="field-label" style="margin-top:4px;">Impact type</span>
       <div class="check-grid impact-type-row">
@@ -2962,6 +2987,7 @@ function buildBCC(){
       <div class="check-grid" id="b_lane_pos_row" style="margin-top:8px;">
         ${["Left","Centre","Right"].map(x=>`<label class="inline-check lane-pos-item lane-pos-compact"><input type="checkbox" class="b_lane_pos" value="${x}" onchange="onBccLaneChange()"> ${x} <input type="number" min="1" id="b_lane_pos_num_${x}" class="b_lane_pos_num lane-pos-num lane-pos-num-sm" data-pos="${x}" placeholder="#" oninput="renderPreview(); scheduleWorkingSave();"></label>`).join('')}
         <label class="inline-check"><input type="checkbox" id="b_lane_unknown" onchange="onBccLaneUnknownChange()"> Unknown</label>
+      </div>
       </div>
       <input type="text" id="b_lanes_prefix" placeholder="Optional free text — appears before the generated lane info" style="margin-top:10px;">
       <p class="hint" id="b_lanes_gen"></p>
@@ -3407,7 +3433,117 @@ function bccDirection(){
   const out = [compass, extras.join(' and ')].filter(Boolean).join(' / ');
   return out ? out.charAt(0).toUpperCase() + out.slice(1) : '';
 }
+/* ===================== v208.09: BCC SLAM lane board =====================
+   Numbered lanes (L1..Ln, 1–8 via −/+), each tapped through Open → Blocked → Impacted →
+   Affected → Closed. Shortcuts: All (every lane Blocked), Nil, Road closed. Present tense, BCC
+   style: "L1 and L2 blocked, L3 impacted" / "All lanes blocked" / "Nil lanes affected" /
+   "Road closed". The "text before lanes" box still prepends. Classic controls stay behind the
+   ⇄ switch (remembered in bmtmc_bcc_lane_board); switching converts in both directions. */
+const BCC_BOARD_CYCLE = ['open','blocked','impacted','affected','closed'];
+function emptyBccBoard(){ return { n:3, L:['open','open','open'], road:false, nil:false }; }
+function cloneBccBoard(b){
+  if (!b) return emptyBccBoard();
+  const n = Math.max(1, Math.min(8, parseInt(b.n, 10) || 3));
+  const L = Array.from({ length:n }, (_, i) => (b.L && BCC_BOARD_CYCLE.includes(b.L[i])) ? b.L[i] : 'open');
+  return { n, L, road:!!b.road, nil:!!b.nil };
+}
+let bccBoard = emptyBccBoard();
+function bccBoardMode(){ try { return localStorage.getItem('bmtmc_bcc_lane_board') !== '0'; } catch(e){ return true; } }
+function bccBoardFromClassic(){
+  const b = emptyBccBoard();
+  const st = ((document.querySelector('input[name="b_lane_state"]:checked')||{}).value || '').toLowerCase();
+  if (st === 'closed'){ b.road = true; return b; }
+  if ((document.getElementById('b_lane_nil')||{}).checked){ b.nil = true; return b; }
+  const s = ['blocked','impacted','affected'].includes(st) ? st : 'blocked';
+  const nums = Array.from(document.querySelectorAll('.b_lane_num:checked')).map(c => parseInt(c.value.slice(1), 10)).filter(Boolean);
+  const all = !!(document.getElementById('b_lane_all')||{}).checked;
+  if (nums.length) b.n = Math.max(3, Math.max(...nums));
+  b.L = Array.from({ length:b.n }, (_, i) => (all || nums.includes(i + 1)) ? s : 'open');
+  return b;
+}
+function syncBccBoardToClassic(){
+  const b = bccBoard;
+  document.querySelectorAll('input[name="b_lane_state"]').forEach(r => { r.checked = false; r._wasChecked = false; });
+  document.querySelectorAll('.b_lane_num, .b_lane_pos').forEach(c => c.checked = false);
+  ['b_lane_all','b_lane_nil','b_lane_unknown'].forEach(id => { const e = document.getElementById(id); if (e) e.checked = false; });
+  const setState = v => { const r = document.querySelector(`input[name="b_lane_state"][value="${v}"]`); if (r){ r.checked = true; r._wasChecked = true; } };
+  if (b.road){ setState('Closed'); return; }
+  if (b.nil && b.L.every(s => s === 'open')){ const e = document.getElementById('b_lane_nil'); if (e) e.checked = true; setState('Affected'); return; }
+  const non = b.L.map((s, i) => [s, i + 1]).filter(x => x[0] !== 'open');
+  if (!non.length) return;
+  const rank = ['affected','impacted','blocked','closed'];
+  const top = non.map(x => x[0]).sort((p, q) => rank.indexOf(q) - rank.indexOf(p))[0];
+  setState(top === 'closed' ? 'Blocked' : top.charAt(0).toUpperCase() + top.slice(1));
+  if (non.length === b.n){ const e = document.getElementById('b_lane_all'); if (e) e.checked = true; return; }
+  non.forEach(([, i]) => { const c = document.querySelector(`.b_lane_num[value="L${i}"]`); if (c) c.checked = true; });
+}
+function setBccLaneMode(on){
+  try { localStorage.setItem('bmtmc_bcc_lane_board', on ? '1' : '0'); } catch(e){}
+  if (on) bccBoard = bccBoardFromClassic();
+  else { syncBccBoardToClassic(); if (typeof onBccLaneStateChange === 'function') onBccLaneStateChange(); }
+  renderBccBoard(); renderPreview(); scheduleWorkingSave();
+}
+function bccBoardChanged(){ renderBccBoard(); renderPreview(); scheduleWorkingSave(); }
+function bccBoardCycle(i){
+  if (bccBoard.road) return;
+  bccBoard.L[i] = BCC_BOARD_CYCLE[(BCC_BOARD_CYCLE.indexOf(bccBoard.L[i]) + 1) % BCC_BOARD_CYCLE.length];
+  bccBoard.nil = false;
+  bccBoardChanged();
+}
+function bccBoardSetCount(delta){
+  const n = Math.max(1, Math.min(8, bccBoard.n + delta));
+  if (n === bccBoard.n) return;
+  const allBlocked = bccBoard.L.every(s => s === 'blocked');
+  while (bccBoard.L.length < n) bccBoard.L.push(allBlocked ? 'blocked' : 'open');
+  bccBoard.L.length = n; bccBoard.n = n;
+  bccBoardChanged();
+}
+function bccBoardAll(){ bccBoard.road = false; bccBoard.nil = false; bccBoard.L = bccBoard.L.map(() => 'blocked'); bccBoardChanged(); }
+function bccBoardNil(){ bccBoard.road = false; bccBoard.L = bccBoard.L.map(() => 'open'); bccBoard.nil = true; bccBoardChanged(); }
+function bccBoardToggleRoad(){ bccBoard.road = !bccBoard.road; if (bccBoard.road) bccBoard.nil = false; bccBoardChanged(); }
+function renderBccBoard(){
+  const on = bccBoardMode();
+  const bw = document.getElementById('b_board_wrap'), cw = document.getElementById('b_lane_classic');
+  if (bw) bw.style.display = on ? '' : 'none';
+  if (cw) cw.style.display = on ? 'none' : '';
+  const sw = document.getElementById('b_lane_mode_switch');
+  if (sw) sw.innerHTML = on ? '<span aria-hidden="true">\u21c4</span> Switch to classic controls' : '<span aria-hidden="true">\u21c4</span> Switch to lane board';
+  const tiles = document.getElementById('b_board_tiles');
+  if (!on || !tiles) return;
+  const b = bccBoard;
+  tiles.style.gridTemplateColumns = `repeat(${b.n}, minmax(0, 1fr))`;
+  tiles.innerHTML = b.L.map((s, i) => {
+    const st = b.road ? 'closed' : s;
+    const lbl = b.road ? 'Closed' : st.charAt(0).toUpperCase() + st.slice(1);
+    return `<button type="button" class="lb-tile lb-${st}${b.road ? ' lb-locked' : ''}" onclick="bccBoardCycle(${i})" aria-label="L${i+1}: ${st}. Tap to change."><span class="lb-name">L${i+1}</span><span class="lb-state">${lbl}</span></button>`;
+  }).join('');
+  const cnt = document.getElementById('b_board_n'); if (cnt) cnt.textContent = b.n;
+  const allOpen = b.L.every(s => s === 'open');
+  const t = (id, v) => { const e = document.getElementById(id); if (e) e.classList.toggle('on', v); };
+  t('b_board_all', !b.road && b.L.every(s => s === 'blocked'));
+  t('b_board_nil', !b.road && allOpen && b.nil);
+  t('b_board_road', b.road);
+}
+function buildBccBoardLanes(){
+  const b = bccBoard;
+  if (b.road) return 'Road closed';
+  const non = b.L.map((s, i) => [s, 'L' + (i + 1)]).filter(x => x[0] !== 'open');
+  if (!non.length) return b.nil ? 'Nil lanes affected' : '';
+  if (non.length === b.n && non.every(x => x[0] === non[0][0])) return `All lanes ${non[0][0]}`;
+  const parts = [];
+  ['blocked','impacted','affected','closed'].forEach(s => {
+    const ks = non.filter(x => x[0] === s).map(x => x[1]);
+    if (ks.length) parts.push(`${bccAndList(ks)} ${s}`);
+  });
+  return parts.join(', ');
+}
+/* =================== end BCC lane board =================== */
+
 function bccLanes(){
+  if (bccBoardMode()){   // v208.09 lane board
+    const prefix0 = ((document.getElementById('b_lanes_prefix')||{}).value||'').trim();
+    return [prefix0, buildBccBoardLanes()].filter(Boolean).join(' ').trim();
+  }
   const prefix = ((document.getElementById('b_lanes_prefix')||{}).value||'').trim();
   const stateEl = document.querySelector('input[name="b_lane_state"]:checked');
   const state = stateEl ? stateEl.value.toLowerCase() : '';
@@ -3459,7 +3595,11 @@ function bccResponders(){
   return out;
 }
 function bccActionResponders(){
-  return bccActions().concat(bccResponders()).join(', ');
+  // v208.07: actions stay comma-joined; each responder group (at scene / en route or
+  // proceeding / departed) is its own sentence: "VMS utilised. TRU and QPS at scene. TMA proceeding"
+  const actions = bccActions().join(', ');
+  const sentences = [actions].concat(bccResponders()).filter(Boolean).map(s => capFirstLetter(s));
+  return sentences.join('. ');
 }
 function bccImpact(){
   const out = [];
@@ -3554,6 +3694,7 @@ function escapeHtml(x){
 }
 function renderBCC(){
   applyBccDepartedOptions();   // v208.06
+  renderBccBoard();            // v208.09
   const out = document.getElementById('g_output_text');
   if (!out) return;
   out.classList.remove('empty');
@@ -3661,6 +3802,7 @@ function flashCopied(msg){
 }
 function clearFormBCC(){
   bccCustomResp = [];
+  bccBoard = emptyBccBoard();
   bccDepartedFrom = {}; bccDepartedUserToggled = false;
   bccUpdateNum = 2;
   buildBCC();
@@ -4244,6 +4386,11 @@ function inoBoardToggleRoad(){
   if (inoBoard.road) inoBoard.nil = false;
   inoBoardChanged();
 }
+function inoBoardAllBlocked(){   // v208.09: "All" → every lane Blocked
+  inoBoard.road = false; inoBoard.nil = false;
+  BOARD_LANES.forEach(k => inoBoard.L[k] = 'blocked');
+  inoBoardChanged();
+}
 function inoBoardAllOpen(){
   inoBoard.road = false;
   BOARD_LANES.forEach(k => inoBoard.L[k] = 'open');
@@ -4273,6 +4420,8 @@ function renderInoBoard(){
   }).join('');
   const road = document.getElementById('s_board_road');
   if (road) road.classList.toggle('on', !!inoBoard.road);
+  const allB = document.getElementById('s_board_all');
+  if (allB) allB.classList.toggle('on', !inoBoard.road && BOARD_LANES.every(k => inoBoard.L[k] === 'blocked'));
   const nilBtn = document.getElementById('s_board_nil');
   if (nilBtn){
     nilBtn.innerHTML = upd ? '<i class="ti ti-road" aria-hidden="true"></i> All lanes open' : '<i class="ti ti-circle-off" aria-hidden="true"></i> Nil';
@@ -5327,7 +5476,9 @@ function buildEventTypeP(prefix){
     // INO: the leading word reflects how many vehicles are involved.
     const label = (prefix === 's') ? inoCrashLabel(prefix) : 'crash';
     const sep = (prefix === 's') ? '; ' : ', ';
-    return parts.length ? `${label}${sep}${parts.join('; ')}` : label;
+    // v208.08: BCC SLAM separates the vehicles/parties with commas; INO/GEN keep "; ".
+    const itemSep = (prefix === 'b') ? ', ' : '; ';
+    return parts.length ? `${label}${sep}${parts.join(itemSep)}` : label;
   }
   if (v === 'Stationary vehicle'){
     // Leading word: Broken-down Vehicle can optionally read "Stationary vehicle" instead.
@@ -6897,8 +7048,10 @@ function buildINO(){
       </div>
       <div class="lane-board" id="s_board_tiles"></div>
       <div class="lane-board-actions">
-        <button type="button" class="lb-whole lb-whole-road" id="s_board_road" onclick="inoBoardToggleRoad()"><i class="ti ti-ban" aria-hidden="true"></i> Road closed</button>
+        <button type="button" class="lb-whole" id="s_board_all" onclick="inoBoardAllBlocked()"><i class="ti ti-barrier-block" aria-hidden="true"></i> All</button>
         <button type="button" class="lb-whole" id="s_board_nil" onclick="inoBoardAllOpen()"><i class="ti ti-circle-off" aria-hidden="true"></i> Nil</button>
+        <span class="lb-divider" aria-hidden="true"></span>
+        <button type="button" class="lb-whole lb-whole-road" id="s_board_road" onclick="inoBoardToggleRoad()"><i class="ti ti-ban" aria-hidden="true"></i> Road closed</button>
         <span class="lb-cycle-hint">Tap a lane: Open \u2192 Blocked \u2192 Impacted \u2192 Closed</span>
       </div>
       <p class="hint" id="s_board_hint" style="margin:6px 0 0;"></p>
@@ -10965,6 +11118,7 @@ function collectFormState(){
         laneNil: (document.getElementById('b_lane_nil')||{}).checked,
         actions: cks('.b_action'), actionOther: gv('b_action_other'),
         respCustom: bccCustomResp.map(x => ({ name: x.name, origin: x.origin })),
+        laneBoard: cloneBccBoard(bccBoard),
         respScene: cks('.b_resp_scene'), respRoute: cks('.b_resp_route'), respDeparted: cks('.b_resp_departed'),
         routeSuffix: rbn('b_route_suffix'),
         div: rbn('b_div'), divText: gv('b_div_text'),
@@ -12712,6 +12866,7 @@ function applyDraft(s){
 
     setCks('.b_action', a.actions); set('b_action_other', a.actionOther);
     bccCustomResp = Array.isArray(a.respCustom) ? a.respCustom.map(x => ({ name: x.name, origin: x.origin })) : [];
+    bccBoard = a.laneBoard ? cloneBccBoard(a.laneBoard) : bccBoardFromClassic();   // v208.09 (legacy drafts convert from the classic lane fields restored above)
     renderBccCustomResp();
     setCks('.b_resp_scene',    a.respScene);
     setCks('.b_resp_route',    a.respRoute);
