@@ -1185,7 +1185,12 @@
   .lb-whole.on { background: var(--accent-soft, #e3f1ec); border-color: transparent; font-weight:600; }
   .lb-whole-road.on { background: rgba(120,40,40,.13); color:#7b241c; }
   .lb-mode-link { margin-left:auto; font-size:12px !important; font-weight:500 !important; }
-  .lb-back-link { display:inline-flex; align-items:center; gap:4px; }
+  /* v207.25: lane board / classic switch — underlined link with swap icon, identical in both modes */
+  .lb-switch { margin-left:auto; display:inline-flex; align-items:center; gap:5px; background:none; border:none; padding:0;
+    font: inherit; font-size:12px; font-weight:500; color: var(--blue, #1a5fc7); text-decoration: underline;
+    text-underline-offset: 3px; cursor:pointer; white-space:nowrap; }
+  .lb-switch:hover { text-decoration-thickness: 2px; }
+  .lb-switch:focus-visible { outline:2px solid var(--blue, #1a5fc7); outline-offset:2px; border-radius:3px; }
   /* v207.17: breathing room between the Departed block and the Estimated duration divider */
   #s_dur_field { margin-top: 18px; padding-top: 16px; }
   /* v207.15: compact "Join" separator switch beside the Additional information label */
@@ -2063,7 +2068,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 207.24</span>
+    <span class="app-version">Version 207.26</span>
   </footer>
 </div>
 
@@ -6705,13 +6710,13 @@ function buildINO(){
     <div class="field" id="s_board_field">
       <div class="addl-label-row">
         <span class="field-label">Impact on lanes</span>
-        <span class="lb-cycle-hint">Tap a lane: Open \u2192 Blocked \u2192 Impacted \u2192 Closed</span>
+        <button type="button" class="lb-switch" onclick="setInoLaneMode(false)"><span aria-hidden="true">\u21c4</span> Switch to classic controls</button>
       </div>
       <div class="lane-board" id="s_board_tiles"></div>
       <div class="lane-board-actions">
         <button type="button" class="lb-whole lb-whole-road" id="s_board_road" onclick="inoBoardToggleRoad()"><i class="ti ti-ban" aria-hidden="true"></i> Road closed</button>
         <button type="button" class="lb-whole" id="s_board_nil" onclick="inoBoardAllOpen()"><i class="ti ti-circle-off" aria-hidden="true"></i> Nil</button>
-        <button type="button" class="link-btn lb-mode-link" onclick="setInoLaneMode(false)">Use classic lane controls</button>
+        <span class="lb-cycle-hint">Tap a lane: Open \u2192 Blocked \u2192 Impacted \u2192 Closed</span>
       </div>
       <p class="hint" id="s_board_hint" style="margin:6px 0 0;"></p>
     </div>
@@ -6720,7 +6725,7 @@ function buildINO(){
     <div class="field" id="s_lanes_field">
       <div class="field-condense-head">
         <span class="field-label" style="margin:0;">Impact on lanes</span>
-        <button type="button" class="link-btn lb-mode-link lb-back-link" onclick="setInoLaneMode(true)"><i class="ti ti-layout-grid" aria-hidden="true"></i> Switch to lane board</button>
+        <button type="button" class="lb-switch" onclick="setInoLaneMode(true)"><span aria-hidden="true">\u21c4</span> Switch to lane board</button>
         <button type="button" class="field-edit-pill" id="s_lanes_edit" style="display:none;" onclick="editInoField('s_lanes_field')"><i class="ti ti-pencil" style="font-size:12px;" aria-hidden="true"></i>Edit</button>
       </div>
       <div class="field-summary" id="s_lanes_summary"></div>
@@ -6828,6 +6833,7 @@ function buildINO(){
           <div class="check-grid" id="s_cong_more_wrap" style="display:none;margin-top:8px;align-items:flex-end;">
             <label class="inline-check"><input type="checkbox" id="s_cong_localised" onchange="renderPreview(); scheduleWorkingSave();"> Localised</label>
             <label class="inline-check"><input type="checkbox" id="s_cong_residual" onchange="renderPreview(); scheduleWorkingSave();"> Residual</label>
+            <label class="inline-check"><input type="checkbox" id="s_cong_clearing" onchange="renderPreview(); scheduleWorkingSave();"> Clearing</label>
             <span style="width:1px;height:24px;background:var(--line-strong,#c4ccc7);margin:0 4px;align-self:center;"></span>
             <div style="display:flex;flex-direction:column;gap:3px;">
               <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted,#5f6863);">Including</span>
@@ -8288,9 +8294,11 @@ function renderINO(){
   const unitLabel = (typeof inoLengthUnit !== 'undefined' && inoLengthUnit === 'm') ? 'm' : 'km';
   const lengthStr = length ? `${length} ${unitLabel}` : '';
   const congTypeWord = congType ? ` ${congType}` : '';
+  // v207.26: "Clearing" → "8 km of residual congestion clearing from …"
+  const congClearingWord = (document.getElementById('s_cong_clearing')||{}).checked ? ' clearing' : '';
   const peakSuffix = congPeak ? ` including ${congPeak.toUpperCase()} peak` : '';
   const lengthCongPlain = lengthStr
-    ? [ `${lengthStr} of${congTypeWord} congestion`, congestion ].filter(Boolean).join(' ') + peakSuffix
+    ? [ `${lengthStr} of${congTypeWord} congestion${congClearingWord}`, congestion ].filter(Boolean).join(' ') + peakSuffix
     : congestion;
   let lengthCong;
   if (finalOn && congestionClear) lengthCong = 'nil congestion';
@@ -8370,7 +8378,7 @@ function renderINO(){
         if (!(inoAllOpenAnnounced)) regSeg(laneRegStr, 's_lanes_field');
       }
       regSeg(oppStr, 's_opp_text');
-      const lengthPortionF = lengthStr ? `${lengthStr} of${congTypeWord} congestion` : '';
+      const lengthPortionF = lengthStr ? `${lengthStr} of${congTypeWord} congestion${congClearingWord}` : '';
       regSeg((lengthPortionF && lengthCong.indexOf(lengthPortionF) !== -1) ? lengthPortionF : lengthCong, 's_length');
       // On a FINAL the congestion reads "Residual congestion of 1.3km from Sandgate" — the
       // "Xkm of congestion" form above never appears, so also register the bare "Xkm" token
@@ -10823,7 +10831,7 @@ function collectFormState(){
         board: cloneBoard(inoBoard),
         congestionYN: rb('s_congestion_yn'),
         length: gv('s_length'), lengthUnit: (typeof inoLengthUnit !== 'undefined') ? inoLengthUnit : 'km',
-        congLocalised: !!(document.getElementById('s_cong_localised')||{}).checked, congResidual: !!(document.getElementById('s_cong_residual')||{}).checked, congPeakVal: (document.querySelector('input[name="s_cong_peak"]:checked')||{}).value || '', congestion: gv('s_congestion'),
+        congLocalised: !!(document.getElementById('s_cong_localised')||{}).checked, congResidual: !!(document.getElementById('s_cong_residual')||{}).checked, congClearing: !!(document.getElementById('s_cong_clearing')||{}).checked, congPeakVal: (document.querySelector('input[name="s_cong_peak"]:checked')||{}).value || '', congestion: gv('s_congestion'),
         diversion: rb('s_diversion'), divAvailable: rb('s_div_available'), diversionText: gv('s_diversion_text'),
         addlInfo: gv('s_addl_info'),
         addlSep: gv('s_addl_sep') || '.',
@@ -12644,6 +12652,7 @@ function applyDraft(s){
     set('s_length', a.length); set('s_congestion', a.congestion);
     if (a.congLocalised){ const cl = document.getElementById('s_cong_localised'); if (cl) cl.checked = true; }
     if (a.congResidual){ const cr = document.getElementById('s_cong_residual'); if (cr) cr.checked = true; }
+    if (a.congClearing){ const cc = document.getElementById('s_cong_clearing'); if (cc) cc.checked = true; }
     if (a.congPeakVal){ setRadio('s_cong_peak', a.congPeakVal); }
     // Legacy: old congType radio → map to checkboxes
     if (a.congType && !a.congLocalised && !a.congResidual){
