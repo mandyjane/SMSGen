@@ -1169,7 +1169,7 @@
   .bcc-other-item > .inline-check { flex:1; min-width:0; }
   .bcc-other-del { font: inherit; font-size:14px; line-height:1; width:22px; height:22px; padding:0; border:none; background:transparent; color: var(--ink-soft); cursor:pointer; border-radius:4px; }
   .bcc-other-del:hover { background: var(--line, #eef0f2); color: var(--ink, #1a1f24); }
-  .bcc-other-add { display:block; font-size:12.5px; margin-top:6px; }
+  .bcc-other-add { display:block; font-size:12.5px; margin-top:2px; padding-top:2px !important; padding-bottom:2px !important; line-height:1.3; }
   .bcc-other-row { display:flex; gap:6px; align-items:center; margin-top:6px; }
   .bcc-other-row input { flex:1; min-width:0; }
   /* v207.20: INO lane board */
@@ -1644,7 +1644,18 @@
   .bcc-route-opt:hover:not(.on) { color: var(--ink-soft, #5f6863); }
   .bcc-route-opt:focus-visible { outline:2px solid var(--blue,#1a5fc7); outline-offset:2px; border-radius:3px; }
   .bcc-route-sl { color:#c4ccc7; font-weight:400; }
-  .bcc-dep-toggle { display:inline-flex; align-items:center; gap:6px; font-size:13.5px; margin-top:12px; }
+  /* v208.12: Departed is a full-width bar so it stands apart from the column links */
+  .bcc-dep-toggle { display:flex; align-items:center; gap:7px; width:100%; margin-top:14px; padding:8px 12px;
+    font: inherit; font-size:13px; font-weight:600; color: var(--ink, #1a1f24); text-align:left; cursor:pointer;
+    background:#f3f5f4; border:1px solid var(--line-strong, #c4ccc7); border-radius:8px; }
+  .bcc-dep-toggle:hover { background:#eceff0; }
+  .bcc-dep-toggle[aria-expanded="true"] { border-bottom-left-radius:0; border-bottom-right-radius:0; }
+  .bcc-dep-toggle .ml-chev { color: var(--ink-soft); font-size:11px; width:10px; }
+  .bcc-dep-toggle .ti { color: var(--ink-soft); font-size:15px; }
+  .bcc-dep-count { margin-left:auto; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background: var(--ink, #1a1f24); color:#fff; font-size:11.5px; display:inline-flex; align-items:center; justify-content:center; }
+  .bcc-dep-toggle[aria-expanded="true"] + .bcc-dep-box { margin-top:0; border-top:none; border-top-left-radius:0; border-top-right-radius:0; }
+  /* v208.12: More sits directly above + Other with minimal gap */
+  .bcc-resp-more-btn { padding:2px 0 !important; margin-top:2px; line-height:1.3; }
   .bcc-dep-box { margin-top:8px; padding:12px 14px; border:1px solid var(--line); border-radius:10px; background:#fafbfa; }
   .bcc-dep-box .check-grid { margin-top:0; }
   .bcc-unit { position:relative; flex:1 1 0; }
@@ -2098,7 +2109,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.14</span>
+    <span class="app-version">Version 208.16</span>
   </footer>
 </div>
 
@@ -3008,7 +3019,9 @@ function buildBCC(){
       <div class="resp-cols resp-cols-2">
         <div>
           <span class="field-label">At scene</span>
-          ${BCC_RESPONDERS.map(r=>`<label class="inline-check"><input type="checkbox" class="b_resp_scene" value="${r}" onchange="syncBccResponder('scene','${r}')"> ${r}</label>`).join('')}
+          ${BCC_RESP_CORE.map(r=>`<label class="inline-check"><input type="checkbox" class="b_resp_scene" value="${r}" onchange="syncBccResponder('scene','${r}')"> ${r}</label>`).join('')}
+          <div class="bcc-resp-more" style="display:none;">${BCC_RESP_MORE.map(r=>`<label class="inline-check"><input type="checkbox" class="b_resp_scene" value="${r}" onchange="syncBccResponder('scene','${r}')"> ${r}</label>`).join('')}</div>
+          <button type="button" class="moreless-btn bcc-resp-more-btn" aria-expanded="false" onclick="toggleBccRespMore()"><span class="ml-label">More</span> <span class="ml-chev">\u25be</span></button>
           <div id="b_resp_custom_scene"></div><button type="button" class="link-btn bcc-other-add" id="b_resp_other_btn_scene" onclick="openBccOtherResp('scene')">+ Other</button><div class="bcc-other-row" id="b_resp_other_row_scene" style="display:none;"><input type="text" id="b_resp_other_txt_scene" placeholder="Other responder" onkeydown="onBccOtherRespKey(event, 'scene')"><button type="button" class="dur-quick-btn" onclick="addBccOtherResp('scene')">Add</button></div>
         </div>
         <div>
@@ -3017,7 +3030,9 @@ function buildBCC(){
             <span class="bcc-route-sl" aria-hidden="true">/</span>
             <button type="button" class="bcc-route-opt" data-v="proceeding" role="radio" aria-checked="false" onclick="setBccRouteSuffix('proceeding')">Proceeding</button>
           </div>
-          ${BCC_RESPONDERS.map(r=>`<label class="inline-check"><input type="checkbox" class="b_resp_route" value="${r}" onchange="syncBccResponder('route','${r}')"> ${r}</label>`).join('')}
+          ${BCC_RESP_CORE.map(r=>`<label class="inline-check"><input type="checkbox" class="b_resp_route" value="${r}" onchange="syncBccResponder('route','${r}')"> ${r}</label>`).join('')}
+          <div class="bcc-resp-more" style="display:none;">${BCC_RESP_MORE.map(r=>`<label class="inline-check"><input type="checkbox" class="b_resp_route" value="${r}" onchange="syncBccResponder('route','${r}')"> ${r}</label>`).join('')}</div>
+          <button type="button" class="moreless-btn bcc-resp-more-btn" aria-expanded="false" onclick="toggleBccRespMore()"><span class="ml-label">More</span> <span class="ml-chev">\u25be</span></button>
           <div id="b_resp_custom_route"></div><button type="button" class="link-btn bcc-other-add" id="b_resp_other_btn_route" onclick="openBccOtherResp('route')">+ Other</button><div class="bcc-other-row" id="b_resp_other_row_route" style="display:none;"><input type="text" id="b_resp_other_txt_route" placeholder="Other responder" onkeydown="onBccOtherRespKey(event, 'route')"><button type="button" class="dur-quick-btn" onclick="addBccOtherResp('route')">Add</button></div>
           <div style="display:none;">
             <input type="radio" name="b_route_suffix" value="en route" checked onchange="renderPreview()">
@@ -3025,7 +3040,7 @@ function buildBCC(){
           </div>
         </div>
       </div>
-      <button type="button" class="link-btn bcc-dep-toggle" id="b_departed_toggle" aria-expanded="false" onclick="toggleBccDeparted()"><span class="ml-chev">\u25b8</span> Departed</button>
+      <button type="button" class="bcc-dep-toggle" id="b_departed_toggle" aria-expanded="false" onclick="toggleBccDeparted()"><span class="ml-chev">\u25b8</span><i class="ti ti-logout" aria-hidden="true"></i> Departed <span class="bcc-dep-count" id="b_departed_count" style="display:none;"></span></button>
       <div class="bcc-dep-box" id="b_departed_wrap" style="display:none;">
         <p class="hint" id="b_departed_empty" style="margin:0;">Tick responders At scene or En route to mark them departed.</p>
         <div class="check-grid" id="b_departed_grid">
@@ -3098,7 +3113,10 @@ function buildBCC(){
 
 
 /* ---------- BCC: responder list (INO order, FCU moved above Maintenance) ---------- */
-const BCC_RESPONDERS = ["TRU","TMA","Towing","QPS","QAS","QFD","TQ","FCU","Maintenance","Heavy haulage","Road Steward","Media","Energex","Traffic Control"];   // v208.03: + Media, Energex, Traffic Control
+const BCC_RESPONDERS = ["TRU","TMA","Towing","QPS","QAS","QFD","TQ","FCU","Maintenance","Heavy haulage","Road Steward","Media","Energex","Traffic Control"];
+// v208.12: these sit behind one "More" that opens in both At scene and En route.
+const BCC_RESP_MORE = ["TQ","Road Steward","Media","Energex","Traffic Control"];
+const BCC_RESP_CORE = BCC_RESPONDERS.filter(r => !BCC_RESP_MORE.includes(r));   // v208.03: + Media, Energex, Traffic Control
 const BCC_SEVERITY = ["Minor","Moderate","Serious","Critical","Life threatening","Medical episode","Fatality"];
 
 /* Stage drives subject suffix, Advice Number, and the Next Update default. */
@@ -3307,6 +3325,21 @@ function syncBccRouteHeading(){
    En route (plus anyone already departed). Unticking Departed puts them back where they were. */
 let bccDepartedFrom = {};
 let bccDepartedUserToggled = false;
+/* v208.12: one More/Less for the less-used responders, opening them in both columns. */
+let bccRespMoreUserToggled = false;
+function toggleBccRespMore(force){
+  const btns = document.querySelectorAll('.bcc-resp-more-btn');
+  const boxes = document.querySelectorAll('.bcc-resp-more');
+  if (!btns.length || !boxes.length) return;
+  const isOpen = boxes[0].style.display !== 'none';
+  const open = (typeof force === 'boolean') ? force : !isOpen;
+  if (typeof force !== 'boolean') bccRespMoreUserToggled = true;
+  boxes.forEach(b => b.style.display = open ? 'block' : 'none');
+  btns.forEach(btn => {
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    const l = btn.querySelector('.ml-label'); if (l) l.textContent = open ? 'Less' : 'More';
+  });
+}
 function toggleBccDeparted(force){
   const wrap = document.getElementById('b_departed_wrap');
   const btn = document.getElementById('b_departed_toggle');
@@ -3332,6 +3365,10 @@ function applyBccDepartedOptions(){
   const empty = document.getElementById('b_departed_empty');
   if (empty) empty.style.display = any ? 'none' : 'block';
   if (anyDeparted && !bccDepartedUserToggled) toggleBccDeparted(true);
+  { const n = wrap.querySelectorAll('.b_resp_departed:checked').length;
+    const cEl = document.getElementById('b_departed_count');
+    if (cEl){ cEl.textContent = n; cEl.style.display = n ? '' : 'none'; } }
+  if (!bccRespMoreUserToggled && document.querySelector('.bcc-resp-more input:checked')) toggleBccRespMore(true);
   syncBccRouteHeading();
 }
 function syncBccResponder(col, name){
@@ -3815,7 +3852,7 @@ function flashCopied(msg){
 function clearFormBCC(){
   bccCustomResp = [];
   bccBoard = emptyBccBoard();
-  bccDepartedFrom = {}; bccDepartedUserToggled = false;
+  bccDepartedFrom = {}; bccDepartedUserToggled = false; bccRespMoreUserToggled = false;
   bccUpdateNum = 2;
   buildBCC();
   attachLiveListeners();
@@ -6966,7 +7003,9 @@ function buildINO(){
       </div>
       <div class="check-grid moreless-extra" id="s_cross_pos_extra" data-open-display="flex" style="display:none; margin-bottom:8px;">
         ${["between","intersection of"].map(p=>`<label class="inline-check"><input type="radio" name="s_cross_pos" value="${p}" onchange="onCrossPosChange('s')"> ${p}</label>`).join('')}
+        <label class="inline-check"><input type="radio" name="s_cross_pos" value="custom" onchange="onCrossPosChange('s')"> Custom</label>
       </div>
+      <input type="text" id="s_cross_pos_custom" placeholder="e.g. 1 km prior to" style="display:none; margin-bottom:6px;" oninput="renderPreview(); scheduleWorkingSave();">
       <input type="text" id="s_cross" placeholder="e.g. Smith St">
       <input type="text" id="s_cross2" placeholder="and… (second road / street)" style="display:none; margin-top:6px;" oninput="renderPreview()">
     </div>
@@ -7044,7 +7083,10 @@ function buildINO(){
       <span class="field-label">Fatalities</span>
       <div class="check-grid">${ynuDesel('s_fat','onInoFatalChange')}<span class="unknown-note" id="s_fat_unknown_note">will not generate text</span></div>
       <div id="s_fat_field" style="display:none;margin-top:10px;">
-        <input type="number" min="0" max="999" id="s_fat_count" class="shrink" placeholder="0" style="max-width:110px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <input type="number" min="0" max="999" id="s_fat_count" class="shrink" placeholder="0" style="max-width:110px;">
+          <label class="inline-check"><input type="checkbox" id="s_fat_confirmed" onchange="renderPreview(); scheduleWorkingSave();"> Confirmed</label>
+        </div>
       </div>
     </div>
 
@@ -7573,7 +7615,7 @@ function applyMorelessAutoExpand(){
     !!document.querySelector(`.s_dir[value="${v}"]:checked`));
   if (dirHidden) toggleMoreless('s_dir', true);
   // Intersecting road/street: near / adjacent to / intersection of are hidden.
-  const crossHidden = ['between','intersection of'].some(v =>
+  const crossHidden = ['between','intersection of','custom'].some(v =>
     !!document.querySelector(`input[name="s_cross_pos"][value="${v}"]:checked`));
   if (crossHidden) toggleMoreless('s_cross_pos', true);
   // v165: reveal the INO lane More panel if Unknown is ticked.
@@ -7728,6 +7770,12 @@ function onCrossPosChange(prefix){
     if (pos === 'between'){ box2.style.display = ''; }
     else { box2.style.display = 'none'; box2.value = ''; }
   }
+  // v208.16: Custom → show the free-text wording box (kept, not cleared, if you switch away and back)
+  const cust = document.getElementById(`${prefix}_cross_pos_custom`);
+  if (cust){
+    cust.style.display = pos === 'custom' ? '' : 'none';
+    if (pos === 'custom' && !cust.value) setTimeout(() => cust.focus(), 0);
+  }
   renderPreview();
 }
 
@@ -7743,6 +7791,11 @@ function buildCrossClause(prefix){
     if (txt && txt2) return `between ${txt} and ${txt2}`;
     if (txt) return `between ${txt}`;   // second not yet entered — show partial
     return '';
+  }
+  if (pos === 'custom'){
+    // v208.16: operator's own wording, as typed, before the road ("500 m north of Smith Street")
+    const c = ((document.getElementById(`${prefix}_cross_pos_custom`)||{}).value || '').trim();
+    return [c, txt].filter(Boolean).join(' ');
   }
   if (txt && pos) return `${pos} ${txt}`;
   return txt || pos;
@@ -8494,7 +8547,12 @@ function renderINO(){
         injBit = (kind === 'count' ? 'injuries updated to ' : 'injury severity updated to ') + injBit;
       }
     }
-    if (fatYes){ const fc = parseInt(fatCount,10) || 0; fatBit = fc === 1 ? '1x fatality' : `${fc}x fatalities`; }
+    if (fatYes){
+      const fc = parseInt(fatCount,10) || 0;
+      // v208.15: "Confirmed" (manual tick) → "1x confirmed fatality" / "2x confirmed fatalities"
+      const conf = (document.getElementById('s_fat_confirmed')||{}).checked ? 'confirmed ' : '';
+      fatBit = fc === 1 ? `1x ${conf}fatality` : `${fc}x ${conf}fatalities`;
+    }
     else if (fatVal === 'unknown') fatBit = '';   // Unknown fatalities are omitted from the SMS
     else if (fatVal === 'no') fatBit = 'nil fatalities';
     const incBits = [eventType, infra, injBit, fatBit].filter(Boolean);
@@ -11202,7 +11260,7 @@ function collectFormState(){
         typeUpdate: (document.getElementById('s_type_update')||{}).checked,
         road: gv('s_road'),
         dir: Array.from(document.querySelectorAll('.s_dir:checked')).map(c=>c.value),
-        cross: gv('s_cross'), cross2: gv('s_cross2'), crossPos: rb('s_cross_pos'), suburb: gv('s_suburb'),
+        cross: gv('s_cross'), cross2: gv('s_cross2'), crossPos: rb('s_cross_pos'), crossPosCustom: gv('s_cross_pos_custom'), suburb: gv('s_suburb'),
         url: gv('s_qld_url'),
         timeHH: gv('s_time_hh'), timeMM: gv('s_time_mm'),
         clearedHH: gv('s_cleared_hh'), clearedMM: gv('s_cleared_mm'),
@@ -11214,7 +11272,7 @@ function collectFormState(){
         crashOtherLabel: rb('s_crash_otherlabel_opt'),
         infra: rb('s_infra'), infraText: gv('s_infra_text'),
         inj: rb('s_inj'), injCount: gv('s_inj_count'), injRows, injQas, injUpd,
-        fat: rb('s_fat'), fatCount: gv('s_fat_count'),
+        fat: rb('s_fat'), fatCount: gv('s_fat_count'), fatConfirmed: !!(document.getElementById('s_fat_confirmed')||{}).checked,
         lanePos: Array.from(document.querySelectorAll('.s_lane_pos:checked')).map(c=>c.value),
         laneCounts: (function(){ const o={}; document.querySelectorAll('.s_lane_pos_num').forEach(el=>{ if(el.value) o[el.dataset.pos]=el.value; }); return o; })(),
         reopenPos: Array.from(document.querySelectorAll('.s_reopen_pos:checked')).map(c=>c.value),
@@ -12663,7 +12721,7 @@ function inoEventDetailFromState(a){
 function summaryDetailLine1(state){
   const t = state.tmpl || 'generic';
   let dir = '', crossPos = '', cross = '';
-  if (t === 'ino'){ const a = state.ino||{}; dir = dirPhraseFromArr(a.dir); crossPos = a.crossPos; cross = a.cross; }
+  if (t === 'ino'){ const a = state.ino||{}; dir = dirPhraseFromArr(a.dir); crossPos = a.crossPos === 'custom' ? (a.crossPosCustom||'') : a.crossPos; cross = a.cross; }
   else if (t === 'av'){ const a = state.av||{}; cross = ''; }
   else if (t === 'avr'){ const a = state.avr||{}; cross = ''; }
   else { dir = dirPhraseFromArr(genericDirArr(state)); crossPos = (state.radios && Object.keys(state.radios).find(k=>state.radios[k]&&k.indexOf('g_cross_pos__')===0)||'').split('__')[1]||''; cross = (state.texts||{})['g_cross']||''; }
@@ -12960,7 +13018,8 @@ function applyDraft(s){
     applyInoTypeDisable();
     // location
     set('s_road', a.road); setChecks('s_dir', a.dir);
-    set('s_cross', a.cross); if (a.crossPos) setRadio('s_cross_pos', a.crossPos); set('s_cross2', a.cross2||''); set('s_suburb', a.suburb);
+    set('s_cross', a.cross); set('s_cross_pos_custom', a.crossPosCustom||''); if (a.crossPos) setRadio('s_cross_pos', a.crossPos); set('s_cross2', a.cross2||''); set('s_suburb', a.suburb);
+    { const cpc = document.getElementById('s_cross_pos_custom'); if (cpc) cpc.style.display = a.crossPos === 'custom' ? '' : 'none'; }
     onCrossPosChange('s');
     set('s_qld_url', a.url);
     set('s_time_hh', a.timeHH); set('s_time_mm', a.timeMM);
@@ -13000,6 +13059,7 @@ function applyDraft(s){
     }
     // fatalities
     if (a.fat){ setRadio('s_fat', a.fat); onInoFatalChange(); set('s_fat_count', a.fatCount); }
+    { const fcf = document.getElementById('s_fat_confirmed'); if (fcf) fcf.checked = !!a.fatConfirmed; }
     // network impact
     setChecks('s_lane_pos', a.lanePos);
     // restore per-position counts, then sync count-box enabled state
