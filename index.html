@@ -2098,7 +2098,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.13</span>
+    <span class="app-version">Version 208.14</span>
   </footer>
 </div>
 
@@ -6764,8 +6764,13 @@ function buildInoDuration(){
   if ((document.getElementById('s_dur_recovery')||{}).checked){
     subjectParts.push('vehicle recovery');
   }
-  if ((document.getElementById('s_dur_fcu')||{}).checked) subjectParts.push('FCU investigation');
-  if ((document.getElementById('s_dur_qps')||{}).checked) subjectParts.push('QPS investigation');
+  { // v208.14: both ticked → one combined item, "FCU & QPS investigation"
+    const fcu = (document.getElementById('s_dur_fcu')||{}).checked;
+    const qps = (document.getElementById('s_dur_qps')||{}).checked;
+    if (fcu && qps) subjectParts.push('FCU & QPS investigation');
+    else if (fcu) subjectParts.push('FCU investigation');
+    else if (qps) subjectParts.push('QPS investigation');
+  }
   if ((document.getElementById('s_dur_cleanup')||{}).checked) subjectParts.push('clean-up');
   if ((document.getElementById('s_dur_emergency_ops')||{}).checked) subjectParts.push('emergency services operation');
   if ((document.getElementById('s_dur_road_surface')||{}).checked) subjectParts.push('road surface assessment');
