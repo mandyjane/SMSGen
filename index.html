@@ -2114,7 +2114,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.18</span>
+    <span class="app-version">Version 208.19</span>
   </footer>
 </div>
 
@@ -8939,7 +8939,8 @@ function renderINO(){
     // escalations, so a FINAL lists all groups that ever attended or were en route.
     // Road Steward is included in sceneList/fullRouteList so it merges naturally.
     const currentAll = sceneList.concat(fullRouteList);
-    const allGroups = mergeGroupLists(inoPriorGroups, currentAll);
+    // v208.19: AES overrides QPS/QAS/QFD carried from earlier escalations.
+    const allGroups = dropAesCovered(mergeGroupLists(inoPriorGroups, currentAll));
     // Sort: "All emergency services" first, "tow" last
     const aesI = allGroups.findIndex(g => g === 'All emergency services');
     if (aesI > 0) { allGroups.splice(aesI, 1); allGroups.unshift('All emergency services'); }
@@ -8947,7 +8948,8 @@ function renderINO(){
     if (towI >= 0) { allGroups.splice(towI, 1); allGroups.push('tow'); }
     const merged = andList(allGroups);
     groupsLine = `${groupsLabel}: ${merged || 'nil'}.`;
-    if (departed) groupsLine += `\n${departed} departed.`;
+    const depFinal = andList(dropAesCovered(departedList));
+    if (depFinal) groupsLine += `\n${depFinal} departed.`;
   } else if (isUpdateContext){
     // v207.17: UPDATE — no Groups at Scene line (changes are on the Update line).
     groupsLine = '';
@@ -10686,6 +10688,12 @@ function autoExpandRespMore(){
   });
 }
 
+/* v208.19: groups covered by "All emergency services". */
+function inoAesCovered(){ return ['QPS','QAS','QFD']; }
+function dropAesCovered(list){
+  if (!list.some(g => g === 'All emergency services')) return list;
+  return list.filter(g => inoAesCovered().indexOf(g) === -1);
+}
 function syncInoGroup(which, value){
   const thisCls  = which === 'scene' ? 's_groups_ck' : 's_route_ck';
   const otherCls = which === 'scene' ? 's_route_ck'  : 's_groups_ck';
@@ -10697,6 +10705,14 @@ function syncInoGroup(which, value){
     });
     // v207.18: back at scene → no longer departed
     if (which === 'scene') document.querySelectorAll('.s_departed_ck').forEach(c=>{ if (c.value === value) c.checked = false; });
+    // v208.19: "All emergency services" covers QPS, QAS and QFD — untick them in the same
+    // column; AES at scene also clears them from Proceeding (they're all at scene now).
+    if (value === 'All emergency services'){
+      const clsList = which === 'scene' ? [thisCls, otherCls] : [thisCls];
+      clsList.forEach(cls => document.querySelectorAll('.'+cls).forEach(c=>{
+        if (inoAesCovered().indexOf(c.value) !== -1) c.checked = false;
+      }));
+    }
   }
   updateAllRespSummaries();
   renderPreview();
