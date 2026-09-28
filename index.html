@@ -1004,6 +1004,11 @@
     transition: all 0.13s ease;
   }
   .inline-check:hover { border-color: var(--teal); background: var(--teal-soft-2); }
+  /* v208.18: never spill out of the pill — long labels truncate with "…" (full text on hover). */
+  .inline-check { max-width: 100%; min-width: 0; overflow: hidden; }
+  .inline-check > input, .inline-check > button, .inline-check > select { flex-shrink: 0; }
+  .inline-check > .ic-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .inline-check > .ic-text.ic-short { flex-shrink: 0; overflow: visible; }   /* short codes (QPS, TRU, L1) never truncate */
   .inline-check input:not([type="number"]) { accent-color: var(--teal); width: 15px; height: 15px; margin: 0; cursor: pointer; }
   /* Suppress the native focus ring drawn around a radio/checkbox after a mouse
      click (the pill itself already shows the selected state). Keyboard focus
@@ -2109,7 +2114,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.16</span>
+    <span class="app-version">Version 208.18</span>
   </footer>
 </div>
 
@@ -4578,6 +4583,14 @@ function inoDiversionsWereAvailable(){
   return inoPrevDivAvail === 'yes' || inoDivAvailBeforeNo
     || (document.querySelector('input[name="s_div_available"]:checked')||{}).value === 'yes';
 }
+/* v208.17: remember the order FCU / QPS investigation were ticked in, so the combined wording
+   leads with whichever came first. Unticking removes it from the order. */
+let inoInvestOrder = [];
+function noteInoInvestOrder(el){
+  const k = el.id === 's_dur_qps' ? 'QPS' : 'FCU';
+  inoInvestOrder = inoInvestOrder.filter(x => x !== k);
+  if (el.checked) inoInvestOrder.push(k);
+}
 function isInoUpdateContext(){
   if (Array.isArray(inoPrevLanes)) return true;   // advanced/updated from a prior message
   if (inoUpdate.on) return true;
@@ -6804,7 +6817,8 @@ function buildInoDuration(){
   { // v208.14: both ticked → one combined item, "FCU & QPS investigation"
     const fcu = (document.getElementById('s_dur_fcu')||{}).checked;
     const qps = (document.getElementById('s_dur_qps')||{}).checked;
-    if (fcu && qps) subjectParts.push('FCU & QPS investigation');
+    // v208.17: whichever was ticked first leads ("QPS & FCU investigation" if QPS came first)
+    if (fcu && qps) subjectParts.push(inoInvestOrder[0] === 'QPS' ? 'QPS & FCU investigation' : 'FCU & QPS investigation');
     else if (fcu) subjectParts.push('FCU investigation');
     else if (qps) subjectParts.push('QPS investigation');
   }
@@ -7453,8 +7467,8 @@ function buildINO(){
       <div class="resp-group-label" style="margin-top:0;">Subject to:</div>
       <div class="check-grid check-grid--2col">
         <label class="inline-check"><input type="checkbox" id="s_dur_recovery" onchange="onInoRecoveryChange(); renderPreview(); scheduleWorkingSave();"> Vehicle recovery</label>
-        <label class="inline-check"><input type="checkbox" id="s_dur_fcu" onchange="renderPreview(); scheduleWorkingSave();"> FCU investigation</label>
-        <label class="inline-check"><input type="checkbox" id="s_dur_qps" onchange="renderPreview(); scheduleWorkingSave();"> QPS investigation</label>
+        <label class="inline-check"><input type="checkbox" id="s_dur_fcu" onchange="noteInoInvestOrder(this); renderPreview(); scheduleWorkingSave();"> FCU investigation</label>
+        <label class="inline-check"><input type="checkbox" id="s_dur_qps" onchange="noteInoInvestOrder(this); renderPreview(); scheduleWorkingSave();"> QPS investigation</label>
         <label class="inline-check"><input type="checkbox" id="s_dur_cleanup" onchange="renderPreview(); scheduleWorkingSave();"> Clean-up</label>
         <label class="inline-check"><input type="checkbox" id="s_dur_emergency_ops" onchange="renderPreview(); scheduleWorkingSave();"> Emergency services operation</label>
         <label class="inline-check"><input type="checkbox" id="s_dur_road_surface" onchange="renderPreview(); scheduleWorkingSave();"> Road surface assessment</label>
@@ -8255,6 +8269,7 @@ function applyInoTimeLock(){
 }
 
 function clearFormINO(){
+  inoInvestOrder = [];
   previewLockedText = null; previewEditing = false;
   carryClearState();   // fresh message: no carried-over text from the previous one
   sloReset();
@@ -11306,6 +11321,7 @@ function collectFormState(){
         durRecovery: (document.getElementById('s_dur_recovery')||{}).checked,
         durFcu: (document.getElementById('s_dur_fcu')||{}).checked,
         durQps: (document.getElementById('s_dur_qps')||{}).checked,
+        durInvestOrder: inoInvestOrder.slice(),
         durCleanup: (document.getElementById('s_dur_cleanup')||{}).checked,
         durEmergencyOps: (document.getElementById('s_dur_emergency_ops')||{}).checked,
         durRoadSurface: (document.getElementById('s_dur_road_surface')||{}).checked,
@@ -13166,6 +13182,7 @@ function applyDraft(s){
     if (a.durFcuQps){ const f=document.getElementById('s_dur_fcu'); if(f) f.checked=true; const q=document.getElementById('s_dur_qps'); if(q) q.checked=true; }
     if (a.durFcu){ const f = document.getElementById('s_dur_fcu'); if (f) f.checked = true; }
     if (a.durQps){ const q = document.getElementById('s_dur_qps'); if (q) q.checked = true; }
+    inoInvestOrder = Array.isArray(a.durInvestOrder) ? a.durInvestOrder.filter(k => k === 'FCU' || k === 'QPS') : [];
     if (a.durCleanup){ const cl = document.getElementById('s_dur_cleanup'); if (cl){ cl.checked = true; } }
     if (a.durEmergencyOps){ const eo = document.getElementById('s_dur_emergency_ops'); if (eo){ eo.checked = true; } }
     if (a.durRoadSurface){ const rs = document.getElementById('s_dur_road_surface'); if (rs){ rs.checked = true; } }
@@ -13948,6 +13965,36 @@ renderDraftsList();
 renderPreview();
 // Delegated click on preview segments (click-to-field when not editing).
 { const _pv = document.getElementById('g_output_text'); if (_pv) _pv.addEventListener('click', onPreviewSegmentClick); }
+
+/* v208.18: wrap the text of every pill label in <span class="ic-text"> so CSS can truncate it
+   with an ellipsis when space is tight; the full text goes in the tooltip. Runs on load and
+   whenever templates rebuild (MutationObserver, batched per frame). */
+(function(){
+  let pending = false;
+  function wrapAll(){
+    pending = false;
+    document.querySelectorAll('label.inline-check:not([data-ic])').forEach(lbl => {
+      lbl.setAttribute('data-ic', '1');
+      const parts = [];
+      Array.from(lbl.childNodes).forEach(n => {
+        if (n.nodeType === 3 && n.nodeValue.trim()){
+          const s = document.createElement('span');
+          s.className = 'ic-text';
+          s.textContent = n.nodeValue.trim();
+          if (s.textContent.length <= 4) s.classList.add('ic-short');
+          parts.push(s.textContent);
+          lbl.replaceChild(s, n);
+        }
+      });
+      if (parts.length && !lbl.title) lbl.title = parts.join(' ');
+    });
+  }
+  function schedule(){ if (!pending){ pending = true; requestAnimationFrame(wrapAll); } }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', schedule); else schedule();
+  new MutationObserver(muts => {
+    for (const m of muts){ for (const n of m.addedNodes){ if (n.nodeType === 1 && (n.matches('label.inline-check') || n.querySelector && n.querySelector('label.inline-check'))){ schedule(); return; } } }
+  }).observe(document.documentElement, { childList: true, subtree: true });
+})();
 </script>
 <!-- SLO PIN modal -->
 <div class="slo-modal-backdrop" id="sloPinModal" role="dialog" aria-modal="true" aria-label="SLO PIN entry">
