@@ -858,6 +858,10 @@
   .field { padding: 10px 0; border-top: 1px solid var(--line); }
   .field:first-child { border-top: none; padding-top: 4px; }
 
+  /* v208.20: Response label row with the update-only "Include all responders" pill on the right. */
+  .resp-head-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; min-height: 26px; }
+  .inline-check.resp-all-pill { font-size: 12px; padding: 3px 10px; gap: 6px; }
+  .inline-check.resp-all-pill input:not([type="number"]) { width: 13px; height: 13px; }
   .field-label {
     display: block; font-family: var(--mono); font-size: 11px;
     letter-spacing: 0.07em; text-transform: uppercase;
@@ -1556,6 +1560,16 @@
   .preview-card.clickable .seg { cursor: pointer; }
   .preview-card.clickable.generic .seg:hover { background: var(--teal-soft); box-shadow: 0 0 0 1px var(--teal) inset; }
   .preview-card.clickable.ino .seg:hover { background: var(--blue-soft); box-shadow: 0 0 0 1px var(--blue) inset; }
+  /* v208.20: hover box for "keep highlighted" mode — drawn over the text (multiply keeps it readable
+     and lets the amber change highlight show through). */
+  .preview-card.clickable.held-hover-on { cursor: pointer; }
+  #heldHoverLayer { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+  .held-hover-box { position: fixed; border-radius: 3px; }
+  .held-hover-box.ino { box-shadow: 0 0 0 1px var(--blue) inset; }
+  .held-hover-box.generic { box-shadow: 0 0 0 1px var(--teal) inset; }
+  /* Fill painted under the text via the CSS Custom Highlight API (over the amber highlight). */
+  ::highlight(held-hover-ino) { background-color: var(--blue-soft); }
+  ::highlight(held-hover-generic) { background-color: var(--teal-soft); }
   /* Editing state: contenteditable, coloured outline per template. */
   .preview-card.editing { outline: none; white-space: pre-wrap; }
   .preview-card.editing.generic { border-color: var(--teal); box-shadow: 0 0 0 2px var(--teal-soft); }
@@ -2114,7 +2128,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.19</span>
+    <span class="app-version">Version 208.20</span>
   </footer>
 </div>
 
@@ -7374,7 +7388,10 @@ function buildINO(){
     <div class="ino-seg-body">
 
     <div class="field" id="s_groups_field">
-      <span class="field-label">Response</span>
+      <div class="resp-head-row">
+        <span class="field-label" style="margin:0;">Response</span>
+        <label class="inline-check resp-all-pill" id="s_resp_all_wrap" style="display:none;" title="On an update, list every responder at scene and proceeding, not just the changes"><input type="checkbox" id="s_resp_all" onchange="renderPreview(); scheduleWorkingSave();"> Include all responders</label>
+      </div>
       <div class="responder-cols">
         <div class="responder-col-card">
           <h4>At scene</h4>
@@ -8479,6 +8496,10 @@ function renderINO(){
 
   // Resolution
   applyInoDepartedOptions();
+  { // v208.20: "Include all responders" is offered on updates only (No.2+ / Update from draft).
+    const w = document.getElementById('s_resp_all_wrap');
+    if (w) w.style.display = isInoUpdateContext() ? '' : 'none';
+  }
   const groupList = Array.from(document.querySelectorAll('.s_groups_ck:checked')).map(c=>c.value);
   const groupsOtherOn = (document.getElementById('s_groups_other_ck')||{}).checked;
   if (groupsOtherOn){ const o = get('s_groups_other'); if (o) groupList.push(o); }
@@ -8875,8 +8896,11 @@ function renderINO(){
     if (isUpdateContext){
       const prev = inoPrevGroupSnap || { scene:[], route:[], departed:[] };
       const has = (list, g) => list.some(x => String(x).toLowerCase() === String(g).toLowerCase());
-      const newScene = sceneList.filter(g => !has(prev.scene, g));
-      const newRoute = fullRouteList.filter(g => !has(prev.route, g) && !has(prev.scene, g));
+      // v208.20: "Include all responders" lists everyone at scene / proceeding, not just changes.
+      // Departed still reports only newly departed groups.
+      const respAll = !!(document.getElementById('s_resp_all')||{}).checked;
+      const newScene = respAll ? sceneList.slice() : sceneList.filter(g => !has(prev.scene, g));
+      const newRoute = respAll ? fullRouteList.slice() : fullRouteList.filter(g => !has(prev.route, g) && !has(prev.scene, g));
       const newDep = departedList.filter(g => !has(prev.departed, g));
       const grpBits = [];
       if (newScene.length) grpBits.push(`${andList(newScene)} at scene`);
@@ -9216,6 +9240,7 @@ function decoratePreviewSegments(t){
   // so a click can be resolved by character offset without replacing the diff HTML.
   const holdMode = !!(heldDiff.active && heldDiff.before);
   out._segMarks = null;
+  clearHeldHover();
   const text = out.textContent;
   // Build a list of {start,end,seg} spans by locating each mapped field value.
   const marks = [];
@@ -9388,6 +9413,59 @@ function previewClickOffset(out, e){
     total += n.nodeValue.length;
   }
   return -1;
+}
+/* v208.20: in "keep highlighted" mode the diff owns the preview HTML (no .seg spans), so
+   hovering showed nothing. Resolve the hovered segment by character offset (same map the
+   click uses): the fill is a CSS highlight (paints under the text), the outline a
+   non-interactive overlay. */
+function clearHeldHover(){
+  const ov = document.getElementById('heldHoverLayer');
+  if (ov){ ov.innerHTML = ''; ov.dataset.key = ''; }
+  if (window.CSS && CSS.highlights){ CSS.highlights.delete('held-hover-ino'); CSS.highlights.delete('held-hover-generic'); }
+  const out = document.getElementById('g_output_text');
+  if (out) out.classList.remove('held-hover-on');
+}
+function heldRangeFor(out, start, end){
+  const walker = document.createTreeWalker(out, NodeFilter.SHOW_TEXT);
+  let total = 0, n, sNode = null, sOff = 0, eNode = null, eOff = 0;
+  while ((n = walker.nextNode())){
+    const len = n.nodeValue.length;
+    if (!sNode && start < total + len){ sNode = n; sOff = start - total; }
+    if (sNode && end <= total + len){ eNode = n; eOff = end - total; break; }
+    total += len;
+  }
+  if (!sNode || !eNode) return null;
+  const r = document.createRange(); r.setStart(sNode, sOff); r.setEnd(eNode, eOff);
+  return r;
+}
+function onPreviewHeldHover(e){
+  const out = document.getElementById('g_output_text');
+  const map = out && out._segMarks;
+  if (!out || previewEditing || !map || !(heldDiff.active && heldDiff.before) || out.textContent !== map.text){ clearHeldHover(); return; }
+  const pos = previewClickOffset(out, e);
+  const hit = pos < 0 ? null : map.marks.find(m => pos >= m.start && pos < m.end);
+  if (!hit){ clearHeldHover(); return; }
+  let ov = document.getElementById('heldHoverLayer');
+  if (!ov){ ov = document.createElement('div'); ov.id = 'heldHoverLayer'; document.body.appendChild(ov); }
+  if (ov.dataset.key === hit.seg + ':' + hit.start && ov.childElementCount){ out.classList.add('held-hover-on'); return; }
+  ov.dataset.key = hit.seg + ':' + hit.start;
+  ov.innerHTML = '';
+  const r = heldRangeFor(out, hit.start, hit.end);
+  if (!r) return;
+  const tone = out.classList.contains('generic') ? 'generic' : 'ino';
+  if (window.CSS && CSS.highlights && typeof Highlight === 'function'){
+    CSS.highlights.delete('held-hover-ino'); CSS.highlights.delete('held-hover-generic');
+    CSS.highlights.set('held-hover-' + tone, new Highlight(r));
+  }
+  Array.from(r.getClientRects()).forEach(rc => {
+    if (rc.width < 1) return;
+    const b = document.createElement('div');
+    b.className = 'held-hover-box ' + tone;
+    b.style.left = (rc.left - 1) + 'px'; b.style.top = rc.top + 'px';
+    b.style.width = (rc.width + 2) + 'px'; b.style.height = rc.height + 'px';
+    ov.appendChild(b);
+  });
+  out.classList.add('held-hover-on');
 }
 function onPreviewSegmentClick(e){
   if (previewEditing) return;
@@ -10101,7 +10179,9 @@ function onKeepHighlightChange(){
     // Freeze against the current "before" if we have one; else against the last shown diff.
     if (heldDiff.before == null) heldDiff.before = _lastDiffBefore;
     heldDiff.active = !!heldDiff.before;
-    reapplyHeldDiff();
+    // v208.20: full render (not just reapplyHeldDiff) so the click/hover segment map is built
+    // straight away — before, clicks did nothing until the next edit re-rendered.
+    renderPreview();
   } else {
     heldDiff = { before: null, active: false };
     renderPreview();   // drop back to clean text
@@ -11328,6 +11408,7 @@ function collectFormState(){
         cctv: rb('s_cctv'),
         actOther: Array.from(document.querySelectorAll('.s_act_other_ck:checked')).map(c=>c.value),
         groupsList: Array.from(document.querySelectorAll('.s_groups_ck:checked')).map(c=>c.value),
+        respAll: !!(document.getElementById('s_resp_all')||{}).checked,
         groupsOther: (document.getElementById('s_groups_other_ck')||{}).checked, groupsOtherText: gv('s_groups_other'),
         routeList: Array.from(document.querySelectorAll('.s_route_ck:checked')).map(c=>c.value),
         routeOther: (document.getElementById('s_route_other_ck')||{}).checked, routeOtherText: gv('s_route_other'),
@@ -13187,6 +13268,7 @@ function applyDraft(s){
     if (a.actOther && a.actOther.length){ setChecks('s_act_other_ck', a.actOther); toggleActOther(true); }
     // resolution
     setChecks('s_groups_ck', a.groupsList);
+    { const ra = document.getElementById('s_resp_all'); if (ra) ra.checked = !!a.respAll; }
     if (a.groupsOther){ document.getElementById('s_groups_other_ck').checked = true; onInoGroupsOtherChange(); set('s_groups_other', a.groupsOtherText); }
     setChecks('s_route_ck', a.routeList);
     if (a.routeOther){ document.getElementById('s_route_other_ck').checked = true; onInoRouteOtherChange(); set('s_route_other', a.routeOtherText); }
@@ -13980,7 +14062,13 @@ refreshDraftsCount();
 renderDraftsList();
 renderPreview();
 // Delegated click on preview segments (click-to-field when not editing).
-{ const _pv = document.getElementById('g_output_text'); if (_pv) _pv.addEventListener('click', onPreviewSegmentClick); }
+{ const _pv = document.getElementById('g_output_text'); if (_pv){
+    _pv.addEventListener('click', onPreviewSegmentClick);
+    // v208.20: hover feedback while "keep highlighted" is on
+    _pv.addEventListener('mousemove', onPreviewHeldHover);
+    _pv.addEventListener('mouseleave', clearHeldHover);
+    window.addEventListener('scroll', clearHeldHover, true);
+  } }
 
 /* v208.18: wrap the text of every pill label in <span class="ic-text"> so CSS can truncate it
    with an ellipsis when space is tight; the full text goes in the tooltip. Runs on load and
