@@ -735,7 +735,7 @@
   @keyframes escSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
   /* ---- Template picker ---- */
-  .template-list { display: flex; flex-direction: column; gap: 0; margin-top: 18px; }
+  .template-list { display: flex; flex-direction: column; gap: 0; margin-top: 12px; }
   .tmpl { border-bottom: 1px solid var(--line); transition: margin 0.16s ease; }
   .tmpl:first-child { border-top: 1px solid var(--line); }
 
@@ -753,8 +753,8 @@
   .tmpl-head {
     display: flex; align-items: center; gap: 12px; width: 100%;
     text-align: left; background: none; border: none;
-    padding: 16px 4px; cursor: pointer;
-    font-family: var(--display); font-size: 15px; font-weight: 600;
+    padding: 7px 4px; cursor: pointer;   /* v208.23: 7px (was 10px) — tighter list */
+    font-family: var(--display); font-size: 12.5px;   /* v208.23: was 15px */ font-weight: 600;
     letter-spacing: -0.01em; color: var(--ink);
   }
   .tmpl-head .tmpl-title { flex: none; white-space: nowrap; }
@@ -801,16 +801,20 @@
   .tmpl-live .tl-prompt { font-size: 12.5px; font-weight: 400; color: var(--muted); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tmpl.open .tmpl-head .chev { transform: rotate(90deg); color: var(--teal); }
   .tmpl-head .dot {
-    width: 26px; height: 26px; border-radius: 6px;
+    width: 20px; height: 20px; border-radius: 5px;   /* v208.23: was 26px */
     background: var(--teal-soft); color: var(--teal-deep);
     flex: none; display: grid; place-items: center;
-    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    font-family: var(--mono); font-size: 8.5px; font-weight: 600;   /* v208.23: was 11px */
   }
   .tmpl-head .dot::before { content: "01"; }
   .tmpl[data-tmpl="av"] .tmpl-head .dot { background: #eef0ee; color: var(--muted); }
-  .tmpl[data-tmpl="av"] .tmpl-head .dot::before { content: "02"; }
+  .tmpl[data-tmpl="av"] .tmpl-head .dot::before { content: "AV"; }
   .tmpl[data-tmpl="tts"] .tmpl-head .dot { background: #eef0ee; color: var(--muted); }
-  .tmpl[data-tmpl="tts"] .tmpl-head .dot::before { content: "03"; }
+  .tmpl[data-tmpl="tts"] .tmpl-head .dot::before { content: "TTS"; letter-spacing: -0.02em; }
+  /* v208.22: Generic Disruption SMS hidden unless switched on in Settings ▸ Templates.
+     An open GEN card (restored working state / loaded draft) stays visible until closed. */
+  body.hide-generic .tmpl[data-tmpl="generic"]:not(.open) { display: none; }
+  body.hide-generic .gen-only-setting { display: none; }
 
   /* SEQ OPS group — blue accent */
   .tmpl-group-head {
@@ -818,7 +822,7 @@
     letter-spacing: 0.14em; text-transform: uppercase;
     color: var(--blue-deep); background: var(--blue-soft-2);
     border: 1px solid var(--blue-soft); border-radius: var(--radius-sm);
-    padding: 7px 12px; margin: 22px 0 10px;
+    padding: 7px 12px; margin: 14px 0 4px;   /* v208.22: was 22px 0 10px */
     display: flex; align-items: center; gap: 8px;
   }
   .tmpl-group-head::before {
@@ -833,10 +837,15 @@
 
   /* BCC group — slate accent, envelope icon */
   .tmpl-group-head.bcc { color: var(--slate-deep); background: var(--slate-soft-2); border-color: var(--slate-soft); }
+  /* v208.22: Stationary Vehicle Management (AV/TTS) — purple, matching the AV draft colour.
+     With Generic hidden it's the first thing in the list, so no top gap. */
+  .tmpl-group-head.svm { color: var(--purple-deep); background: var(--purple-soft-2); border-color: var(--purple-soft); }
+  .tmpl-group-head.svm::before { background: var(--purple); }
+  body.hide-generic .tmpl-group-head.svm { margin-top: 0; }
   .tmpl-group-head.bcc::before { background: var(--slate); }
   .tmpl[data-tmpl="bcc"] .tmpl-head .dot { background: var(--slate-soft); color: var(--slate-deep); }
   .tmpl[data-tmpl="bcc"] .tmpl-head .dot::before { content: ""; }
-  .tmpl[data-tmpl="bcc"] .tmpl-head .dot svg { width: 15px; height: 15px; }
+  .tmpl[data-tmpl="bcc"] .tmpl-head .dot svg { width: 12px; height: 12px; }
   .tmpl[data-tmpl="bcc"].open { border-left-color: var(--slate); }
   .tmpl[data-tmpl="bcc"] .tmpl-head:hover { color: var(--slate-deep); }
   .tmpl[data-tmpl="bcc"].open .tmpl-head .chev { color: var(--slate); }
@@ -856,6 +865,9 @@
 
   /* ---- Field blocks ---- */
   .field { padding: 10px 0; border-top: 1px solid var(--line); }
+  /* v208.24: AV & TTS — the section heading's underline is the only divider. Field-level
+     lines doubled up under each heading and cluttered the rest. */
+  #body-av .field, #body-tts .field { border-top: none; }
   .field:first-child { border-top: none; padding-top: 4px; }
 
   /* v208.20: Response label row with the update-only "Include all responders" pill on the right. */
@@ -1976,6 +1988,9 @@
           </div>
         </div>
 
+        <!-- v208.22: Stationary Vehicle Management group (AV + TTS) -->
+        <div class="tmpl-group-head svm">Stationary Vehicle Management</div>
+
         <!-- Template 2: AV Initial -->
         <div class="tmpl" data-tmpl="av">
           <button type="button" class="tmpl-head" onclick="toggleTmpl(this)">
@@ -2131,7 +2146,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.21</span>
+    <span class="app-version">Version 208.24</span>
   </footer>
 </div>
 
@@ -11837,6 +11852,22 @@ function setKeepHlEnabled(on){
   if (!keepHlEnabled){ clearHeldHighlight(); renderPreview(); }
 }
 
+/* v208.22: Generic Disruption SMS no longer required — hidden by default, switch in
+   Settings ▸ Templates brings it back. Per device (localStorage). */
+const SHOW_GENERIC_KEY = 'bmtmc_show_generic_v1';
+let showGeneric = false;
+function loadShowGenericPref(){
+  try { const raw = window.localStorage.getItem(SHOW_GENERIC_KEY); if (raw !== null) showGeneric = (raw === '1'); } catch(e){}
+  applyShowGeneric();
+}
+function applyShowGeneric(){ document.body.classList.toggle('hide-generic', !showGeneric); }
+function setShowGeneric(on){
+  showGeneric = !!on;
+  try { window.localStorage.setItem(SHOW_GENERIC_KEY, showGeneric ? '1' : '0'); } catch(e){}
+  applyShowGeneric();
+  renderChipSettings();
+}
+
 /* GEN direction abbreviation: when ON, lane directions in GEN messages render as
    NB/SB/EB/WB/IB/OB instead of northbound/southbound/etc. Only affects GEN. */
 const GEN_DIR_ABBREV_KEY = 'bmtmc_gen_dir_abbrev_v1';
@@ -11929,6 +11960,16 @@ function renderChipSettings(){
     </div>`;
   }).join('');
   panel.innerHTML = `<div class="disp-settings">
+    <h4>Templates</h4>
+    <div class="disp-row">
+      <span class="disp-name">Show Generic Disruption SMS<span class="disp-info" tabindex="0" role="img" aria-label="The Generic Disruption SMS is no longer required, so it's hidden from the template list. Turn on to bring it back. Saved drafts for it still open." title="The Generic Disruption SMS is no longer required, so it's hidden from the template list. Turn on to bring it back. Saved drafts for it still open.">i</span></span>
+      <label class="disp-switch">
+        <input type="checkbox" ${showGeneric ? 'checked' : ''} onchange="setShowGeneric(this.checked)" aria-label="Show Generic Disruption SMS template">
+        <span class="disp-track"><span class="disp-knob"></span></span>
+      </label>
+    </div>
+  </div>
+  <div class="disp-settings" style="margin-top:14px;">
     <h4>Display</h4>
     <div class="disp-row">
       <span class="disp-name">Convert ALL CAPS input to Title Case on leaving a field</span>
@@ -11972,7 +12013,7 @@ function renderChipSettings(){
         <span class="disp-track"><span class="disp-knob"></span></span>
       </label>
     </div>
-    <div class="disp-row">
+    <div class="disp-row gen-only-setting">
       <span class="disp-name">Use NB/SB/EB/WB for lane directions (GEN)<span class="disp-info" tabindex="0" role="img" aria-label="In GEN messages, abbreviate lane directions: northbound→NB, southbound→SB, eastbound→EB, westbound→WB, inbound→IB, outbound→OB. &quot;In both directions&quot; is unchanged." title="In GEN messages, abbreviate lane directions: northbound→NB, southbound→SB, eastbound→EB, westbound→WB, inbound→IB, outbound→OB. &quot;In both directions&quot; is unchanged.">i</span></span>
       <label class="disp-switch">
         <input type="checkbox" ${genDirAbbrev ? 'checked' : ''} onchange="setGenDirAbbrev(this.checked)" aria-label="Use NB/SB/EB/WB for lane directions in GEN">
@@ -14071,6 +14112,7 @@ loadEditWriteBackPref();
 loadCarryoverModePref();
 loadKeepHlPref();
 loadGenDirAbbrevPref();
+loadShowGenericPref();
 loadRecents();
 loadFreqLocations();
 /* Delegated blur listener: caps→title case on all free-text inputs when setting is on.
