@@ -960,7 +960,10 @@
     font-size: 10px; font-weight: 700; cursor: help; position: relative; margin-left: 2px;
   }
   #body-ino .fld-help { background: var(--blue); }
+  /* v208.21: label + ? help on one row */
+  .label-help-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
   .fld-help::after {
+    text-transform: none; letter-spacing: normal; font-family: var(--sans);
     content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 8px);
     transform: translateX(-50%); width: 260px; max-width: 70vw;
     background: #16201d; color: #fff; font-size: 11.5px; font-weight: 400; line-height: 1.45;
@@ -2128,7 +2131,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.20</span>
+    <span class="app-version">Version 208.21</span>
   </footer>
 </div>
 
@@ -6980,17 +6983,21 @@ function buildINO(){
           </div>
         </div>
         <div style="margin-top:14px;">
-          <span class="field-label" style="margin-bottom:5px;">Time incident cleared</span>
+          <div class="label-help-row"><span class="field-label" style="margin:0;">Time incident cleared</span><span class="fld-help" tabindex="0" role="button" aria-label="About this time" data-tip="Auto-filled with the current time when FINAL is ticked. Editable.">?</span></div>
           <div class="time-row">
             <input type="text" id="s_cleared_hh" class="time-box narrow" inputmode="numeric" maxlength="2" placeholder="HH" oninput="onTimeBoxInput(this,'s_cleared_mm')">
             <span class="time-colon">:</span>
             <input type="text" id="s_cleared_mm" class="time-box narrow" inputmode="numeric" maxlength="2" placeholder="MM" oninput="onTimeBoxInput(this)">
           </div>
-          <p class="hint" style="margin-bottom:0;">Auto-filled with the current time when FINAL is ticked. Editable.</p>
         </div>
-        <div style="margin-top:10px;">
-          <span class="field-label" style="margin-bottom:5px;">Final update / notes — appended to end of Network Impact line</span>
-          <input type="text" id="s_final_note" placeholder="Final Update / notes (free text)" oninput="updateFinalOutline(); renderPreview(); scheduleWorkingSave();">
+        <div style="margin-top:6px;">
+          <div class="label-help-row">
+            <button type="button" class="link-btn" id="s_final_note_toggle" aria-expanded="false" onclick="toggleInoFinalNote()"><span class="ml-chev" id="s_final_note_chev">▸</span> Final update / notes</button>
+            <span class="fld-help" id="s_final_note_help" tabindex="0" role="button" aria-label="Where this goes" data-tip="Appended to the end of the Network Impact line." style="margin-top:7px;">?</span>
+          </div>
+          <div id="s_final_note_wrap" style="display:none;margin-top:8px;">
+            <input type="text" id="s_final_note" placeholder="Final Update / notes (free text)" oninput="updateFinalOutline(); renderPreview(); scheduleWorkingSave();">
+          </div>
         </div>
         <div id="s_final_impact_outline" class="final-outline" style="display:none;"></div>
       </div>
@@ -8160,6 +8167,23 @@ function autoSwitchDiversionOnFinal(el){
     }
   }
 }
+/* v208.21: FINAL "Final update / notes" is a collapsible row. It opens by itself whenever the
+   note has text (draft restore, carried state), so text is never hidden. */
+function toggleInoFinalNote(force){
+  const w = document.getElementById('s_final_note_wrap');
+  const btn = document.getElementById('s_final_note_toggle');
+  const chev = document.getElementById('s_final_note_chev');
+  if (!w) return;
+  const open = (typeof force === 'boolean') ? force : (w.style.display === 'none');
+  w.style.display = open ? 'block' : 'none';
+  if (chev) chev.textContent = open ? '▾' : '▸';
+  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open && force === undefined){ const inp = document.getElementById('s_final_note'); if (inp) inp.focus(); }
+}
+function syncInoFinalNoteOpen(){
+  const inp = document.getElementById('s_final_note');
+  if (inp && inp.value.trim()) toggleInoFinalNote(true);
+}
 function onInoFinalChange(){
   const on = document.getElementById('s_final').checked;
   applyInoUpdTimeVisibility();
@@ -8180,6 +8204,7 @@ function onInoFinalChange(){
     const ri = document.getElementById('s_final_reinstate'); if (ri) ri.checked = false;
     const cc = document.getElementById('s_congestion_clear'); if (cc) cc.checked = false;
     const fn = document.getElementById('s_final_note'); if (fn) fn.value = '';
+    toggleInoFinalNote(false);
     // Re-expand the segments that FINAL had auto-collapsed.
     collapseInoSegsForFinal(true);
   }
@@ -8753,6 +8778,12 @@ function renderINO(){
 
   const isUpdateContext = inoUpdate.on || seqNum >= 2;
   const isNo1Final = finalOn && !isUpdateContext;         // No.1 and FINAL
+  { // v208.21: the note's ? tip says where it will actually land for this message.
+    const h = document.getElementById('s_final_note_help');
+    if (h) h.setAttribute('data-tip', isNo1Final
+      ? 'Appended to the end of the Network Impact line.'
+      : 'Appended to the end of the Final Update line.');
+  }
   const isSeqFinal = finalOn && isUpdateContext;          // No.# and FINAL (No.2+)
 
   if (finalOn){
@@ -13127,6 +13158,7 @@ function applyDraft(s){
     set('s_final_reinstate_note', a.finalReinstateNote);
     syncInoReinstateNote();
     set('s_final_note', a.finalNote);
+    syncInoFinalNoteOpen();
     if (a.typeUpdate){ const tu=document.getElementById('s_type_update'); if(tu) tu.checked = true; }
     applyInoTypeDisable();
     // location
