@@ -867,7 +867,11 @@
   .field { padding: 10px 0; border-top: 1px solid var(--line); }
   /* v208.24: AV & TTS — the section heading's underline is the only divider. Field-level
      lines doubled up under each heading and cluttered the rest. */
-  #body-av .field, #body-tts .field { border-top: none; }
+  #body-av .field, #body-tts .field,
+  #body-ino .field, #body-bcc .field { border-top: none; }
+  /* BCC has no section headings, so a few group breaks keep a line: above Reason for
+     Escalation, Lanes Impacted, Action Taken and Impact/Diversion. */
+  #body-bcc .field.divided { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 16px; }
   .field:first-child { border-top: none; padding-top: 4px; }
 
   /* v208.20: Response label row with the update-only "Include all responders" pill on the right. */
@@ -2146,7 +2150,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.24</span>
+    <span class="app-version">Version 208.25</span>
   </footer>
 </div>
 
@@ -2948,7 +2952,7 @@ function buildBCC(){
     </div>
 
     <!-- Reason -->
-    <div class="field">
+    <div class="field divided">
       <span class="field-label">Reason for Escalation</span>
       <select id="b_reason" onchange="onBccReasonChange()">${reasonOptions}</select>
       <input type="text" id="b_reason_other" placeholder="Type the reason" style="display:none;margin-top:8px;">
@@ -2991,7 +2995,7 @@ function buildBCC(){
     </div>
 
     <!-- Lanes Impacted -->
-    <div class="field" id="b_lanes_field">
+    <div class="field divided" id="b_lanes_field">
       <div class="addl-label-row">
         <span class="field-label">Lanes Impacted</span>
         <button type="button" class="lb-switch" id="b_lane_mode_switch" onclick="setBccLaneMode(!bccBoardMode())"><span aria-hidden="true">\u21c4</span> Switch to classic controls</button>
@@ -3042,7 +3046,7 @@ function buildBCC(){
     </div>
 
     <!-- Action taken -->
-    <div class="field">
+    <div class="field divided">
       <span class="field-label">Action Taken</span>
       <div class="check-grid">
         ${BCC_ACTIONS.map(x=>`<label class="inline-check"><input type="checkbox" class="b_action" value="${x}" onchange="renderPreview()"> ${x}</label>`).join('')}
@@ -3089,7 +3093,7 @@ function buildBCC(){
     </div>
 
     <!-- Impact -->
-    <div class="field">
+    <div class="field divided">
       <span class="field-label">Impact</span>
 
       <span class="field-label" style="margin-top:4px;">Diversion</span>
