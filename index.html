@@ -751,19 +751,26 @@
   .tmpl.open .tmpl-body { padding-left: 11px; }
 
   .tmpl-head {
-    display: flex; align-items: center; gap: 12px; width: 100%;
+    display: flex; align-items: flex-start; gap: 12px; width: 100%;   /* v208.26: top-aligned for the 2-line summary */
     text-align: left; background: none; border: none;
     padding: 7px 4px; cursor: pointer;   /* v208.23: 7px (was 10px) — tighter list */
     font-family: var(--display); font-size: 12.5px;   /* v208.23: was 15px */ font-weight: 600;
     letter-spacing: -0.01em; color: var(--ink);
   }
-  .tmpl-head .tmpl-title { flex: none; white-space: nowrap; }
+  /* v208.26: open-message summary. .tmpl-main = line 1 (name + right-hand item) and
+     line 2 (.tmpl-live). Shown collapsed or expanded whenever the template has a message
+     in progress; names never get pushed off — the right-hand item truncates first. */
+  .tmpl-head .tmpl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .tmpl-head .tl-line { display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 20px; }
+  /* Name never shrinks for the summary (only if the row itself is narrower than the name). */
+  .tmpl-head .tmpl-title { flex: 0 0 auto; max-width: 100%; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tmpl-head .tmpl-right { margin-left: auto; min-width: 0; flex: 0 1000 auto;   /* shrinks (truncates) long before the name does */ display: flex; justify-content: flex-end; font-family: var(--sans); font-weight: 400; letter-spacing: 0; }
+  .tmpl-head .tmpl-right:empty { display: none; }
   /* When a template is open, pin its title row + the back/reset row below the header */
   .tmpl.open .tmpl-head {
     position: sticky; top: 80px; z-index: 30;
     background: var(--card);
     border-bottom: 1px solid var(--line);
-    flex-wrap: wrap; row-gap: 6px; align-items: center;
     padding-top: 12px; padding-bottom: 12px;
   }
   .tmpl.open .form-topbar {
@@ -773,32 +780,30 @@
     border-bottom: 1px solid var(--line);
   }
   .tmpl-head:hover { color: var(--teal); }
-  .tmpl-head .chev { margin-left: auto; font-family: var(--mono); font-size: 13px; color: var(--muted); transition: transform 0.2s ease; }
+  .tmpl-head .chev { margin-left: auto; line-height: 20px; font-family: var(--mono); font-size: 13px; color: var(--muted); transition: transform 0.2s ease; }
   /* Live open-draft summary in the header (only visible when the card is open).
      The seq + location + type chip sit on ONE line when the panel is wide enough;
      when it's too narrow the type chip drops to its own second line (full width,
      ellipsised) instead of overflowing the panel. Purely width-driven via flex-wrap. */
-  .tmpl-live { display: none; }
-  .tmpl.open .tmpl-live {
-    display: flex; align-items: center; flex-wrap: wrap;
-    column-gap: 9px; row-gap: 5px; min-width: 0;
-    flex: 0 0 100%; order: 3;
-    margin-left: 38px; padding-left: 0; border-left: none;
-    font-family: var(--sans); font-weight: 400; letter-spacing: 0;
+  .tmpl-live { display: flex; align-items: center; gap: 6px; min-width: 0; margin-top: 4px;
+    font-family: var(--sans); font-weight: 400; letter-spacing: 0; }
+  .tmpl-live:empty { display: none; }
+  /* Message chip (No.3 FINAL): template's own soft colour, never shrinks. */
+  .tl-seq {
+    font-family: var(--mono); font-size: 11px; font-weight: 600; flex: none; white-space: nowrap;
+    padding: 1px 6px; border-radius: 5px; background: var(--blue-soft); color: var(--blue-deep);
   }
-  .tmpl-live .tl-seq {
-    font-family: var(--mono); font-size: 11px; font-weight: 700; flex: none;
-    padding: 2px 8px; border-radius: 100px;
-  }
-  .tmpl[data-tmpl="generic"] .tmpl-live .tl-seq { background: var(--teal-soft); color: var(--teal-deep); }
-  .tmpl[data-tmpl="ino"]     .tmpl-live .tl-seq { background: var(--blue-soft); color: var(--blue-deep); }
-  .tmpl[data-tmpl="av"]      .tmpl-live .tl-seq,
-  .tmpl[data-tmpl="avr"]     .tmpl-live .tl-seq { background: var(--purple-soft); color: var(--purple-deep); }
-  .tmpl-live .tl-loc { font-size: 13.5px; font-weight: 500; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
-  /* Chip won't shrink on the shared line (so it wraps rather than squashing); once on
-     its own line it's capped to the row width and ellipsised. */
-  .tmpl-live .tl-chip { font-size: 11px; font-weight: 500; padding: 2px 9px; border-radius: 100px; flex: 0 0 auto; max-width: 100%; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .tmpl-live .tl-prompt { font-size: 12.5px; font-weight: 400; color: var(--muted); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tmpl[data-tmpl="generic"] .tl-seq { background: var(--teal-soft); color: var(--teal-deep); }
+  .tmpl[data-tmpl="ino"]     .tl-seq { background: var(--blue-soft); color: var(--blue-deep); }
+  .tmpl[data-tmpl="av"]      .tl-seq,
+  .tmpl[data-tmpl="tts"]     .tl-seq { background: var(--purple-soft); color: var(--purple-deep); }
+  /* Location: road · suburb, secondary colour. */
+  .tl-loc { font-size: 12px; font-weight: 400; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+  .tmpl-right .tl-loc { padding-left: 10px; text-align: right; }
+  /* Description: incident type / vehicle — pill (default layout) or plain coloured text. */
+  .tl-chip { font-size: 11.5px; font-weight: 500; padding: 0 8px; border-radius: 999px; flex: 0 1 auto; min-width: 30px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tl-desc { font-size: 12px; font-weight: 500; flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tl-sep { flex: none; font-size: 12px; color: var(--line-strong, #c9cfcc); }
   .tmpl.open .tmpl-head .chev { transform: rotate(90deg); color: var(--teal); }
   .tmpl-head .dot {
     width: 20px; height: 20px; border-radius: 5px;   /* v208.23: was 26px */
@@ -849,7 +854,7 @@
   .tmpl[data-tmpl="bcc"].open { border-left-color: var(--slate); }
   .tmpl[data-tmpl="bcc"] .tmpl-head:hover { color: var(--slate-deep); }
   .tmpl[data-tmpl="bcc"].open .tmpl-head .chev { color: var(--slate); }
-  .tmpl[data-tmpl="bcc"] .tmpl-live .tl-seq { background: var(--slate-soft); color: var(--slate-deep); }
+  .tmpl[data-tmpl="bcc"] .tl-seq { background: var(--slate-soft); color: var(--slate-deep); }
   /* BCC crash — collapsible optional section */
   .bcc-crash-collapse { padding: 0; overflow: hidden; }
   .bcc-collapse-head { display: flex; align-items: center; gap: 9px; width: 100%; padding: 11px 13px; background: var(--slate-soft-2); border: 0; border-radius: var(--radius-sm); cursor: pointer; text-align: left; font-family: var(--sans); }
@@ -1983,8 +1988,10 @@
         <div class="tmpl" data-tmpl="generic">
           <button type="button" class="tmpl-head" onclick="toggleTmpl(this)">
             <span class="dot"></span>
-            <span class="tmpl-title">BMTMC Generic Disruption SMS</span>
-            <span class="tmpl-live" id="tmpl-live-generic"></span>
+            <span class="tmpl-main">
+              <span class="tl-line"><span class="tmpl-title">BMTMC Generic Disruption SMS</span><span class="tmpl-right" id="tmpl-right-generic"></span></span>
+              <span class="tmpl-live" id="tmpl-live-generic"></span>
+            </span>
             <span class="chev">▸</span>
           </button>
           <div class="tmpl-body" id="body-generic">
@@ -1999,8 +2006,10 @@
         <div class="tmpl" data-tmpl="av">
           <button type="button" class="tmpl-head" onclick="toggleTmpl(this)">
             <span class="dot"></span>
-            <span class="tmpl-title">Abandoned Vehicle</span>
-            <span class="tmpl-live" id="tmpl-live-av"></span>
+            <span class="tmpl-main">
+              <span class="tl-line"><span class="tmpl-title">Abandoned Vehicle</span><span class="tmpl-right" id="tmpl-right-av"></span></span>
+              <span class="tmpl-live" id="tmpl-live-av"></span>
+            </span>
             <span class="chev">▸</span>
           </button>
           <div class="tmpl-body" id="body-av">
@@ -2012,8 +2021,10 @@
         <div class="tmpl" data-tmpl="tts">
           <button type="button" class="tmpl-head" onclick="toggleTmpl(this)">
             <span class="dot"></span>
-            <span class="tmpl-title">Tow to Safety</span>
-            <span class="tmpl-live" id="tmpl-live-tts"></span>
+            <span class="tmpl-main">
+              <span class="tl-line"><span class="tmpl-title">Tow to Safety</span><span class="tmpl-right" id="tmpl-right-tts"></span></span>
+              <span class="tmpl-live" id="tmpl-live-tts"></span>
+            </span>
             <span class="chev">▸</span>
           </button>
           <div class="tmpl-body" id="body-tts">
@@ -2028,8 +2039,10 @@
         <div class="tmpl" data-tmpl="ino" data-group="seqops">
           <button type="button" class="tmpl-head" onclick="toggleTmpl(this)">
             <span class="dot"></span>
-            <span class="tmpl-title">INO Incident Escalation</span>
-            <span class="tmpl-live" id="tmpl-live-ino"></span>
+            <span class="tmpl-main">
+              <span class="tl-line"><span class="tmpl-title">INO Incident Escalation</span><span class="tmpl-right" id="tmpl-right-ino"></span></span>
+              <span class="tmpl-live" id="tmpl-live-ino"></span>
+            </span>
             <span class="chev">▸</span>
           </button>
           <div class="tmpl-body" id="body-ino">
@@ -2044,8 +2057,10 @@
         <div class="tmpl" data-tmpl="bcc" data-group="bcc">
           <button type="button" class="tmpl-head" onclick="toggleTmpl(this)">
             <span class="dot"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18v12H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 7l9 6 9-6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span>
-            <span class="tmpl-title">BCC SLAM Escalation Email</span>
-            <span class="tmpl-live" id="tmpl-live-bcc"></span>
+            <span class="tmpl-main">
+              <span class="tl-line"><span class="tmpl-title">BCC SLAM Escalation Email</span><span class="tmpl-right" id="tmpl-right-bcc"></span></span>
+              <span class="tmpl-live" id="tmpl-live-bcc"></span>
+            </span>
             <span class="chev">▸</span>
           </button>
           <div class="tmpl-body" id="body-bcc">
@@ -2150,7 +2165,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.25</span>
+    <span class="app-version">Version 208.26</span>
   </footer>
 </div>
 
@@ -9065,85 +9080,99 @@ function activeTemplate(){
   const open = document.querySelector('.tmpl.open');
   return open ? open.getAttribute('data-tmpl') : null;
 }
-/* ---------- Live open-draft header summary ---------- */
-/* Builds the sequence pill / location / type chip shown in the open card's header,
-   reflecting the message currently in the form. Falls back to a "New … " prompt
-   when no location has been entered yet. */
-function updateLiveHeader(t){
-  if (!t) return;
-  const el = document.getElementById('tmpl-live-' + t);
-  if (!el) return;
+/* ---------- Open-message summary on template headings (v208.26) ---------- */
+/* Every template with a message in progress (a location or description entered) shows a
+   compact summary on its heading, collapsed or expanded, updated live:
+     message chip (No.3 FINAL) · location (road · suburb, brackets stripped) · description.
+   Two layouts (Settings ▸ Display ▸ "Message number on heading line"):
+     off (default): name … location   /  chip (description pill)
+     on:            name … chip       /  location | description (plain coloured text)
+   Templates with nothing entered show only their name. */
+const SUMMARY_NUM_KEY = 'bmtmc_summary_num_heading_v1';
+let summaryNumOnHeading = false;
+try { summaryNumOnHeading = window.localStorage.getItem(SUMMARY_NUM_KEY) === '1'; } catch(e){}
+function setSummaryNumOnHeading(on){
+  summaryNumOnHeading = !!on;
+  try { window.localStorage.setItem(SUMMARY_NUM_KEY, on ? '1' : '0'); } catch(e){}
+  renderChipSettings();
+  updateAllLiveHeaders();
+  syncTopbarOffset();
+}
+function summaryCleanRoad(r){ return String(r || '').replace(/\s*\([^)]*\)/g, '').trim(); }
+function templateSummary(t){
   const gv = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
-
-  // Location (title-cased road · suburb)
   let road = '', suburb = '';
   if (t === 'ino'){ road = gv('s_road'); suburb = gv('s_suburb'); }
   else if (t === 'av'){ road = gv('av_road'); suburb = gv('av_suburb'); }
-  else if (t === 'tts'){ road = ''; suburb = ''; }
+  else if (t === 'tts'){ road = gv('tts_road'); suburb = gv('tts_suburb'); }
   else if (t === 'bcc'){ road = gv('b_road'); suburb = gv('b_suburb'); }
   else { road = gv('g_road'); suburb = gv('g_suburb'); }
-  const loc = [titleCaseProperNoun(road), titleCaseProperNoun(suburb)].filter(Boolean).join(' · ');
+  const loc = [titleCaseProperNoun(summaryCleanRoad(road)), titleCaseProperNoun(suburb)].filter(Boolean).join(' · ');
 
-  // Sequence label
+  // Message chip: number + stage
   let seq = '';
   if (t === 'ino'){
     let s = gv('s_seq'); if (s === '__other') s = gv('s_seq_other') || 'No.?';
     if ((document.getElementById('s_final')||{}).checked) s += ' FINAL';
-    if (inoUpdate.on && inoUpdate.time) s += ` UPDATE ${inoUpdate.time}`;
+    else if (typeof isInoUpdateContext === 'function' && isInoUpdateContext()) s += ' UPDATE';
     seq = s;
   } else if (t === 'generic'){
     let s = gv('g_seq'); if (s === '__other') s = gv('g_seq_other') || 'Update';
     if ((document.getElementById('g_final')||{}).checked && s) s += ' FINAL';
     seq = s;
-  } else if (t === 'bcc'){ seq = (typeof bccStage === 'function') ? bccStage() : ''; }
-  else if (t === 'av'){ seq = AV_STEP_LABELS[avStep] || 'Initial notice'; }
-  else if (t === 'tts'){ seq = 'Tow to Safety'; }
+  } else if (t === 'bcc'){
+    const stage = (typeof bccStage === 'function') ? bccStage() : 'Initial';
+    const n = (gv('b_advice').match(/\d+/) || [])[0];
+    seq = (stage !== 'Initial' && n) ? `No.${n} ${stage.toUpperCase()}` : stage.toUpperCase();
+  } else if (t === 'av'){ seq = AV_STEP_LABELS[avStep] || 'Initial notice'; }
+  // TTS: a single email — no number or stage.
 
-  // Type chip: incident/event type for INO & Generic; vehicle + rego for AV/AVR
-  let chipText = '', chipStyle = null;
-  if (t === 'ino'){
-    const label = buildEventTypeP('s') || '';
-    chipText = label;
-    if (label) chipStyle = chipStyleForType(label, 'ino');
+  // Description: incident type (INO/BCC/GEN), vehicle (AV), COV title or rego (TTS)
+  let desc = '', style = null;
+  if (t === 'ino' || t === 'bcc'){
+    desc = capFirstLetter(buildEventTypeP(t === 'ino' ? 's' : 'b') || '');
+    if (desc) style = chipStyleForType(desc, t);
   } else if (t === 'generic'){
-    const label = buildEventType() || '';
-    chipText = label;
-    if (label) chipStyle = chipStyleForType(label, 'generic');
+    desc = capFirstLetter(buildEventType() || '');
+    if (desc) style = chipStyleForType(desc, 'generic');
+  } else if (t === 'av'){
+    let colour = gv('av_colour'); if (colour === '__other') colour = gv('av_colour_other');
+    const veh = [colour, gv('av_make'), gv('av_model')].filter(Boolean).join(' ');
+    desc = [veh, gv('av_plate')].filter(Boolean).join(' · ');
+    style = { bg:'var(--purple-soft)', fg:'var(--purple-deep)' };
+  } else if (t === 'tts'){
+    desc = gv('tts_cov_title') || gv('tts_plate');
+    style = { bg:'var(--purple-soft)', fg:'var(--purple-deep)' };
+  }
+  if (!style) style = { bg:'var(--teal-soft)', fg:'var(--teal-deep)' };
+  return { open: !!(loc || desc), seq, loc, desc, style };
+}
+function updateLiveHeader(t){
+  const line2 = document.getElementById('tmpl-live-' + t);
+  const right = document.getElementById('tmpl-right-' + t);
+  if (!line2 || !right) return;
+  const m = templateSummary(t);
+  if (!m.open){ line2.innerHTML = ''; right.innerHTML = ''; return; }
+  const e = escapeHtml;
+  const chip = m.seq ? `<span class="tl-seq">${e(m.seq)}</span>` : '';
+  const locSpan = m.loc ? `<span class="tl-loc" title="${e(m.loc)}">${e(m.loc)}</span>` : '';
+  if (summaryNumOnHeading){
+    right.innerHTML = chip;
+    const bits = [locSpan, m.desc ? `<span class="tl-desc" title="${e(m.desc)}" style="color:${m.style.fg};">${e(m.desc)}</span>` : ''].filter(Boolean);
+    line2.innerHTML = bits.join('<span class="tl-sep">|</span>');
   } else {
-    const pfx = 'av';
-    let colour = gv(pfx + '_colour'); if (colour === '__other') colour = gv(pfx + '_colour_other');
-    const veh = [colour, gv(pfx + '_make'), gv(pfx + '_model')].filter(Boolean).join(' ');
-    const plate = gv(pfx + '_plate');
-    chipText = [veh, plate].filter(Boolean).join(' · ');
-    chipStyle = { bg:'var(--purple-soft)', fg:'var(--purple-deep)' };
+    right.innerHTML = locSpan;
+    line2.innerHTML = chip + (m.desc ? `<span class="tl-chip" title="${e(m.desc)}" style="background:${m.style.bg};color:${m.style.fg};">${e(m.desc)}</span>` : '');
   }
-
-  // Prompts when nothing entered yet
-  const promptFor = { ino:'New INO escalation — enter a location to begin',
-    generic:'New disruption notice — enter a location to begin',
-    av:'New AV notice — enter a location to begin',
-    tts:'New TTS email — fill in the details to begin' };
-
-  if (!loc && !chipText){
-    el.innerHTML = `<span class="tl-prompt">${escapeHtml(promptFor[t] || 'New message')}</span>`;
-    return;
-  }
-  const parts = [];
-  if (seq) parts.push(`<span class="tl-seq">${escapeHtml(seq)}</span>`);
-  if (loc) parts.push(`<span class="tl-loc">${escapeHtml(loc)}</span>`);
-  else parts.push(`<span class="tl-prompt">enter a location</span>`);
-  if (chipText){
-    const bg = chipStyle ? chipStyle.bg : 'var(--teal-soft)';
-    const fg = chipStyle ? chipStyle.fg : 'var(--teal-deep)';
-    parts.push(`<span class="tl-chip" title="${escapeHtml(chipText)}" style="background:${bg};color:${fg};">${escapeHtml(chipText)}</span>`);
-  }
-  el.innerHTML = parts.join('');
+}
+function updateAllLiveHeaders(){
+  ['generic','av','tts','ino','bcc'].forEach(updateLiveHeader);
 }
 
 function renderPreview(){
   const t = activeTemplate();
   if (t === 'ino'){ updateInoSegCounts(); applyInoCondense(); }
-  if (t) updateLiveHeader(t);
+  updateAllLiveHeaders();   // v208.26: every template with a message in progress
   syncTopbarOffset();
   // The auto-FINAL notice is generic-only; hide it for other templates (renderGeneric re-shows it).
   if (t !== 'generic'){ const afs = document.getElementById('autoFinalStrip'); if (afs) afs.style.display = 'none'; }
@@ -11372,6 +11401,7 @@ function collectFormState(){
         authName: gv('tts_auth_name'),
         covId: gv('tts_cov_id'), covTitle: gv('tts_cov_title'),
         plate: gv('tts_plate'), locDetail: gv('tts_loc_detail'),
+        road: gv('tts_road'), suburb: gv('tts_suburb'),   // v208.26: were never saved
         towType: (document.querySelector('input[name="tts_tow_type"]:checked')||{}).value || "Clayton's TTS - Light"
       }
     };
@@ -11975,6 +12005,13 @@ function renderChipSettings(){
   </div>
   <div class="disp-settings" style="margin-top:14px;">
     <h4>Display</h4>
+    <div class="disp-row">
+      <span class="disp-name">Message number on heading line<span class="disp-info" tabindex="0" role="img" aria-label="Moves the message number beside the template name, with road, suburb and description underneath." title="Moves the message number beside the template name, with road, suburb and description underneath.">i</span></span>
+      <label class="disp-switch">
+        <input type="checkbox" ${summaryNumOnHeading ? 'checked' : ''} onchange="setSummaryNumOnHeading(this.checked)" aria-label="Message number on heading line">
+        <span class="disp-track"><span class="disp-knob"></span></span>
+      </label>
+    </div>
     <div class="disp-row">
       <span class="disp-name">Convert ALL CAPS input to Title Case on leaving a field</span>
       <label class="disp-switch">
@@ -13163,6 +13200,7 @@ function applyDraft(s){
     set('tts_auth_name', a.authName);
     set('tts_cov_id', a.covId); set('tts_cov_title', a.covTitle);
     set('tts_plate', a.plate); set('tts_loc_detail', a.locDetail);
+    set('tts_road', a.road); set('tts_suburb', a.suburb);
     if (a.towType){ const r = document.querySelector('input[name="tts_tow_type"][value="'+a.towType+'"]'); if(r) r.checked = true; }
     renderPreview();
     return;
