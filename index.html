@@ -576,6 +576,26 @@
   .settings-pop .settings-close svg { width: 16px; height: 16px; }
   .settings-pop .settings-body { padding: 14px 16px; }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  /* v208.29: delete confirmation dialog (all delete / remove buttons). */
+  .confirm-backdrop { position: fixed; inset: 0; z-index: 90; background: rgba(22,32,29,0.42);
+    display: flex; align-items: flex-start; justify-content: center; padding: 120px 16px 16px; animation: fadeIn 0.12s ease; }
+  .confirm-pop { width: 340px; max-width: 100%; background: #fff; border: 1px solid #dde2df; border-radius: var(--radius);
+    box-shadow: var(--shadow-md); animation: subIn 0.15s ease; padding: 16px 16px 14px; }
+  .confirm-pop .cf-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .confirm-pop .cf-ico { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+    background: #fbe9e5; color: #b5371f; }
+  .confirm-pop .cf-title { font-family: var(--display); font-size: 14.5px; font-weight: 700; color: #16201d; }
+  .confirm-pop .cf-item { margin: 4px 0 8px 40px; padding: 7px 10px; border-radius: 7px; background: #f4f6f5;
+    border: 1px solid #e3e7e5; font-size: 12.5px; color: #16201d; overflow-wrap: anywhere; }
+  .confirm-pop .cf-item:empty { display: none; }
+  .confirm-pop .cf-msg { margin: 0 0 14px 40px; font-size: 12.5px; color: var(--muted); }
+  .confirm-pop .cf-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .confirm-pop .cf-btn { font-family: var(--sans); font-size: 13px; font-weight: 600; padding: 7px 14px; border-radius: 8px;
+    cursor: pointer; border: 1px solid #dde2df; background: #fff; color: #16201d; }
+  .confirm-pop .cf-btn:hover { background: #f4f6f5; }
+  .confirm-pop .cf-btn.danger { background: #b5371f; border-color: #b5371f; color: #fff; }
+  .confirm-pop .cf-btn.danger:hover { background: #9a2e19; }
+  .confirm-pop .cf-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 
   /* Chip-colour settings panel — flat inside the modal, divided from Display block. Light forced. */
   .chip-settings {
@@ -2186,7 +2206,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.28</span>
+    <span class="app-version">Version 208.29</span>
   </footer>
 </div>
 
@@ -3337,7 +3357,7 @@ function renderBccCustomResp(){
         const idx = bccCustomResp.indexOf(x);
         const on = ticked[x.name.toLowerCase()] === col;
         const del = (x.origin === col)
-          ? `<button type="button" class="bcc-other-del" title="Remove ${bccEsc(x.name)}" aria-label="Remove ${bccEsc(x.name)}" onclick="removeBccCustomResp(${idx})">\u00d7</button>` : '';
+          ? `<button type="button" class="bcc-other-del" title="Remove ${bccEsc(x.name)}" aria-label="Remove ${bccEsc(x.name)}" onclick="confirmDelete({ title: 'Remove this responder?', item: this.getAttribute('data-name'), message: 'It comes off the responder list for this message.', okLabel: 'Remove' }, () => removeBccCustomResp(${idx}))" data-name="${bccEsc(x.name)}">\u00d7</button>` : '';
         return `<span class="bcc-other-item"><label class="inline-check"><input type="checkbox" class="${BCC_RESP_CLS[col]}" value="${bccEsc(x.name)}" ${on ? 'checked' : ''} onchange="syncBccResponder('${col}', this.value)"> ${bccEsc(x.name)}</label>${del}</span>`;
       }).join('');
   });
@@ -12463,7 +12483,58 @@ function escalateAvToRemoval(id){
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function deleteDraftById(id){
+/* v208.29: confirmation for every delete / remove button. Cancel has focus by default
+   (Enter on its own won't delete); Esc or a click outside cancels. */
+function confirmDelete(opts, onYes){
+  const o = opts || {};
+  let back = document.getElementById('confirmBackdrop');
+  if (!back){
+    back = document.createElement('div');
+    back.id = 'confirmBackdrop'; back.className = 'confirm-backdrop';
+    back.innerHTML = '<div class="confirm-pop" role="alertdialog" aria-modal="true" aria-labelledby="cfTitle" aria-describedby="cfMsg">'
+      + '<div class="cf-head"><span class="cf-ico" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
+      + '<span class="cf-title" id="cfTitle"></span></div>'
+      + '<div class="cf-item" id="cfItem"></div>'
+      + '<p class="cf-msg" id="cfMsg"></p>'
+      + '<div class="cf-actions"><button type="button" class="cf-btn" id="cfCancel">Cancel</button>'
+      + '<button type="button" class="cf-btn danger" id="cfOk"></button></div></div>';
+    document.body.appendChild(back);
+  }
+  document.getElementById('cfTitle').textContent = o.title || 'Delete this?';
+  document.getElementById('cfItem').textContent = o.item || '';
+  document.getElementById('cfMsg').textContent = o.message || "This can't be undone.";
+  const ok = document.getElementById('cfOk'), cancel = document.getElementById('cfCancel');
+  ok.textContent = o.okLabel || 'Delete';
+  const prevFocus = document.activeElement;
+  const close = () => {
+    back.style.display = 'none';
+    document.removeEventListener('keydown', onKey, true);
+    back.onclick = null; ok.onclick = null; cancel.onclick = null;
+    if (prevFocus && prevFocus.focus && document.contains(prevFocus)) prevFocus.focus();
+  };
+  const onKey = (e) => {
+    if (e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); close(); }
+    else if (e.key === 'Tab'){ e.preventDefault(); (document.activeElement === ok ? cancel : ok).focus(); }
+  };
+  ok.onclick = (e) => { e.stopPropagation(); close(); onYes && onYes(); };
+  cancel.onclick = (e) => { e.stopPropagation(); close(); };
+  back.onclick = (e) => { if (e.target === back){ e.stopPropagation(); close(); } };
+  back.style.display = 'flex';
+  document.addEventListener('keydown', onKey, true);
+  cancel.focus();
+}
+function draftConfirmLabel(d){
+  const st = (d && d.state) || {};
+  const where = draftLocation(st) || draftChipText(st) || 'Untitled draft';
+  return draftTypeBadge(st.tmpl) + ' · ' + where;
+}
+function deleteDraftById(id, confirmed){
+  if (!confirmed){
+    const d = drafts.find(x => x.id === id);
+    confirmDelete({ title: 'Delete this draft?', item: d ? draftConfirmLabel(d) : '' },
+      () => deleteDraftById(id, true));
+    return;
+  }
   drafts = drafts.filter(d => d.id !== id);
   persistDrafts();
   refreshDraftsCount();
@@ -12472,11 +12543,19 @@ function deleteDraftById(id){
 
 /* Delete every draft in one incident cluster (all its escalations), confirm-gated
    when more than one message. `ids` is a comma-separated list of draft ids. */
-function deleteIncident(ids){
+function deleteIncident(ids, confirmed){
   const idList = String(ids).split(',').filter(Boolean);
   if (!idList.length) return;
   const n = idList.length;
-  if (n > 1 && !window.confirm(`Delete all ${n} messages in this incident? This can't be undone.`)) return;
+  if (!confirmed){
+    const first = drafts.find(x => x.id === idList[0]);
+    confirmDelete({
+      title: n > 1 ? 'Delete this incident?' : 'Delete this draft?',
+      item: first ? draftConfirmLabel(first) : '',
+      message: n > 1 ? `All ${n} messages in this incident will be deleted. This can't be undone.` : "This can't be undone."
+    }, () => deleteIncident(ids, true));
+    return;
+  }
   const set = new Set(idList);
   drafts = drafts.filter(d => !set.has(d.id));
   persistDrafts();
@@ -14189,8 +14268,15 @@ function addFreqLocationFromForm(){
   renderFreqChips();
   flashFreqNote('Pinned ✓');
 }
-function removeFreqLocation(idx, ev){
+function removeFreqLocation(idx, ev, confirmed){
   if (ev) ev.stopPropagation();
+  if (!confirmed){
+    const l = freqLocations[idx] || {};
+    confirmDelete({ title: 'Remove this pinned location?', item: [l.road, l.suburb].filter(Boolean).join(' · '),
+      message: 'It comes off the shortcut chips above Road. You can pin it again any time.', okLabel: 'Remove' },
+      () => removeFreqLocation(idx, null, true));
+    return;
+  }
   freqLocations.splice(idx, 1);
   persistFreqLocations();
   renderFreqChips();
