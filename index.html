@@ -1242,6 +1242,8 @@
   .bcc-other-item > .inline-check { flex:1; min-width:0; }
   .bcc-other-del { font: inherit; font-size:14px; line-height:1; width:22px; height:22px; padding:0; border:none; background:transparent; color: var(--ink-soft); cursor:pointer; border-radius:4px; }
   .bcc-other-del:hover { background: var(--line, #eef0f2); color: var(--ink, #1a1f24); }
+  .ino-custom-grid:empty { display: none; }
+  .ino-custom-grid { margin-top: 8px; }
   .bcc-other-add { display:block; font-size:12.5px; margin-top:2px; padding-top:2px !important; padding-bottom:2px !important; line-height:1.3; }
   .bcc-other-row { display:flex; gap:6px; align-items:center; margin-top:6px; }
   .bcc-other-row input { flex:1; min-width:0; }
@@ -1476,6 +1478,11 @@
   .lane-more-btn.v6ps-toggle:hover { color: var(--ink-soft); }
   .moreless-btn.v6ps-toggle { color: var(--muted); font-weight: 500; padding: 3px 4px; }
   .moreless-btn.v6ps-toggle:hover { color: var(--ink-soft); }
+  /* v208.32: Activated systems' More hides one rarely-used option — keep it quiet. */
+  .moreless-btn.sys-more-quiet { font-size: 12px; }
+  /* v208.32: pull Vision 6 / Public SMS up closer to Other. */
+  .field.act-other-field { padding-bottom: 0; }
+  .field.act-other-field + .field.v6ps-field { padding-top: 2px; }
 
   /* Estimated-duration quick-fill buttons (15/30/60 min) */
   .dur-quick { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
@@ -2206,7 +2213,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.30</span>
+    <span class="app-version">Version 208.33</span>
   </footer>
 </div>
 
@@ -5312,7 +5319,10 @@ function onEventChangeP(prefix){
     const moreCells = CRASH_ITEMS_MORE.map(it=>`<div class="count-cell"><label>${it.singular}</label><input type="number" min="0" class="${prefix}_crash" data-singular="${it.singular}" data-plural="${it.plural}" data-key="${it.key}" id="${prefix}_crash_${it.key}"></div>`).join('');
     const addBtn = `<button type="button" class="link-btn" onclick="addCrashOtherP('${prefix}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg> Add other</button>`;
     const busPaxField = `<div class="field" id="${prefix}_bus_pax_wrap" style="display:none;margin-top:8px;"><span class="field-label">Bus passengers</span><input type="number" min="0" id="${prefix}_bus_pax" placeholder="Number of pax" style="max-width:160px;" oninput="renderPreview()"><p class="hint">Generates: [n]x bus carrying [pax] pax</p></div>`;
-    const crashInner = `<div class="count-grid">${crashCells}</div>${busPaxField}<div class="moreless-wrap"><button type="button" class="moreless-btn" id="${prefix}_crashveh_more_btn" aria-expanded="false" onclick="toggleMoreless('${prefix}_crashveh')"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button><div class="count-grid moreless-extra" id="${prefix}_crashveh_extra" data-open-display="grid" style="display:none;">${moreCells}</div></div><div id="${prefix}_crash_others"></div>${addBtn}`;
+    // v208.31: INO — "+ Add other" lives inside More (rows already added stay visible below).
+    const crashInner = prefix === 's'
+      ? `<div class="count-grid">${crashCells}</div>${busPaxField}<div class="moreless-wrap"><button type="button" class="moreless-btn" id="${prefix}_crashveh_more_btn" aria-expanded="false" onclick="toggleMoreless('${prefix}_crashveh')"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button><div class="moreless-extra" id="${prefix}_crashveh_extra" data-open-display="block" style="display:none;"><div class="count-grid">${moreCells}</div><div style="margin-top:4px;">${addBtn}</div></div></div><div id="${prefix}_crash_others"></div>`
+      : `<div class="count-grid">${crashCells}</div>${busPaxField}<div class="moreless-wrap"><button type="button" class="moreless-btn" id="${prefix}_crashveh_more_btn" aria-expanded="false" onclick="toggleMoreless('${prefix}_crashveh')"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button><div class="count-grid moreless-extra" id="${prefix}_crashveh_extra" data-open-display="grid" style="display:none;">${moreCells}</div></div><div id="${prefix}_crash_others"></div>${addBtn}`;
     let otherLabelBlock = '';
     if (prefix === 's'){
       otherLabelBlock = '<div id="s_crash_otherlabel" style="display:none;margin-top:12px;">'
@@ -7129,9 +7139,8 @@ function buildINO(){
     </div>
 
     <div class="field">
-      <span class="field-label">QLDTraffic ID</span>
+      <div class="label-help-row"><span class="field-label" style="margin:0;">QLDTraffic ID</span><span class="fld-help" tabindex="0" role="button" aria-label="About the QLDTraffic ID" data-tip="Enter the 6-digit ID from the end of the QLDTraffic URL. Builds the full link automatically.">?</span></div>
       <input type="text" id="s_qld_url" placeholder="e.g. 123456" inputmode="numeric" style="max-width:200px;">
-      <p class="hint">Enter the 6-digit ID from the end of the QLDTraffic URL. Builds the full link automatically.</p>
     </div>
 
     <div class="field" id="s_time_field">
@@ -7295,7 +7304,7 @@ function buildINO(){
 
     <div class="field" style="border-top:none;padding-top:0;margin-top:-8px;">
       <button type="button" class="link-btn" id="s_oppsec_toggle" onclick="toggleInoOppSec()" aria-expanded="false" style="font-size:13.5px;">
-        <span id="s_oppsec_chev">▸</span> Additional info
+        <span id="s_oppsec_chev">▸</span> Add information
       </button>
       <div id="s_oppsec_body" style="display:none;margin-top:10px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
@@ -7316,12 +7325,11 @@ function buildINO(){
     </div>
 
     <div class="field" id="s_congestion_field">
-      <span class="field-label">Congestion</span>
+      <div class="label-help-row"><span class="field-label" style="margin:0;">Congestion</span><span class="fld-help" tabindex="0" role="button" aria-label="About congestion" data-tip="No → “Nil congestion” before the diversion detail. Yes → enter the length and location below.">?</span></div>
       <div class="check-grid">
         <label class="inline-check"><input type="radio" class="desel-radio" name="s_congestion_yn" value="yes" onclick="toggleDeselectableRadio(this)" onchange="onInoCongestionChange()"> Yes</label>
         <label class="inline-check"><input type="radio" class="desel-radio" name="s_congestion_yn" value="no" onclick="toggleDeselectableRadio(this)" onchange="onInoCongestionChange()"> No</label>
       </div>
-      <p class="hint">No → “Nil congestion” before the diversion detail. Yes → enter the length and location below.</p>
       <div id="s_congestion_fields" style="display:none;margin-top:10px;">
         <div class="field" style="margin-bottom:12px;">
           <span class="field-label">Length</span>
@@ -7377,10 +7385,10 @@ function buildINO(){
       </div>
     </div>
 
-    <div class="field">
-      <div class="addl-label-row">
-        <span class="field-label">Additional information</span>
-        <div class="addl-sep" id="s_addl_sep_group" role="group" aria-label="Join with">
+    <div class="field" style="padding-top:0;margin-top:-8px;">
+      <div class="addl-label-row" style="margin-bottom:0;">
+        <button type="button" class="link-btn" id="s_addl_toggle" aria-expanded="false" onclick="toggleInoAddl()"><span class="ml-chev" id="s_addl_chev">▸</span> Add information</button>
+        <div class="addl-sep" id="s_addl_sep_group" style="display:none;" role="group" aria-label="Join with">
           <span class="addl-sep-lbl">Join</span>
           <button type="button" class="addl-sep-btn on" data-sep="." aria-label="Full stop" title="Full stop — new sentence" onclick="setInoAddlSep(this.dataset.sep)">.</button>
           <button type="button" class="addl-sep-btn" data-sep="," aria-label="Comma" title="Comma — continues the sentence" onclick="setInoAddlSep(this.dataset.sep)">,</button>
@@ -7389,7 +7397,9 @@ function buildINO(){
         </div>
       </div>
       <input type="hidden" id="s_addl_sep" value=".">
+      <div id="s_addl_wrap" style="display:none;margin-top:6px;">
       <input type="text" id="s_addl_info" placeholder="Free text — appended to the end of the message" oninput="hideInoAddlClearedNote(); renderPreview(); scheduleWorkingSave();">
+      </div>
       <div id="s_addl_cleared_note" role="status" style="display:none;align-items:center;gap:8px;margin-top:6px;font-size:12.5px;color:var(--muted,#6b7280);">
         <span id="s_addl_cleared_txt">Cleared because Diversion set to No.</span>
         <button type="button" class="link-btn" style="font-size:12.5px;" onclick="undoInoAddlClear()">Undo</button>
@@ -7420,7 +7430,7 @@ function buildINO(){
       <div class="check-grid">
         ${["VMS","VSLS","LUMS"].map(x=>`<label class="inline-check"><input type="checkbox" class="s_sys" value="${x}"> ${x}</label>`).join('')}
         <label class="inline-check"><input type="checkbox" class="s_sys" value="Traffic signals"> Traffic signals</label>
-        <button type="button" class="moreless-btn" id="s_sys_more_btn" aria-expanded="false" onclick="toggleSysMore()"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button>
+        <button type="button" class="moreless-btn v6ps-toggle sys-more-quiet" id="s_sys_more_btn" aria-expanded="false" onclick="toggleSysMore()"><span class="ml-label">More</span> <span class="ml-chev">▾</span></button>
         <span class="moreless-extra" id="s_sys_more" style="display:none;">
           <label class="inline-check"><input type="checkbox" class="s_sys" value="RCIS"> RCIS</label>
         </span>
@@ -7435,9 +7445,9 @@ function buildINO(){
       </div>
     </div>
 
-    <div class="field">
+    <div class="field act-other-field">
       <button type="button" class="link-btn" id="s_act_other_toggle" onclick="toggleActOther()" aria-expanded="false" style="font-size:13.5px;">
-        <span id="s_act_other_chev">▸</span> Other
+        <span id="s_act_other_chev">▸</span> Other actions
       </button>
       <div id="s_act_other_body" style="display:none;margin-top:10px;">
         <div class="check-grid">
@@ -7493,10 +7503,12 @@ function buildINO(){
           <div class="resp-more-section" id="scene_resp_more">
             <div class="check-grid">
               ${["Medivac","SOC","All emergency services","Translink response service"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_groups_ck" value="${r}" onchange="syncInoGroup('scene','${r}')"> ${r}</label>`).join('')}
-              <label class="inline-check"><input type="checkbox" id="s_groups_other_ck" onchange="onInoGroupsOtherChange()"> Other</label>
+              <label class="inline-check" style="display:none;"><input type="checkbox" id="s_groups_other_ck" onchange="onInoGroupsOtherChange()"> Other</label>
             </div>
-            <input type="text" id="s_groups_other" placeholder="Other groups (e.g. SES)" style="display:none;margin-top:8px;">
+            <input type="text" id="s_groups_other" placeholder="Other groups (e.g. SES)" style="display:none;margin-top:8px;" hidden>
           </div>
+          <div class="check-grid ino-custom-grid" id="s_resp_custom_scene"></div>
+          <div><button type="button" class="link-btn bcc-other-add" id="s_resp_other_btn_scene" onclick="openInoOtherResp('scene')">+ Other</button></div><div class="bcc-other-row" id="s_resp_other_row_scene" style="display:none;"><input type="text" id="s_resp_other_txt_scene" placeholder="Other responder (e.g. SES)" onkeydown="onInoOtherRespKey(event, 'scene')"><button type="button" class="dur-quick-btn" onclick="addInoOtherResp('scene')">Add</button></div>
         </div>
         <div class="responder-col-card">
           <h4>Proceeding</h4>
@@ -7516,10 +7528,12 @@ function buildINO(){
           <div class="resp-more-section" id="route_resp_more">
             <div class="check-grid">
               ${["Medivac","SOC","All emergency services","Translink response service"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_route_ck" value="${r}" onchange="syncInoGroup('route','${r}')"> ${r}</label>`).join('')}
-              <label class="inline-check"><input type="checkbox" id="s_route_other_ck" onchange="onInoRouteOtherChange()"> Other</label>
+              <label class="inline-check" style="display:none;"><input type="checkbox" id="s_route_other_ck" onchange="onInoRouteOtherChange()"> Other</label>
             </div>
-            <input type="text" id="s_route_other" placeholder="Other (proceeding)" style="display:none;margin-top:8px;">
+            <input type="text" id="s_route_other" placeholder="Other (proceeding)" style="display:none;margin-top:8px;" hidden>
           </div>
+          <div class="check-grid ino-custom-grid" id="s_resp_custom_route"></div>
+          <div><button type="button" class="link-btn bcc-other-add" id="s_resp_other_btn_route" onclick="openInoOtherResp('route')">+ Other</button></div><div class="bcc-other-row" id="s_resp_other_row_route" style="display:none;"><input type="text" id="s_resp_other_txt_route" placeholder="Other responder (e.g. SES)" onkeydown="onInoOtherRespKey(event, 'route')"><button type="button" class="dur-quick-btn" onclick="addInoOtherResp('route')">Add</button></div>
         </div>
       </div>
 
@@ -7550,9 +7564,12 @@ function buildINO(){
         </div>
         <div class="check-grid moreless-extra" id="s_departed_extra" data-open-display="flex" style="display:none;margin-top:8px;">
           ${["Medivac","SOC","All emergency services","Translink response service"].map(r=>`<label class="inline-check"><input type="checkbox" class="s_departed_ck" value="${r}" onchange="onInoDepartedChange(this)"> ${r}</label>`).join('')}
-          <label class="inline-check"><input type="checkbox" id="s_departed_other_ck" onchange="document.getElementById('s_departed_other').style.display=this.checked?'block':'none'; renderPreview(); scheduleWorkingSave();"> Other</label>
+          <label class="inline-check" style="display:none;"><input type="checkbox" id="s_departed_other_ck" onchange="renderPreview(); scheduleWorkingSave();"> Other</label>
         </div>
-        <input type="text" id="s_departed_other" placeholder="Other (departed)" style="display:none;margin-top:8px;" oninput="renderPreview(); scheduleWorkingSave();">
+        <input type="text" id="s_departed_other" placeholder="Other (departed)" style="display:none;margin-top:8px;" hidden oninput="renderPreview(); scheduleWorkingSave();">
+        <div class="resp-group-label" id="s_departed_custom_lbl" style="display:none;">Other</div>
+        <div class="check-grid ino-custom-grid" id="s_resp_custom_departed"></div>
+        <div><button type="button" class="link-btn bcc-other-add" id="s_resp_other_btn_departed" onclick="openInoOtherResp('departed')">+ Other</button></div><div class="bcc-other-row" id="s_resp_other_row_departed" style="display:none;"><input type="text" id="s_resp_other_txt_departed" placeholder="Other responder (e.g. SES)" onkeydown="onInoOtherRespKey(event, 'departed')"><button type="button" class="dur-quick-btn" onclick="addInoOtherResp('departed')">Add</button></div>
       </div>
     </div>
 
@@ -7599,6 +7616,7 @@ function buildINO(){
 
     </div>
     </div>
+    </div><!-- v208.32: closes s_seg_resolution — Contact was nested inside Resolution -->
 
     <div class="ino-seg" id="s_seg_contact">
     <button type="button" class="ino-seg-head" onclick="toggleInoSeg('s_seg_contact')">
@@ -8244,6 +8262,25 @@ function autoSwitchDiversionOnFinal(el){
 }
 /* v208.21: FINAL "Final update / notes" is a collapsible row. It opens by itself whenever the
    note has text (draft restore, carried state), so text is never hidden. */
+/* v208.31: INO bottom "Additional information" is collapsible; opens by itself whenever it
+   has text (typed, restored, Undo), so text is never hidden. */
+function toggleInoAddl(force){
+  const w = document.getElementById('s_addl_wrap');
+  const btn = document.getElementById('s_addl_toggle');
+  const chev = document.getElementById('s_addl_chev');
+  if (!w) return;
+  const open = (typeof force === 'boolean') ? force : (w.style.display === 'none');
+  w.style.display = open ? 'block' : 'none';
+  const sep = document.getElementById('s_addl_sep_group'); if (sep) sep.style.display = open ? '' : 'none';
+  if (chev) chev.textContent = open ? '▾' : '▸';
+  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open && force === undefined){ const inp = document.getElementById('s_addl_info'); if (inp) inp.focus(); }
+}
+function syncInoAddlOpen(){
+  const inp = document.getElementById('s_addl_info');
+  const w = document.getElementById('s_addl_wrap');
+  if (inp && w && inp.value.trim() && w.style.display === 'none') toggleInoAddl(true);
+}
 function toggleInoFinalNote(force){
   const w = document.getElementById('s_final_note_wrap');
   const btn = document.getElementById('s_final_note_toggle');
@@ -8387,6 +8424,7 @@ function applyInoTimeLock(){
 
 function clearFormINO(){
   inoInvestOrder = [];
+  inoCustomResp = [];   // v208.33
   previewLockedText = null; previewEditing = false;
   carryClearState();   // fresh message: no carried-over text from the previous one
   sloReset();
@@ -8596,6 +8634,7 @@ function renderINO(){
 
   // Resolution
   applyInoDepartedOptions();
+  syncInoAddlOpen();   // v208.31
   { // v208.20: "Include all responders" is offered on updates only (No.2+ / Update from draft).
     const w = document.getElementById('s_resp_all_wrap');
     if (w) w.style.display = isInoUpdateContext() ? '' : 'none';
@@ -8617,7 +8656,7 @@ function renderINO(){
   const fullRouteList = routeList;
   // Suffix for en-route clause — always "proceeding"
   const routeSuffix = 'proceeding';
-  const departedList = mapRoadSteward(Array.from(document.querySelectorAll('.s_departed_ck:checked')).map(c=>c.value));
+  const departedList = dropAesCovered(mapRoadSteward(Array.from(document.querySelectorAll('.s_departed_ck:checked')).map(c=>c.value)));   // v208.33
   const departedOtherOn = (document.getElementById('s_departed_other_ck')||{}).checked;
   if (departedOtherOn){ const o = (document.getElementById('s_departed_other')||{value:''}).value.trim(); if (o) departedList.push(o); }
   // Sort: "All emergency services" first, "tow" last
@@ -9103,7 +9142,8 @@ function renderINO(){
 
 
   const out = document.getElementById('g_output_text');
-  const meaningful = road||cross||suburb||url||time||eventType||groups||enRoute||duration||contact||lanes||length||congestion||nilCongestion||oppStr||diversion||infra||injuriesStr||fatYes||systems.length||trafficSignals||finalOn||inoUpdate.on;
+  // v208.33: departed groups count as content (AES moved to Departed was blanking the preview)
+  const meaningful = road||cross||suburb||url||time||eventType||groups||enRoute||departed||duration||contact||lanes||length||congestion||nilCongestion||oppStr||diversion||infra||injuriesStr||fatYes||systems.length||trafficSignals||finalOn||inoUpdate.on;
   if (!meaningful){
     out.classList.add('empty');
     out.textContent = 'Fill in the form — your message builds here as you type.';
@@ -10900,6 +10940,90 @@ function autoExpandRespMore(){
   });
 }
 
+/* v208.33: INO "+ Other" responders, same model as BCC (v208.03). An Other added in
+   Proceeding appears in Proceeding (ticked), At scene and Departed; one added At scene
+   appears At scene (ticked) and Departed; one added in Departed stays there. They use the
+   normal s_groups_ck / s_route_ck / s_departed_ck classes, so output, the one-column rule,
+   drafts and previous-message snapshots treat them like any other group. */
+let inoCustomResp = [];   // [{ name, origin: 'route'|'scene'|'departed' }]
+const INO_RESP_RANK = { route:0, scene:1, departed:2 };
+const INO_RESP_CLS  = { scene:'s_groups_ck', route:'s_route_ck', departed:'s_departed_ck' };
+function renderInoCustomResp(){
+  const ticked = {};
+  Object.keys(INO_RESP_CLS).forEach(col => {
+    document.querySelectorAll(`#s_resp_custom_${col} .${INO_RESP_CLS[col]}:checked`).forEach(c => {
+      (ticked[c.value.toLowerCase()] = ticked[c.value.toLowerCase()] || []).push(col);
+    });
+  });
+  Object.keys(INO_RESP_CLS).forEach(col => {
+    const box = document.getElementById(`s_resp_custom_${col}`);
+    if (!box) return;
+    box.innerHTML = inoCustomResp
+      .filter(x => INO_RESP_RANK[col] >= INO_RESP_RANK[x.origin])
+      .map(x => {
+        const idx = inoCustomResp.indexOf(x);
+        const on = (ticked[x.name.toLowerCase()] || []).indexOf(col) !== -1;
+        const handler = col === 'departed' ? 'onInoDepartedChange(this)' : `syncInoGroup('${col}', this.value)`;
+        const del = (x.origin === col)
+          ? `<button type="button" class="bcc-other-del" title="Remove ${bccEsc(x.name)}" aria-label="Remove ${bccEsc(x.name)}" onclick="confirmDelete({ title: 'Remove this responder?', item: this.getAttribute('data-name'), message: 'It comes off the responder list for this message.', okLabel: 'Remove' }, () => removeInoCustomResp(${idx}))" data-name="${bccEsc(x.name)}">\u00d7</button>` : '';
+        return `<span class="bcc-other-item"><label class="inline-check"><input type="checkbox" class="${INO_RESP_CLS[col]}" value="${bccEsc(x.name)}" ${on ? 'checked' : ''} onchange="${handler}"> ${bccEsc(x.name)}</label>${del}</span>`;
+      }).join('');
+  });
+  const lbl = document.getElementById('s_departed_custom_lbl');
+  if (lbl) lbl.style.display = inoCustomResp.length ? '' : 'none';
+}
+function openInoOtherResp(col){
+  const row = document.getElementById(`s_resp_other_row_${col}`);
+  const btn = document.getElementById(`s_resp_other_btn_${col}`);
+  if (row){ row.style.display = 'flex'; const inp = row.querySelector('input'); if (inp){ inp.value = ''; inp.focus(); } }
+  if (btn) btn.style.display = 'none';
+}
+function closeInoOtherResp(col){
+  const row = document.getElementById(`s_resp_other_row_${col}`);
+  const btn = document.getElementById(`s_resp_other_btn_${col}`);
+  if (row) row.style.display = 'none';
+  if (btn) btn.style.display = '';
+}
+function addInoOtherResp(col, nameIn, silent){
+  const inp = document.getElementById(`s_resp_other_txt_${col}`);
+  const name = (nameIn !== undefined ? String(nameIn) : ((inp && inp.value) || '')).trim();
+  if (nameIn === undefined) closeInoOtherResp(col);
+  if (!name) return;
+  const lo = name.toLowerCase();
+  const std = Array.from(document.querySelectorAll('.' + INO_RESP_CLS[col]))
+    .find(c => !c.closest('.ino-custom-grid') && c.value.toLowerCase() === lo);
+  const existing = inoCustomResp.find(x => x.name.toLowerCase() === lo);
+  let value = std ? std.value : (existing && existing.name);
+  if (!value){
+    inoCustomResp.push({ name, origin: col });
+    value = name;
+    renderInoCustomResp();
+  } else if (existing && INO_RESP_RANK[col] < INO_RESP_RANK[existing.origin]){
+    existing.origin = col;
+    renderInoCustomResp();
+  }
+  const ck = Array.from(document.querySelectorAll('.' + INO_RESP_CLS[col])).find(c => c.value.toLowerCase() === value.toLowerCase());
+  if (ck){
+    ck.checked = true;
+    if (silent) return;
+    if (col === 'departed') onInoDepartedChange(ck); else syncInoGroup(col, ck.value);
+  } else if (!silent){ renderPreview(); scheduleWorkingSave(); }
+}
+function onInoOtherRespKey(e, col){
+  if (e.key === 'Enter'){ e.preventDefault(); addInoOtherResp(col); }
+  else if (e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); closeInoOtherResp(col); }
+}
+function removeInoCustomResp(idx){
+  inoCustomResp.splice(idx, 1);
+  renderInoCustomResp();
+  renderPreview(); scheduleWorkingSave();
+}
+/* Legacy drafts: the old free-text "Other" boxes become custom responders. */
+function inoOtherTextToCustom(col, text){
+  String(text || '').split(/\s*(?:,|;|\band\b|&)\s*/i).map(x => x.trim()).filter(Boolean)
+    .forEach(n => addInoOtherResp(col, n, true));
+}
+
 /* v208.19: groups covered by "All emergency services". */
 function inoAesCovered(){ return ['QPS','QAS','QFD']; }
 function dropAesCovered(list){
@@ -10936,6 +11060,10 @@ function onInoDepartedChange(el){
     document.querySelectorAll('.s_groups_ck').forEach(c=>{ if (c.value === el.value) c.checked = false; });
     updateAllRespSummaries();
   }
+  // v208.33: "All emergency services" departed → QPS, QAS and QFD departed too (and back).
+  if (el && el.value === 'All emergency services'){
+    document.querySelectorAll('.s_departed_ck').forEach(c=>{ if (inoAesCovered().indexOf(c.value) !== -1) c.checked = el.checked; });
+  }
   renderPreview();
   scheduleWorkingSave();
 }
@@ -10946,8 +11074,11 @@ function applyInoDepartedOptions(){
   const wrap = document.getElementById('s_departed_wrap');
   if (!wrap) return;
   const scene = new Set(Array.from(document.querySelectorAll('.s_groups_ck:checked')).map(c=>c.value));
+  // v208.33: All emergency services at scene also offers QPS, QAS and QFD individually.
+  if (scene.has('All emergency services')) inoAesCovered().forEach(g => scene.add(g));
   let any = false;
   wrap.querySelectorAll('.s_departed_ck').forEach(c=>{
+    if (c.closest('.ino-custom-grid')){ any = true; return; }   // Other responders: always offered
     const show = scene.has(c.value) || c.checked;
     const lbl = c.closest('label'); if (lbl) lbl.style.display = show ? '' : 'none';
     if (show) any = true;
@@ -10962,7 +11093,7 @@ function applyInoDepartedOptions(){
   }
   // Hide empty grids and their headings
   wrap.querySelectorAll('.check-grid').forEach(g=>{
-    if (g.id === 's_departed_more_row') return;
+    if (g.id === 's_departed_more_row' || g.classList.contains('ino-custom-grid')) return;
     const vis = Array.from(g.querySelectorAll('label')).some(l => l.style.display !== 'none');
     g.style.display = vis ? (g.id === 's_departed_extra' ? 'flex' : '') : 'none';
     const prev = g.previousElementSibling;
@@ -11545,6 +11676,7 @@ function collectFormState(){
         groupsOther: (document.getElementById('s_groups_other_ck')||{}).checked, groupsOtherText: gv('s_groups_other'),
         routeList: Array.from(document.querySelectorAll('.s_route_ck:checked')).map(c=>c.value),
         routeOther: (document.getElementById('s_route_other_ck')||{}).checked, routeOtherText: gv('s_route_other'),
+        respCustom: inoCustomResp.map(x => ({ name: x.name, origin: x.origin })),   // v208.33
         departedList: Array.from(document.querySelectorAll('.s_departed_ck:checked')).map(c=>c.value), departedOther: (document.getElementById('s_departed_other_ck')||{}).checked, departedOtherText: gv('s_departed_other'),
         durUnknown: (document.getElementById('s_duration_unknown')||{}).checked, durHH: gv('s_dur_hh'), durMM: gv('s_dur_mm'),
         durOther: gv('s_dur_other'),
@@ -13556,13 +13688,16 @@ function applyDraft(s){
     if (a.cctv){ setRadio('s_cctv', a.cctv); }
     if (a.actOther && a.actOther.length){ setChecks('s_act_other_ck', a.actOther); toggleActOther(true); }
     // resolution
+    // v208.33: Other responders first (their checkboxes must exist before ticks are restored)
+    inoCustomResp = Array.isArray(a.respCustom) ? a.respCustom.map(x => ({ name: x.name, origin: x.origin })) : [];
+    renderInoCustomResp();
     setChecks('s_groups_ck', a.groupsList);
     { const ra = document.getElementById('s_resp_all'); if (ra) ra.checked = !!a.respAll; }
-    if (a.groupsOther){ document.getElementById('s_groups_other_ck').checked = true; onInoGroupsOtherChange(); set('s_groups_other', a.groupsOtherText); }
+    if (a.groupsOther && a.groupsOtherText) inoOtherTextToCustom('scene', a.groupsOtherText);   // legacy → + Other
     setChecks('s_route_ck', a.routeList);
-    if (a.routeOther){ document.getElementById('s_route_other_ck').checked = true; onInoRouteOtherChange(); set('s_route_other', a.routeOtherText); }
+    if (a.routeOther && a.routeOtherText) inoOtherTextToCustom('route', a.routeOtherText);   // legacy → + Other
     if (a.departedList && a.departedList.length){ setChecks('s_departed_ck', a.departedList); document.getElementById('s_departed_wrap').style.display='block'; document.getElementById('s_departed_toggle').querySelector('.ml-chev').textContent='\u25be'; }
-    if (a.departedOther){ const ck=document.getElementById('s_departed_other_ck'); if(ck){ck.checked=true; document.getElementById('s_departed_other').style.display='block';} set('s_departed_other', a.departedOtherText); }
+    if (a.departedOther && a.departedOtherText) inoOtherTextToCustom('departed', a.departedOtherText);   // legacy → + Other
     autoExpandRespMore();
     set('s_dur_hh', a.durHH); set('s_dur_mm', a.durMM);
     if (a.durRecovery){ const rc = document.getElementById('s_dur_recovery'); if (rc){ rc.checked = true; onInoRecoveryChange(); } }
