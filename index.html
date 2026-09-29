@@ -628,6 +628,14 @@
     font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
     color: #38423e; margin: 0 0 12px; font-weight: 600;
   }
+  /* v208.27: Advanced settings — a quiet muted link at the foot of Settings. */
+  .adv-settings { margin-top: 14px; padding-top: 10px; }
+  .adv-settings-link { display: inline-flex; align-items: center; gap: 4px; background: none; border: none; padding: 2px 0;
+    font-family: var(--sans); font-size: 11.5px; font-weight: 400; color: var(--muted); cursor: pointer; }
+  .adv-settings-link:hover { color: var(--ink); text-decoration: underline; }
+  .adv-settings-link .adv-chev { transform: rotate(-90deg); transition: transform 0.15s ease; }
+  .adv-settings-link[aria-expanded="true"] .adv-chev { transform: none; }
+  .adv-settings-body { padding: 6px 2px 4px; }
   .disp-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
   .disp-row .disp-name { flex: 1; min-width: 0; font-size: 13px; color: #16201d; }
   /* Stacked-label variant: label + hint on their own lines, control keeps its width */
@@ -820,6 +828,18 @@
      An open GEN card (restored working state / loaded draft) stays visible until closed. */
   body.hide-generic .tmpl[data-tmpl="generic"]:not(.open) { display: none; }
   body.hide-generic .gen-only-setting { display: none; }
+  /* v208.27: Stationary Vehicle Management (AV/TTS) and SLO escalations (INO/BCC) can be
+     hidden the same way. An open card stays visible until it's closed. */
+  body.hide-svm .tmpl-group-head.svm,
+  body.hide-svm .tmpl[data-tmpl="av"]:not(.open),
+  body.hide-svm .tmpl[data-tmpl="tts"]:not(.open),
+  body.hide-slo .tmpl-group-head.seqops,
+  body.hide-slo .tmpl-group-head.bcc,
+  body.hide-slo .tmpl[data-tmpl="ino"]:not(.open),
+  body.hide-slo .tmpl[data-tmpl="bcc"]:not(.open) { display: none; }
+  body.hide-generic.hide-svm .tmpl-group-head.seqops { margin-top: 0; }
+  .tmpl-all-hidden { display: none; margin: 8px 4px; font-size: 13px; color: var(--muted); }
+  body.hide-generic.hide-svm.hide-slo .tmpl-all-hidden { display: block; }
 
   /* SEQ OPS group — blue accent */
   .tmpl-group-head {
@@ -1984,6 +2004,7 @@
   <div class="work">
     <div class="form-col">
       <div class="template-list" id="templateList">
+        <p class="tmpl-all-hidden">All templates are hidden — turn them back on in Settings (the cog, top right).</p>
         <!-- Template 1 -->
         <div class="tmpl" data-tmpl="generic">
           <button type="button" class="tmpl-head" onclick="toggleTmpl(this)">
@@ -2033,7 +2054,7 @@
         </div>
 
         <!-- SEQ OPS group -->
-        <div class="tmpl-group-head">SEQ OPS</div>
+        <div class="tmpl-group-head seqops">SEQ OPS</div>
 
         <!-- SEQ OPS Template 1: INO Incident Escalation -->
         <div class="tmpl" data-tmpl="ino" data-group="seqops">
@@ -2165,7 +2186,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.26</span>
+    <span class="app-version">Version 208.28</span>
   </footer>
 </div>
 
@@ -2616,8 +2637,8 @@ const AV_TOW_SUBJ_BASE = 'QLD GOV - DTMR - METRO - Stationary (Abandoned / Broke
 
 const AUTH_NAME_KEY = 'bmtmc_auth_name_v1';
 const TOWING_RICH_KEY = 'bmtmc_towing_rich_v1';
-let towingRichEmail = false;
-try { towingRichEmail = window.localStorage.getItem(TOWING_RICH_KEY) === '1'; } catch(e){}
+let towingRichEmail = true;   // v208.27: default ON (only an explicit saved '0' turns it off)
+try { const v = window.localStorage.getItem(TOWING_RICH_KEY); if (v !== null) towingRichEmail = (v === '1'); } catch(e){}
 function setTowingRichEmail(on){
   towingRichEmail = on;
   try { window.localStorage.setItem(TOWING_RICH_KEY, on ? '1' : '0'); } catch(e){}
@@ -9098,6 +9119,16 @@ function setSummaryNumOnHeading(on){
   updateAllLiveHeaders();
   syncTopbarOffset();
 }
+/* v208.28: optionally show only the incident type (text before the first ";"). */
+const SUMMARY_TYPE_ONLY_KEY = 'bmtmc_summary_type_only_v1';
+let summaryTypeOnly = false;
+try { summaryTypeOnly = window.localStorage.getItem(SUMMARY_TYPE_ONLY_KEY) === '1'; } catch(e){}
+function setSummaryTypeOnly(on){
+  summaryTypeOnly = !!on;
+  try { window.localStorage.setItem(SUMMARY_TYPE_ONLY_KEY, on ? '1' : '0'); } catch(e){}
+  renderChipSettings();
+  updateAllLiveHeaders();
+}
 function summaryCleanRoad(r){ return String(r || '').replace(/\s*\([^)]*\)/g, '').trim(); }
 function templateSummary(t){
   const gv = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
@@ -9145,7 +9176,9 @@ function templateSummary(t){
     style = { bg:'var(--purple-soft)', fg:'var(--purple-deep)' };
   }
   if (!style) style = { bg:'var(--teal-soft)', fg:'var(--teal-deep)' };
-  return { open: !!(loc || desc), seq, loc, desc, style };
+  const descFull = desc;
+  if (summaryTypeOnly && (t === 'ino' || t === 'bcc' || t === 'generic')) desc = desc.split(';')[0].trim();
+  return { open: !!(loc || desc), seq, loc, desc, descFull, style };
 }
 function updateLiveHeader(t){
   const line2 = document.getElementById('tmpl-live-' + t);
@@ -9158,11 +9191,11 @@ function updateLiveHeader(t){
   const locSpan = m.loc ? `<span class="tl-loc" title="${e(m.loc)}">${e(m.loc)}</span>` : '';
   if (summaryNumOnHeading){
     right.innerHTML = chip;
-    const bits = [locSpan, m.desc ? `<span class="tl-desc" title="${e(m.desc)}" style="color:${m.style.fg};">${e(m.desc)}</span>` : ''].filter(Boolean);
+    const bits = [locSpan, m.desc ? `<span class="tl-desc" title="${e(m.descFull)}" style="color:${m.style.fg};">${e(m.desc)}</span>` : ''].filter(Boolean);
     line2.innerHTML = bits.join('<span class="tl-sep">|</span>');
   } else {
     right.innerHTML = locSpan;
-    line2.innerHTML = chip + (m.desc ? `<span class="tl-chip" title="${e(m.desc)}" style="background:${m.style.bg};color:${m.style.fg};">${e(m.desc)}</span>` : '');
+    line2.innerHTML = chip + (m.desc ? `<span class="tl-chip" title="${e(m.descFull)}" style="background:${m.style.bg};color:${m.style.fg};">${e(m.desc)}</span>` : '');
   }
 }
 function updateAllLiveHeaders(){
@@ -11894,7 +11927,29 @@ function loadShowGenericPref(){
   try { const raw = window.localStorage.getItem(SHOW_GENERIC_KEY); if (raw !== null) showGeneric = (raw === '1'); } catch(e){}
   applyShowGeneric();
 }
-function applyShowGeneric(){ document.body.classList.toggle('hide-generic', !showGeneric); }
+function applyShowGeneric(){
+  document.body.classList.toggle('hide-generic', !showGeneric);
+  document.body.classList.toggle('hide-svm', !showSvm);
+  document.body.classList.toggle('hide-slo', !showSlo);
+}
+/* v208.27: template groups that can be hidden along with their drafts (drafts aren't deleted). */
+const SHOW_SVM_KEY = 'bmtmc_show_svm_v1', SHOW_SLO_KEY = 'bmtmc_show_slo_v1';
+var showSvm = true, showSlo = true;
+try {
+  const a = window.localStorage.getItem(SHOW_SVM_KEY); if (a !== null) showSvm = (a === '1');
+  const b = window.localStorage.getItem(SHOW_SLO_KEY); if (b !== null) showSlo = (b === '1');
+} catch(e){}
+function draftFamilyHidden(fam){
+  return (!showSvm && (fam === 'av' || fam === 'tts')) || (!showSlo && (fam === 'ino' || fam === 'bcc'));
+}
+function setShowTemplateGroup(which, on){
+  if (which === 'svm'){ showSvm = !!on; try { window.localStorage.setItem(SHOW_SVM_KEY, on ? '1' : '0'); } catch(e){} }
+  if (which === 'slo'){ showSlo = !!on; try { window.localStorage.setItem(SHOW_SLO_KEY, on ? '1' : '0'); } catch(e){} }
+  applyShowGeneric();
+  renderChipSettings();
+  refreshDraftsCount();
+  renderDraftsList();
+}
 function setShowGeneric(on){
   showGeneric = !!on;
   try { window.localStorage.setItem(SHOW_GENERIC_KEY, showGeneric ? '1' : '0'); } catch(e){}
@@ -12002,48 +12057,34 @@ function renderChipSettings(){
         <span class="disp-track"><span class="disp-knob"></span></span>
       </label>
     </div>
+    <div class="disp-row">
+      <span class="disp-name">Show Stationary Vehicle Management (AV &amp; TTS)<span class="disp-info" tabindex="0" role="img" aria-label="Hides these templates and their saved drafts. Nothing is deleted — turn back on to see them again." title="Hides these templates and their saved drafts. Nothing is deleted — turn back on to see them again.">i</span></span>
+      <label class="disp-switch">
+        <input type="checkbox" ${showSvm ? 'checked' : ''} onchange="setShowTemplateGroup('svm', this.checked)" aria-label="Show Stationary Vehicle Management templates">
+        <span class="disp-track"><span class="disp-knob"></span></span>
+      </label>
+    </div>
+    <div class="disp-row">
+      <span class="disp-name">Show SLO escalations (INO &amp; BCC)<span class="disp-info" tabindex="0" role="img" aria-label="Hides these templates and their saved drafts. Nothing is deleted — turn back on to see them again." title="Hides these templates and their saved drafts. Nothing is deleted — turn back on to see them again.">i</span></span>
+      <label class="disp-switch">
+        <input type="checkbox" ${showSlo ? 'checked' : ''} onchange="setShowTemplateGroup('slo', this.checked)" aria-label="Show SLO escalation templates">
+        <span class="disp-track"><span class="disp-knob"></span></span>
+      </label>
+    </div>
   </div>
-  <div class="disp-settings" style="margin-top:14px;">
+  <div class="disp-settings" style="margin-top:12px; padding-top:12px; border-top:1px solid #dde2df;">
     <h4>Display</h4>
     <div class="disp-row">
-      <span class="disp-name">Message number on heading line<span class="disp-info" tabindex="0" role="img" aria-label="Moves the message number beside the template name, with road, suburb and description underneath." title="Moves the message number beside the template name, with road, suburb and description underneath.">i</span></span>
+      <span class="disp-name">Swap summary layout<span class="disp-info" tabindex="0" role="img" aria-label="Moves the message number beside the template name, with road, suburb and description underneath." title="Moves the message number beside the template name, with road, suburb and description underneath.">i</span></span>
       <label class="disp-switch">
-        <input type="checkbox" ${summaryNumOnHeading ? 'checked' : ''} onchange="setSummaryNumOnHeading(this.checked)" aria-label="Message number on heading line">
+        <input type="checkbox" ${summaryNumOnHeading ? 'checked' : ''} onchange="setSummaryNumOnHeading(this.checked)" aria-label="Swap summary layout">
         <span class="disp-track"><span class="disp-knob"></span></span>
       </label>
     </div>
     <div class="disp-row">
-      <span class="disp-name">Convert ALL CAPS input to Title Case on leaving a field</span>
+      <span class="disp-name">Hide incident details in summary<span class="disp-info" tabindex="0" role="img" aria-label="Summary shows only the incident type, e.g. ‘Single-vehicle crash’, leaving off vehicle and party details (1x heavy vehicle, 1x pedestrian…). Hover the summary to see it all." title="Summary shows only the incident type, e.g. ‘Single-vehicle crash’, leaving off vehicle and party details (1x heavy vehicle, 1x pedestrian…). Hover the summary to see it all.">i</span></span>
       <label class="disp-switch">
-        <input type="checkbox" ${capsToTitleOn ? 'checked' : ''} onchange="setCapsToTitle(this.checked)" aria-label="Convert all-caps input to title case">
-        <span class="disp-track"><span class="disp-knob"></span></span>
-      </label>
-    </div>
-    <div class="disp-row">
-      <span class="disp-name">Use “consecutively” for lanes blocked at separate times<span class="disp-info" tabindex="0" role="img" aria-label="On a FINAL with Summarise impact, when the summary combines lanes that were blocked at different times (across different messages), add the word ‘consecutively’. Lanes blocked together in one message, or a single lane, never get it." title="On a FINAL with Summarise impact, when the summary combines lanes that were blocked at different times (across different messages), add the word ‘consecutively’. Lanes blocked together in one message, or a single lane, never get it.">i</span></span>
-      <label class="disp-switch">
-        <input type="checkbox" ${consecutiveWordingOn ? 'checked' : ''} onchange="setConsecWording(this.checked)" aria-label="Use consecutively for lanes blocked at separate times">
-        <span class="disp-track"><span class="disp-knob"></span></span>
-      </label>
-    </div>
-    <div class="disp-row">
-      <span class="disp-name">Write preview edits back to fields<span class="disp-info" tabindex="0" role="img" aria-label="When you edit the live preview directly, put changes to Road, Cross street, Suburb and Additional info back into those form fields. Other parts (event type, lanes, responders…) stay as typed in the message." title="When you edit the live preview directly, put changes to Road, Cross street, Suburb and Additional info back into those form fields. Other parts (event type, lanes, responders…) stay as typed in the message.">i</span></span>
-      <label class="disp-switch">
-        <input type="checkbox" ${editWriteBack ? 'checked' : ''} onchange="setEditWriteBack(this.checked)" aria-label="Write preview edits back to fields">
-        <span class="disp-track"><span class="disp-knob"></span></span>
-      </label>
-    </div>
-    <div class="disp-row">
-      <span class="disp-name">Warn about un-carried edits while editing<span class="disp-info" tabindex="0" role="img" aria-label="ON: while a preview edit is held, show the carried-over text panel straight away so you can move text into a field before it's at risk. OFF: the panel appears only after the message rebuilds (FINAL, Cleared or Next escalation), listing what was set aside." title="ON: while a preview edit is held, show the carried-over text panel straight away so you can move text into a field before it's at risk. OFF: the panel appears only after the message rebuilds (FINAL, Cleared or Next escalation), listing what was set aside.">i</span></span>
-      <label class="disp-switch">
-        <input type="checkbox" ${carryoverMode === 'held' ? 'checked' : ''} onchange="setCarryoverMode(this.checked)" aria-label="Warn about un-carried edits while editing">
-        <span class="disp-track"><span class="disp-knob"></span></span>
-      </label>
-    </div>
-    <div class="disp-row">
-      <span class="disp-name">Send formatted email (AV &amp; TTS)<span class="disp-info" tabindex="0" role="img" aria-label="ON: Send in Outlook copies a formatted (bold headings, table) email body to your clipboard and opens Outlook with an empty body — paste to send a formatted email. OFF: Opens Outlook with the full email pre-filled as plain text." title="ON: Send in Outlook copies a formatted (bold headings, table) email body to your clipboard and opens Outlook with an empty body — paste to send a formatted email. OFF: Opens Outlook with the full email pre-filled as plain text.">i</span></span>
-      <label class="disp-switch">
-        <input type="checkbox" ${towingRichEmail ? 'checked' : ''} onchange="setTowingRichEmail(this.checked)" aria-label="Send formatted email for AV and TTS">
+        <input type="checkbox" ${summaryTypeOnly ? 'checked' : ''} onchange="setSummaryTypeOnly(this.checked)" aria-label="Hide incident details in summary">
         <span class="disp-track"><span class="disp-knob"></span></span>
       </label>
     </div>
@@ -12079,6 +12120,49 @@ function renderChipSettings(){
       <button type="button" class="draft-btn ghost" onclick="exportDrafts()" title="Download all drafts as a file">Export drafts</button>
       <button type="button" class="draft-btn ghost" onclick="document.getElementById('draftsImportInput').click()" title="Load drafts from a file">Import drafts</button>
     </div>
+  </div>
+  <div class="adv-settings" id="advSettingsBlock">
+    <button type="button" class="adv-settings-link" id="advSettingsToggle" onclick="toggleAdvSettings()" aria-expanded="${advSettingsOpen ? 'true' : 'false'}" aria-controls="advSettingsBody">
+      <svg class="adv-chev" width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Advanced settings</span>
+    </button>
+    <div class="disp-settings adv-settings-body" id="advSettingsBody" ${advSettingsOpen ? '' : 'hidden'}>
+    <div class="disp-row">
+      <span class="disp-name">Convert ALL CAPS input to Title Case on leaving a field</span>
+      <label class="disp-switch">
+        <input type="checkbox" ${capsToTitleOn ? 'checked' : ''} onchange="setCapsToTitle(this.checked)" aria-label="Convert all-caps input to title case">
+        <span class="disp-track"><span class="disp-knob"></span></span>
+      </label>
+    </div>
+    <div class="disp-row">
+      <span class="disp-name">Use “consecutively” for lanes blocked at separate times<span class="disp-info" tabindex="0" role="img" aria-label="On a FINAL with Summarise impact, when the summary combines lanes that were blocked at different times (across different messages), add the word ‘consecutively’. Lanes blocked together in one message, or a single lane, never get it." title="On a FINAL with Summarise impact, when the summary combines lanes that were blocked at different times (across different messages), add the word ‘consecutively’. Lanes blocked together in one message, or a single lane, never get it.">i</span></span>
+      <label class="disp-switch">
+        <input type="checkbox" ${consecutiveWordingOn ? 'checked' : ''} onchange="setConsecWording(this.checked)" aria-label="Use consecutively for lanes blocked at separate times">
+        <span class="disp-track"><span class="disp-knob"></span></span>
+      </label>
+    </div>
+    <div class="disp-row">
+      <span class="disp-name">Write preview edits back to fields<span class="disp-info" tabindex="0" role="img" aria-label="When you edit the live preview directly, put changes to Road, Cross street, Suburb and Additional info back into those form fields. Other parts (event type, lanes, responders…) stay as typed in the message." title="When you edit the live preview directly, put changes to Road, Cross street, Suburb and Additional info back into those form fields. Other parts (event type, lanes, responders…) stay as typed in the message.">i</span></span>
+      <label class="disp-switch">
+        <input type="checkbox" ${editWriteBack ? 'checked' : ''} onchange="setEditWriteBack(this.checked)" aria-label="Write preview edits back to fields">
+        <span class="disp-track"><span class="disp-knob"></span></span>
+      </label>
+    </div>
+    <div class="disp-row">
+      <span class="disp-name">Warn about un-carried edits while editing<span class="disp-info" tabindex="0" role="img" aria-label="ON: while a preview edit is held, show the carried-over text panel straight away so you can move text into a field before it's at risk. OFF: the panel appears only after the message rebuilds (FINAL, Cleared or Next escalation), listing what was set aside." title="ON: while a preview edit is held, show the carried-over text panel straight away so you can move text into a field before it's at risk. OFF: the panel appears only after the message rebuilds (FINAL, Cleared or Next escalation), listing what was set aside.">i</span></span>
+      <label class="disp-switch">
+        <input type="checkbox" ${carryoverMode === 'held' ? 'checked' : ''} onchange="setCarryoverMode(this.checked)" aria-label="Warn about un-carried edits while editing">
+        <span class="disp-track"><span class="disp-knob"></span></span>
+      </label>
+    </div>
+    <div class="disp-row">
+      <span class="disp-name">Send formatted email (AV &amp; TTS)<span class="disp-info" tabindex="0" role="img" aria-label="ON: Send in Outlook copies a formatted (bold headings, table) email body to your clipboard and opens Outlook with an empty body — paste to send a formatted email. OFF: Opens Outlook with the full email pre-filled as plain text." title="ON: Send in Outlook copies a formatted (bold headings, table) email body to your clipboard and opens Outlook with an empty body — paste to send a formatted email. OFF: Opens Outlook with the full email pre-filled as plain text.">i</span></span>
+      <label class="disp-switch">
+        <input type="checkbox" ${towingRichEmail ? 'checked' : ''} onchange="setTowingRichEmail(this.checked)" aria-label="Send formatted email for AV and TTS">
+        <span class="disp-track"><span class="disp-knob"></span></span>
+      </label>
+    </div>
+    </div>
   </div>`;
 }
 function setChipColour(type, key){
@@ -12093,6 +12177,15 @@ function setChipColour(type, key){
 }
 /* Expand/collapse the incident-type chip-colours section. Always starts collapsed
    (re-rendered fresh each time the modal opens), so no persistence needed. */
+/* v208.27: Advanced settings — collapsible; stays open across the re-render each switch triggers. */
+let advSettingsOpen = false;
+function toggleAdvSettings(){
+  advSettingsOpen = !advSettingsOpen;
+  const body = document.getElementById('advSettingsBody');
+  const btn = document.getElementById('advSettingsToggle');
+  if (body){ if (advSettingsOpen) body.removeAttribute('hidden'); else body.setAttribute('hidden',''); }
+  if (btn) btn.setAttribute('aria-expanded', advSettingsOpen ? 'true' : 'false');
+}
 function toggleChipColours(){
   const body = document.getElementById('chipColoursBody');
   const btn = document.getElementById('chipColoursToggle');
@@ -12451,7 +12544,8 @@ function importDraftsFromFile(input){
 
 function refreshDraftsCount(){
   const el = document.getElementById('draftsCount');
-  if (el) el.textContent = drafts.length;
+  // v208.27: hidden template groups' drafts aren't counted
+  if (el) el.textContent = drafts.filter(d => !(d && d.state && draftFamilyHidden(draftFamily(d.state.tmpl)))).length;
 }
 
 function draftFamily(tmpl){
@@ -13025,6 +13119,7 @@ function renderDraftsList(){
   ];
   let html = '';
   groups.forEach(g => {
+    if (draftFamilyHidden(g.fam)) return;   // v208.27: group hidden in Settings
     const rows = drafts.filter(d => d && d.state && draftFamily(d.state.tmpl) === g.fam);
     if (!rows.length) return;   // omit empty groups
     // Cluster once here so the header count reflects the number of incidents
