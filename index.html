@@ -2206,7 +2206,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.29</span>
+    <span class="app-version">Version 208.30</span>
   </footer>
 </div>
 
@@ -7074,7 +7074,7 @@ function buildINO(){
             <input type="text" id="s_final_note" placeholder="Final Update / notes (free text)" oninput="updateFinalOutline(); renderPreview(); scheduleWorkingSave();">
           </div>
         </div>
-        <div id="s_final_impact_outline" class="final-outline" style="display:none;"></div>
+        <!-- v208.30: "In the message" outline box removed (updateFinalOutline no-ops without it). -->
       </div>
     </div>
 
