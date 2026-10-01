@@ -1305,6 +1305,14 @@
     border-radius:999px; border:1px solid var(--line, #d9dee3); background:transparent; color: var(--ink, #1a1f24); cursor:pointer; }
   .lb-whole.on { background: var(--accent-soft, #e3f1ec); border-color: transparent; font-weight:600; }
   .lb-whole-road.on { background: rgba(120,40,40,.13); color:#7b241c; }
+  /* v208.38: Ramp closed → On / Off */
+  .lb-ramp-pick { display:inline-flex; border:1px solid var(--line, #d9dee3); border-radius:999px; overflow:hidden; height:30px; }
+  .lb-ramp-opt { font: inherit; font-size:12.5px; padding:0 12px; border:none; background:transparent; color: var(--ink, #1a1f24); cursor:pointer; }
+  .lb-ramp-opt + .lb-ramp-opt { border-left:1px solid var(--line, #d9dee3); }
+  .lb-ramp-opt.on { background: rgba(120,40,40,.13); color:#7b241c; font-weight:600; }
+  .lb-ramp-names { flex-basis: 100%; display:flex; flex-wrap:wrap; gap:8px 14px; margin-top:4px; }
+  .lb-ramp-name { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color: var(--muted); flex: 1 1 220px; }
+  .lb-ramp-name input { flex:1; min-width:0; font: inherit; font-weight:400; font-size:13px; padding:5px 8px; border:1px solid var(--line-strong,#d1d5db); border-radius:6px; color: var(--ink); }
   .lb-mode-link { margin-left:auto; font-size:12px !important; font-weight:500 !important; }
   /* v208.09: lane board extras — divider between lane shortcuts and Road closed; BCC lane count + Affected */
   .lb-divider { width:1px; height:22px; background: var(--line-strong, #c4ccc7); margin:0 2px; }
@@ -2252,7 +2260,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.36</span>
+    <span class="app-version">Version 208.38</span>
   </footer>
 </div>
 
@@ -4500,8 +4508,10 @@ function inoLanesUnchangedFromPrev(){
    everything that reads them (FINAL, peak/summarise, closure logic) keeps working. */
 const BOARD_LANES = ['Left','Centre','Right'];
 const BOARD_CYCLE = ['open','blocked','impacted','closed'];
-function emptyBoard(){ return { L:{ Left:'open', Centre:'open', Right:'open' }, road:false, nil:false }; }
-function cloneBoard(b){ return b ? { L:Object.assign({ Left:'open', Centre:'open', Right:'open' }, b.L||{}), road:!!b.road, nil:!!b.nil } : null; }
+function emptyBoard(){ return { L:{ Left:'open', Centre:'open', Right:'open' }, road:false, nil:false, ramp:{ on:false, off:false } }; }
+function cloneBoard(b){ return b ? { L:Object.assign({ Left:'open', Centre:'open', Right:'open' }, b.L||{}), road:!!b.road, nil:!!b.nil,
+  ramp:{ on:!!(b.ramp && b.ramp.on), off:!!(b.ramp && b.ramp.off),
+          onName:(b.ramp && b.ramp.onName) || '', offName:(b.ramp && b.ramp.offName) || '' } } : null; }   // v208.38: + ramp
 let inoBoard = emptyBoard();
 let inoPrevBoard = null;
 function inoBoardMode(){
@@ -4509,7 +4519,7 @@ function inoBoardMode(){
 }
 function setInoLaneMode(on){
   try { localStorage.setItem('bmtmc_ino_lane_board', on ? '1' : '0'); } catch(e){}
-  if (on){ inoBoard = boardFromClassicForm(); }
+  if (on){ const ramp = inoBoard.ramp; inoBoard = boardFromClassicForm(); if (ramp) inoBoard.ramp = ramp; }
   else { syncBoardToClassic(); }
   renderInoBoard();
   renderPreview();
@@ -4578,6 +4588,50 @@ function inoBoardToggleRoad(){
   if (inoBoard.road) inoBoard.nil = false;
   inoBoardChanged();
 }
+/* v208.38: Ramp closed — On and/or Off, independent of the lanes. */
+let inoRampPickerOpen = false;
+function inoBoardRampToggle(){
+  const r = inoBoard.ramp || (inoBoard.ramp = { on:false, off:false });
+  if (r.on || r.off){ r.on = false; r.off = false; r.onName = ''; r.offName = ''; inoRampPickerOpen = false; }   // clear it
+  else inoRampPickerOpen = !inoRampPickerOpen;
+  inoBoardChanged();
+}
+function inoBoardRampPick(which){
+  const r = inoBoard.ramp || (inoBoard.ramp = { on:false, off:false });
+  r[which] = !r[which];
+  inoBoardChanged();
+}
+function onInoRampName(which, el){
+  const r = inoBoard.ramp || (inoBoard.ramp = { on:false, off:false });
+  r[which + 'Name'] = el.value;
+  renderPreview(); scheduleWorkingSave();
+}
+/* "Progress Road off ramp closed"; both: "Progress Road on ramp and Exit 20 off ramp closed",
+   same/no name: "Progress Road on and off ramps closed" / "On and off ramps closed". */
+function buildInoRampClause(){
+  const r = inoBoard.ramp || {};
+  const upd = isInoUpdateContext();
+  const pr = (upd && inoPrevBoard && inoPrevBoard.ramp) || { on:false, off:false };
+  const nm = (src, k) => expandAbbreviations(String((src && src[k + 'Name']) || '').trim());
+  const one = (k) => {
+    if (r[k]) return { k, place: nm(r, k), verb: !upd ? 'closed' : (pr[k] ? 'remains closed' : 'now closed') };
+    if (upd && pr[k]) return { k, place: nm(r, k) || nm(pr, k), verb: 'now open' };
+    return null;
+  };
+  const label = x => [x.place, (x.k === 'on' ? 'on' : 'off') + ' ramp'].filter(Boolean).join(' ');
+  const items = [one('on'), one('off')].filter(Boolean);
+  if (!items.length) return '';
+  let out;
+  if (items.length === 2 && items[0].verb === items[1].verb){
+    const v = items[0].verb.replace('remains', 'remain');
+    out = (items[0].place === items[1].place)
+      ? `${items[0].place ? items[0].place + ' ' : ''}on and off ramps ${v}`
+      : `${label(items[0])} and ${label(items[1])} ${items[0].verb === 'remains closed' ? 'remain closed' : v}`;
+  } else {
+    out = items.map(x => `${label(x)} ${x.verb}`).join(', ');
+  }
+  return out.charAt(0).toUpperCase() + out.slice(1);
+}
 function inoBoardAllBlocked(){   // v208.09: "All" → every lane Blocked
   inoBoard.road = false; inoBoard.nil = false;
   BOARD_LANES.forEach(k => inoBoard.L[k] = 'blocked');
@@ -4612,6 +4666,29 @@ function renderInoBoard(){
   }).join('');
   const road = document.getElementById('s_board_road');
   if (road) road.classList.toggle('on', !!inoBoard.road);
+  { // v208.38: Ramp closed + On/Off picker
+    const r = inoBoard.ramp || {};
+    const any = !!(r.on || r.off);
+    const rb = document.getElementById('s_board_ramp');
+    const pk = document.getElementById('s_board_ramp_pick');
+    if (rb){
+      rb.classList.toggle('on', any);
+      rb.innerHTML = '<i class="ti ti-arrow-ramp-right" aria-hidden="true"></i> '
+        + (any ? (r.on && r.off ? 'On & off ramps closed' : (r.on ? 'On ramp closed' : 'Off ramp closed')) : 'Ramp closed');
+      rb.title = any ? 'Click to clear the ramp closure' : 'Choose On or Off ramp';
+    }
+    if (pk){
+      pk.style.display = (any || inoRampPickerOpen) ? '' : 'none';
+      pk.querySelectorAll('[data-ramp]').forEach(b => b.classList.toggle('on', !!r[b.dataset.ramp]));
+    }
+    const names = document.getElementById('s_board_ramp_names');
+    if (names) names.style.display = any ? '' : 'none';
+    ['on','off'].forEach(k => {
+      const w = document.getElementById(`s_ramp_${k}_name_wrap`); if (w) w.style.display = r[k] ? '' : 'none';
+      const inp = document.getElementById(`s_ramp_${k}_name`);
+      if (inp && document.activeElement !== inp) inp.value = r[k + 'Name'] || '';
+    });
+  }
   const allB = document.getElementById('s_board_all');
   if (allB) allB.classList.toggle('on', !inoBoard.road && BOARD_LANES.every(k => inoBoard.L[k] === 'blocked'));
   const nilBtn = document.getElementById('s_board_nil');
@@ -5721,6 +5798,14 @@ function capNumWord(n){ const w = numToWord(n); return w.charAt(0).toUpperCase()
    With no blocked/impacted/closed lanes (or Unknown direction) it stands alone as before. */
 function buildLanesP(prefix){
   if (prefix !== 's') return buildLanesPCore(prefix);
+  // v208.38: ramp closure follows the lane wording ("Left lane blocked; off ramp closed").
+  const base = buildLanesPWithCount(prefix);
+  const ramp = inoBoardMode() ? buildInoRampClause() : '';
+  if (!ramp) return base;
+  const rampMid = /^(On|Off) /.test(ramp) ? ramp.charAt(0).toLowerCase() + ramp.slice(1) : ramp;   // keep place names capitalised
+  return base ? `${base}; ${rampMid}` : ramp;
+}
+function buildLanesPWithCount(prefix){
   const olc = getOpenLaneCount();
   if (!olc) return buildLanesPCore(prefix);
   let base = '';
@@ -7279,6 +7364,14 @@ function buildINO(){
         <button type="button" class="lb-whole" id="s_board_nil" onclick="inoBoardAllOpen()"><i class="ti ti-circle-off" aria-hidden="true"></i> Nil</button>
         <span class="lb-divider" aria-hidden="true"></span>
         <button type="button" class="lb-whole lb-whole-road" id="s_board_road" onclick="inoBoardToggleRoad()"><i class="ti ti-ban" aria-hidden="true"></i> Road closed</button>
+        <button type="button" class="lb-whole lb-whole-road" id="s_board_ramp" onclick="inoBoardRampToggle()"><i class="ti ti-arrow-ramp-right" aria-hidden="true"></i> Ramp closed</button>
+        <span class="lb-ramp-pick" id="s_board_ramp_pick" style="display:none;" role="group" aria-label="Which ramp">
+          <button type="button" class="lb-ramp-opt" data-ramp="on" onclick="inoBoardRampPick('on')">On</button><button type="button" class="lb-ramp-opt" data-ramp="off" onclick="inoBoardRampPick('off')">Off</button>
+        </span>
+        <div class="lb-ramp-names" id="s_board_ramp_names" style="display:none;">
+          <label class="lb-ramp-name" id="s_ramp_on_name_wrap" style="display:none;">On ramp <input type="text" id="s_ramp_on_name" placeholder="e.g. Progress Road (optional)" oninput="onInoRampName('on', this)"></label>
+          <label class="lb-ramp-name" id="s_ramp_off_name_wrap" style="display:none;">Off ramp <input type="text" id="s_ramp_off_name" placeholder="e.g. Progress Road (optional)" oninput="onInoRampName('off', this)"></label>
+        </div>
         <span class="lb-cycle-hint">Tap a lane: Open \u2192 Blocked \u2192 Impacted \u2192 Closed</span>
       </div>
       <p class="hint" id="s_board_hint" style="margin:6px 0 0;"></p>
@@ -8932,9 +9025,15 @@ function renderINO(){
   // v207.26: "Clearing" → "8 km of residual congestion clearing from …"
   const congClearingWord = (document.getElementById('s_cong_clearing')||{}).checked ? ' clearing' : '';
   const peakSuffix = congPeak ? ` including ${congPeak.toUpperCase()} peak` : '';
+  // v208.37: Congestion Yes with a type/clearing/peak/location but no length still names it —
+  // "localised congestion", "residual congestion clearing from Exit 20", "congestion from
+  // Exit 20" (was a bare "from Exit 20"), "… including PM peak".
+  const congNoLenPhrase = (!lengthStr && congestionYN === 'yes' && (congType || congClearingWord || peakSuffix || congestion))
+    ? [ `${congType ? congType + ' ' : ''}congestion${congClearingWord}`, congestion ].filter(Boolean).join(' ') + peakSuffix
+    : '';
   const lengthCongPlain = lengthStr
     ? [ `${lengthStr} of${congTypeWord} congestion${congClearingWord}`, congestion ].filter(Boolean).join(' ') + peakSuffix
-    : congestion;
+    : (congNoLenPhrase || congestion);
   let lengthCong;
   if (finalOn && congestionClear) lengthCong = 'nil congestion';
   else lengthCong = lengthCongPlain;
