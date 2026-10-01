@@ -595,6 +595,44 @@
   .confirm-pop .cf-btn:hover { background: #f4f6f5; }
   .confirm-pop .cf-btn.danger { background: #b5371f; border-color: #b5371f; color: #fff; }
   .confirm-pop .cf-btn.danger:hover { background: #9a2e19; }
+  .confirm-pop .cf-btn.primary { background: var(--teal); border-color: var(--teal); color: #fff; }
+  .confirm-pop .cf-btn.primary:hover { filter: brightness(0.92); }
+  .confirm-pop .cf-ico.info { background: var(--teal-soft); color: var(--teal-deep); }
+  .confirm-pop .cf-ico.warn { background: #fbf1dc; color: #9a6a10; }
+  .confirm-pop input[type="text"] { font: inherit; font-size: 13.5px; padding: 7px 10px; border: 1px solid #dde2df; border-radius: 8px; }
+  /* v208.34: shared drafts status bar, activity lines, Archived section */
+  .shared-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 20px; border-bottom: 1px solid var(--line);
+    background: #f3f8f6; font-size: 12.5px; color: var(--ink); }
+  .shared-bar .sb-dot { width: 8px; height: 8px; border-radius: 50%; background: #1f9d6b; box-shadow: 0 0 0 3px rgba(31,157,107,0.15); flex: none; }
+  .shared-bar.off { background: #fbf4e6; }
+  .shared-bar.off .sb-dot { background: #c98a1b; box-shadow: 0 0 0 3px rgba(201,138,27,0.15); }
+  .shared-bar.err .sb-dot { background: #b5371f; box-shadow: 0 0 0 3px rgba(181,55,31,0.15); }
+  .shared-bar.muted { background: #f6f6f3; }
+  .shared-bar .sb-main { font-weight: 600; }
+  .shared-bar .sb-sub { color: var(--muted); }
+  .shared-bar .sb-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .shared-bar .sb-link { background: none; border: none; padding: 0; font: inherit; font-size: 12px; color: var(--blue-deep, #1f5fc4); cursor: pointer; }
+  .shared-bar .sb-link:hover { text-decoration: underline; }
+  .shared-bar .sb-user { color: var(--muted); }
+  .shared-bar .sb-user b { color: var(--ink); font-weight: 600; }
+  .drafts-panel.list-collapsed .shared-bar { display: none; }
+  .incident-activity { margin-top: 5px; font-size: 11.5px; color: var(--muted); display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .incident-activity svg { flex: none; opacity: 0.8; }
+  .incident-activity b { font-weight: 600; color: var(--ink-soft, #38423e); }
+  .ref-by { font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 4px; }
+  .archive-head { display: flex; align-items: center; gap: 8px; width: 100%; margin: 18px 0 6px; padding: 8px 12px; border: 1px dashed var(--line-strong, #c4ccc7);
+    border-radius: 8px; background: #fafaf8; cursor: pointer; font: inherit; text-align: left; color: var(--ink-soft, #38423e); }
+  .archive-head:hover { background: #f4f4f0; }
+  .archive-head .ah-title { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+  .archive-head .ah-sub { font-size: 12px; color: var(--muted); }
+  .archive-head .ah-chev { transition: transform 0.15s ease; }
+  .archive-head[aria-expanded="true"] .ah-chev { transform: rotate(90deg); }
+  .drafts-panel.list-collapsed .archive-head, .drafts-panel.list-collapsed .archive-body { display: none; }
+  .archive-body .incident-summary, .archive-body .ref-row { opacity: 0.72; }
+  .archive-body .incident-summary:hover, .archive-body .ref-row:hover { opacity: 1; }
+  .draft-restore { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12.5px; font-weight: 600; padding: 6px 11px; border-radius: 8px;
+    border: 1px solid var(--line-strong, #c4ccc7); background: #fff; color: var(--ink); cursor: pointer; }
+  .draft-restore:hover { border-color: var(--teal); color: var(--teal-deep); }
   .confirm-pop .cf-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 
   /* Chip-colour settings panel — flat inside the modal, divided from Display block. Light forced. */
@@ -2023,6 +2061,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
     </div>
+    <div class="shared-bar" id="sharedBar"></div>
     <p class="draft-note" id="draftsIoNote"></p>
     <div id="draftsList"></div>
     <input type="file" id="draftsImportInput" accept="application/json,.json" style="display:none;" onchange="importDraftsFromFile(this)">
@@ -2213,7 +2252,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.33</span>
+    <span class="app-version">Version 208.36</span>
   </footer>
 </div>
 
@@ -5090,24 +5129,17 @@ function onLaneDirChange(){
 function onOpenLaneCountChange(){
   const n = parseInt((document.getElementById('s_open_lane_count')||{}).value, 10);
   const filled = !isNaN(n) && n > 0;
-  if (filled){
-    // Clear Left/Centre/Right, All, Nil
-    document.querySelectorAll('.s_lane_pos').forEach(c => { c.checked = false; });
-    const allCk = document.getElementById('s_lane_all'); if (allCk) allCk.checked = false;
-    const nilCk = document.getElementById('s_lane_nil'); if (nilCk) nilCk.checked = false;
-    inoBoard = emptyBoard();   // v207.20
-  }
-  // Grey out Impact on lanes and Impact type when open lane count is filled
-  const lanesField = document.getElementById('s_lanes_field');
-  const typeField = document.getElementById('s_impacttype_field');
-  [lanesField, typeField, document.getElementById('s_board_field')].forEach(f => {
-    if (!f) return;
-    f.style.opacity = filled ? '0.35' : '';
-    f.style.pointerEvents = filled ? 'none' : '';
+  // v208.36: the count now ADDS to the lane impact ("Left and centre southbound lanes blocked,
+  // single lane open") instead of clearing the lanes and greying them out.
+  ['s_lanes_field','s_impacttype_field','s_board_field'].forEach(id => {
+    const f = document.getElementById(id); if (!f) return;
+    f.style.opacity = ''; f.style.pointerEvents = '';
   });
 }
 /* Get the open lane count from the input field */
+let _ignoreOpenLaneCount = false;
 function getOpenLaneCount(){
+  if (_ignoreOpenLaneCount) return null;
   const n = parseInt((document.getElementById('s_open_lane_count')||{}).value, 10);
   if (isNaN(n) || n < 1) return null;
   return { word: n === 1 ? 'Single' : capNumWord(n), n: n };
@@ -5247,10 +5279,14 @@ const ROAD_ABBREV = {
 };
 function expandAbbreviations(text){
   if (!text) return text;
-  return text.replace(/[A-Za-z]+\.?/g, (tok) => {
+  return text.replace(/[A-Za-z]+\.?/g, (tok, offset, all) => {
     const key = tok.replace(/\.$/,'').toLowerCase();
     if (Object.prototype.hasOwnProperty.call(ROAD_ABBREV, key)){
-      return ROAD_ABBREV[key];
+      // v208.35: "Rd. One southbound…" — the full stop also ends a sentence, so keep it
+      // when a new sentence follows (space + capital/digit). "St." is left alone (St. Lucia).
+      const endsSentence = tok.endsWith('.') && key !== 'st'
+        && /^\s+[A-Z0-9]/.test(all.slice(offset + tok.length));
+      return ROAD_ABBREV[key] + (endsSentence ? '.' : '');
     }
     return tok;
   });
@@ -5681,7 +5717,20 @@ const NUM_WORDS = ['','one','two','three','four','five','six','seven','eight','n
 function numToWord(n){ return (n >= 1 && n <= 10) ? NUM_WORDS[n] : String(n); }
 function capNumWord(n){ const w = numToWord(n); return w.charAt(0).toUpperCase() + w.slice(1); }
 
+/* v208.36: "Number of lanes open" is appended to the lane impact rather than replacing it.
+   With no blocked/impacted/closed lanes (or Unknown direction) it stands alone as before. */
 function buildLanesP(prefix){
+  if (prefix !== 's') return buildLanesPCore(prefix);
+  const olc = getOpenLaneCount();
+  if (!olc) return buildLanesPCore(prefix);
+  let base = '';
+  _ignoreOpenLaneCount = true;
+  try { base = buildLanesPCore(prefix) || ''; } finally { _ignoreOpenLaneCount = false; }
+  const cnt = `${olc.word} lane${olc.n > 1 ? 's' : ''} open`;
+  if (!base || isUnknownLaneDir() || /^nil\b/i.test(base) || !/blocked|impacted|closed|affected/i.test(base)) return cnt;
+  return `${base}, ${cnt.charAt(0).toLowerCase()}${cnt.slice(1)}`;
+}
+function buildLanesPCore(prefix){
   if (prefix === 's' && inoBoardMode()){   // v207.20 lane board
     const olc = getOpenLaneCount();   // "Number of lanes open" still takes priority
     if (olc) return `${olc.word} lane${olc.n > 1 ? 's' : ''} open`;
@@ -11734,11 +11783,15 @@ let storageOK = (function(){
   } catch (e) { return false; }
 })();
 
-function persistDrafts(){
+function persistDraftsLocalOnly(){
   if (!storageOK) return;
   try {
     window.localStorage.setItem(DRAFTS_KEY, JSON.stringify({ seq: draftSeq, drafts }));
   } catch (e) { /* quota or serialisation issue — keep running in-memory */ }
+}
+function persistDrafts(){
+  persistDraftsLocalOnly();
+  if (typeof shared !== 'undefined' && shared.state === 'connected') sharedQueuePush();   // v208.34
 }
 
 function loadPersistedDrafts(){
@@ -11758,6 +11811,316 @@ function loadPersistedDrafts(){
     }
   } catch (e) { /* corrupt store — ignore, start fresh */ }
 }
+
+/* ===================== v208.34: Shared drafts (synced SharePoint folder) =====================
+   Saved drafts can live in a folder that every operator has synced from SharePoint through
+   OneDrive. The browser's File System Access API (Edge / Chrome) reads and writes one file per
+   draft (draft-<id>.json), so a takeover on another computer just opens Drafts. Only SAVED
+   drafts are shared — each template's working copy stays in this browser's local storage.
+   - persistDrafts() still writes the local copy (a cache when connected) and queues a sync.
+   - sharedSync(): push what changed (write / delete files), then read the folder back.
+   - Polls every 15 s while visible, on window focus and when Drafts opens.
+   - Archive: an incident with no activity (save, load, Next escalation, copy, restore) for
+     24 hours drops into the collapsed Archived section; nothing is deleted.            */
+const OPERATOR_KEY = 'bmtmc_operator_name_v1';
+const LOCAL_PENDING_KEY = 'bmtmc_sms_drafts_local_pending_v1';
+const ARCHIVE_AFTER_MS = 24 * 60 * 60 * 1000;
+let operatorName = '';
+try { operatorName = window.localStorage.getItem(OPERATOR_KEY) || ''; } catch(e){}
+const shared = {
+  supported: typeof window.showDirectoryPicker === 'function',
+  handle: null, state: 'off', syncedAt: 0, err: '',
+  written: new Map(), meta: new Map(), chain: Promise.resolve(),
+  dirty: 0, pushTimer: null, pollTimer: null
+};
+let archiveOpen = false;
+let loadedIncident = null;   // { key, at } — the incident last loaded, for the save warning
+
+/* ---------- activity / archive helpers ---------- */
+function draftCreatedAt(d){ return (d && d.createdAt) || draftRecency(d) || 0; }
+function draftActivity(d){ return (d && d.lastActivity) || draftCreatedAt(d); }
+function clusterActivity(c){ return Math.max.apply(null, c.map(draftActivity)); }
+function clusterLastBy(c){
+  const n = c.slice().sort((a, b) => draftCreatedAt(b) - draftCreatedAt(a))[0];
+  return (n && n.savedBy) || '';
+}
+function isArchivedCluster(c){ return Date.now() - clusterActivity(c) > ARCHIVE_AFTER_MS; }
+function activeDraftCount(){
+  let n = 0;
+  ['ino','generic','av','tts','bcc'].forEach(fam => {
+    if (draftFamilyHidden(fam)) return;
+    const rows = drafts.filter(d => d && d.state && draftFamily(d.state.tmpl) === fam);
+    clusterByIncident(rows).forEach(c => { if (!isArchivedCluster(c)) n += c.length; });
+  });
+  // families not in the list above (e.g. legacy AVR) still count
+  drafts.forEach(d => { if (d && d.state && ['ino','generic','av','tts','bcc'].indexOf(draftFamily(d.state.tmpl)) === -1) n++; });
+  return n;
+}
+function touchDraft(id){
+  const d = drafts.find(x => x.id === id);
+  if (!d) return;
+  d.lastActivity = Date.now();
+  persistDrafts();
+}
+function noteLoadedIncident(d){
+  if (!d || !d.state) return;
+  let key = null; try { key = incidentKey(d.state); } catch(e){}
+  loadedIncident = key ? { key, at: Date.now() } : null;
+}
+function restoreIncident(ids){
+  const set = new Set(String(ids).split(',').filter(Boolean));
+  const now = Date.now();
+  drafts.forEach(d => { if (set.has(d.id)) d.lastActivity = now; });
+  persistDrafts(); refreshDraftsCount(); renderDraftsList();
+}
+function toggleArchive(){ archiveOpen = !archiveOpen; renderDraftsList(); }
+function fmtActivity(ms){
+  if (!ms) return '';
+  const d = new Date(ms), now = new Date();
+  const hm = d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const day0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  if (ms >= day0) return 'Today ' + hm;
+  if (ms >= day0 - 86400000) return 'Yesterday ' + hm;
+  return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) + ' ' + hm;
+}
+function fmtAgo(ms){
+  const m = Math.round((Date.now() - ms) / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + ' min ago';
+  const h = Math.round(m / 60);
+  return h < 24 ? h + ' h ago' : Math.round(h / 24) + ' d ago';
+}
+
+/* ---------- operator name ---------- */
+function askOperatorName(then){
+  let back = document.getElementById('opNameBackdrop');
+  if (!back){
+    back = document.createElement('div');
+    back.id = 'opNameBackdrop'; back.className = 'confirm-backdrop';
+    back.innerHTML = '<div class="confirm-pop" role="dialog" aria-modal="true" aria-labelledby="opNameTitle">'
+      + '<div class="cf-head"><span class="cf-ico info" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>'
+      + '<span class="cf-title" id="opNameTitle">Your name for shared drafts</span></div>'
+      + '<p class="cf-msg" style="margin-bottom:8px;">Shown as “last saved by” so the next operator knows who to ask.</p>'
+      + '<input type="text" id="opNameInput" placeholder="e.g. A. Tomlinson" style="margin:0 0 14px 40px;width:calc(100% - 40px);">'
+      + '<div class="cf-actions"><button type="button" class="cf-btn" id="opNameCancel">Later</button>'
+      + '<button type="button" class="cf-btn primary" id="opNameOk">Save</button></div></div>';
+    document.body.appendChild(back);
+  }
+  const inp = document.getElementById('opNameInput');
+  inp.value = operatorName;
+  const close = () => { back.style.display = 'none'; document.removeEventListener('keydown', onKey, true); };
+  const save = () => {
+    operatorName = inp.value.trim();
+    try { window.localStorage.setItem(OPERATOR_KEY, operatorName); } catch(e){}
+    close(); renderSharedBar(); if (then) then();
+  };
+  const onKey = (e) => {
+    if (e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); close(); }
+    else if (e.key === 'Enter' && document.activeElement === inp){ e.preventDefault(); save(); }
+  };
+  document.getElementById('opNameOk').onclick = save;
+  document.getElementById('opNameCancel').onclick = close;
+  back.onclick = (e) => { if (e.target === back) close(); };
+  back.style.display = 'flex';
+  document.addEventListener('keydown', onKey, true);
+  inp.focus();
+}
+
+/* ---------- status bar ---------- */
+function renderSharedBar(){
+  const bar = document.getElementById('sharedBar');
+  if (!bar) return;
+  const esc = escapeHtml;
+  if (!shared.supported){
+    bar.className = 'shared-bar muted';
+    bar.innerHTML = '<span class="sb-sub">Shared drafts need Microsoft Edge or Google Chrome — drafts are saved on this computer only.</span>';
+    return;
+  }
+  if (shared.state === 'connected'){
+    const nm = shared.handle ? shared.handle.name : 'shared folder';
+    bar.className = 'shared-bar' + (shared.err ? ' err' : '');
+    bar.innerHTML = `<span class="sb-dot"></span><span class="sb-main">Shared drafts</span>`
+      + `<span class="sb-sub">${esc(nm)} · ${shared.err ? 'can’t reach the folder — retrying' : (shared.syncedAt ? 'synced ' + fmtAgo(shared.syncedAt) : 'syncing…')}</span>`
+      + `<span class="sb-right"><button type="button" class="sb-link sb-user" onclick="event.stopPropagation();askOperatorName();" title="Change your name">`
+      + (operatorName ? `Saving as <b>${esc(operatorName)}</b>` : 'Set your name') + `</button>`
+      + `<button type="button" class="sb-link" onclick="event.stopPropagation();disconnectShared();">Disconnect</button></span>`;
+    return;
+  }
+  bar.className = 'shared-bar off';
+  if (shared.state === 'needs-permission'){
+    const nm = shared.handle ? shared.handle.name : 'the shared folder';
+    bar.innerHTML = `<span class="sb-dot"></span><span class="sb-main">Shared drafts paused</span><span class="sb-sub">Allow access to “${esc(nm)}” again to see everyone’s drafts.</span>`
+      + `<span class="sb-right"><button type="button" class="sb-link" onclick="event.stopPropagation();reconnectShared();">Reconnect</button></span>`;
+    return;
+  }
+  bar.innerHTML = `<span class="sb-dot"></span><span class="sb-main">Not connected</span><span class="sb-sub">Drafts are only on this computer until you connect the shared folder.</span>`
+    + `<span class="sb-right"><button type="button" class="sb-link" onclick="event.stopPropagation();connectSharedFolder();" title="Choose the SMS drafts folder you've synced from SharePoint">Connect shared folder…</button></span>`;
+}
+
+/* ---------- IndexedDB (keeps the folder handle between visits) ---------- */
+function sharedIdb(){
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('bmtmc_shared', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function sharedIdbOp(mode, fn){
+  const db = await sharedIdb();
+  return new Promise((res, rej) => {
+    const req = fn(db.transaction('kv', mode).objectStore('kv'));
+    req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error);
+  });
+}
+const idbGetHandle = () => sharedIdbOp('readonly', s => s.get('dirHandle'));
+const idbSetHandle = (h) => sharedIdbOp('readwrite', s => s.put(h, 'dirHandle'));
+const idbDelHandle = () => sharedIdbOp('readwrite', s => s.delete('dirHandle'));
+
+/* ---------- connect / reconnect / disconnect ---------- */
+async function sharedPermission(h, ask){
+  if (!h || typeof h.queryPermission !== 'function') return 'granted';
+  const o = { mode: 'readwrite' };
+  let p = await h.queryPermission(o);
+  if (p !== 'granted' && ask) p = await h.requestPermission(o);
+  return p;
+}
+async function sharedInit(){
+  renderSharedBar();
+  if (!shared.supported) return;
+  let h = null;
+  try { h = await idbGetHandle(); } catch(e){}
+  if (!h){ shared.state = 'off'; renderSharedBar(); return; }
+  shared.handle = h;
+  let p = 'prompt'; try { p = await sharedPermission(h, false); } catch(e){}
+  if (p === 'granted') await sharedStart();
+  else { shared.state = 'needs-permission'; renderSharedBar(); }
+}
+async function connectSharedFolder(){
+  if (!shared.supported) return;
+  let h;
+  try { h = await window.showDirectoryPicker({ id: 'bmtmc-sms-drafts', mode: 'readwrite' }); }
+  catch(e){ return; }   // picker cancelled
+  await sharedUseHandle(h);
+}
+async function sharedUseHandle(h){
+  let p = 'denied'; try { p = await sharedPermission(h, true); } catch(e){}
+  if (p !== 'granted'){ shared.handle = h; shared.state = 'needs-permission'; renderSharedBar(); return; }
+  shared.handle = h;
+  try { await idbSetHandle(h); } catch(e){}
+  await sharedStart();
+  if (!operatorName) askOperatorName();
+}
+async function reconnectShared(){
+  if (!shared.handle) return connectSharedFolder();
+  let p = 'denied'; try { p = await sharedPermission(shared.handle, true); } catch(e){}
+  if (p === 'granted') await sharedStart();
+}
+function disconnectShared(){
+  clearInterval(shared.pollTimer); shared.pollTimer = null;
+  shared.handle = null; shared.state = 'off'; shared.err = '';
+  shared.written = new Map(); shared.meta = new Map();
+  idbDelHandle().catch(() => {});
+  renderSharedBar(); refreshDraftsCount(); renderDraftsList();
+}
+async function sharedStart(){
+  // Drafts made on this computer before connecting are held aside and offered once connected.
+  const knownLocal = drafts.slice();
+  shared.state = 'connected'; shared.err = '';
+  shared.written = new Map(); shared.meta = new Map();
+  renderSharedBar();
+  drafts = [];                       // the folder is the list now (nothing pushed until asked)
+  await sharedSync(true);
+  if (shared.state !== 'connected' || shared.err){ drafts = knownLocal; refreshDraftsCount(); renderDraftsList(); return; }
+  let pending = [];
+  try { pending = JSON.parse(window.localStorage.getItem(LOCAL_PENDING_KEY) || '[]'); } catch(e){}
+  const inFolder = new Set(drafts.map(d => d.id));
+  const seen = new Set(pending.map(d => d.id));
+  knownLocal.forEach(d => { if (d && d.state && !inFolder.has(d.id) && !seen.has(d.id)) pending.push(d); });
+  pending = pending.filter(d => d && d.state && !inFolder.has(d.id));
+  try { window.localStorage.setItem(LOCAL_PENDING_KEY, JSON.stringify(pending)); } catch(e){}
+  if (pending.length){
+    confirmDelete({
+      title: `Add ${pending.length} draft${pending.length === 1 ? '' : 's'} from this computer?`,
+      message: 'They were saved before the shared folder was connected, so only you can see them. Add them so other operators can pick them up.',
+      okLabel: 'Add to shared drafts', cancelLabel: 'Not now', tone: 'primary', icon: 'share'
+    }, () => {
+      const ids = new Set(drafts.map(d => d.id));
+      pending.forEach(d => { if (!ids.has(d.id)) drafts.push(d); });
+      drafts.sort((a, b) => draftCreatedAt(b) - draftCreatedAt(a));
+      try { window.localStorage.removeItem(LOCAL_PENDING_KEY); } catch(e){}
+      persistDrafts(); refreshDraftsCount(); renderDraftsList();
+    });
+  }
+  clearInterval(shared.pollTimer);
+  shared.pollTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') sharedSync(); else renderSharedBar();
+  }, 15000);
+}
+window.addEventListener('focus', () => { if (shared.state === 'connected') sharedSync(); });
+
+/* ---------- sync: push local changes, then read the folder ---------- */
+function sharedQueuePush(){
+  shared.dirty++;
+  clearTimeout(shared.pushTimer);
+  shared.pushTimer = setTimeout(() => sharedSync(), 300);
+}
+function sharedSync(forceRender){
+  if (shared.state !== 'connected' || !shared.handle) return Promise.resolve();
+  shared.chain = shared.chain.then(() => sharedSyncOnce(forceRender)).catch(() => {});
+  return shared.chain;
+}
+async function sharedSyncOnce(forceRender){
+  const dir = shared.handle;
+  const dirtyAtStart = shared.dirty;
+  try {
+    // 1. push: write new/changed drafts, delete removed ones
+    const now = new Map(drafts.filter(d => d && d.state && d.id).map(d => [d.id, JSON.stringify(d)]));
+    for (const [id, json] of now){
+      if (shared.written.get(id) === json) continue;
+      const fh = await dir.getFileHandle(`draft-${id}.json`, { create: true });
+      const w = await fh.createWritable(); await w.write(json); await w.close();
+      shared.written.set(id, json);
+    }
+    for (const id of Array.from(shared.written.keys())){
+      if (now.has(id)) continue;
+      try { await dir.removeEntry(`draft-${id}.json`); } catch(e){}
+      shared.written.delete(id);
+    }
+    // 2. pull: read every draft file (unchanged files come from cache)
+    const meta = new Map(), byId = new Map();
+    for await (const [name, h] of dir.entries()){
+      if (h.kind !== 'file') continue;
+      const m = name.match(/^draft-([A-Za-z0-9_-]+)\.json$/);   // ignores OneDrive "-PCNAME" conflict copies
+      if (!m) continue;
+      const f = await h.getFile();
+      const prev = shared.meta.get(name);
+      let json = (prev && prev.lm === f.lastModified && prev.size === f.size) ? prev.json : null;
+      if (json === null){ try { json = await f.text(); JSON.parse(json); } catch(e){ continue; } }
+      meta.set(name, { lm: f.lastModified, size: f.size, json });
+      let d; try { d = JSON.parse(json); } catch(e){ continue; }
+      if (!d || !d.state || d.id !== m[1]) continue;
+      byId.set(d.id, json);
+    }
+    shared.meta = meta;
+    shared.syncedAt = Date.now(); shared.err = '';
+    // If the operator changed drafts while we were reading, keep theirs — the next sync pushes it.
+    if (shared.dirty !== dirtyAtStart){ renderSharedBar(); return; }
+    const changed = forceRender || byId.size !== shared.written.size
+      || Array.from(byId).some(([id, json]) => shared.written.get(id) !== json);
+    shared.written = byId;
+    if (changed){
+      drafts = Array.from(byId.values()).map(j => JSON.parse(j)).sort((a, b) => draftCreatedAt(b) - draftCreatedAt(a));
+      persistDraftsLocalOnly();
+      refreshDraftsCount(); renderDraftsList();
+    }
+    renderSharedBar();
+  } catch(e){
+    if (e && e.name === 'NotAllowedError'){ shared.state = 'needs-permission'; }
+    else shared.err = (e && e.message) || 'error';
+    renderSharedBar();
+  }
+}
+
 
 /* ---------- Live working-form persistence (unsaved fields survive a close) ---------- */
 const WORKING_KEY = 'bmtmc_sms_working_v1';
@@ -12360,6 +12723,26 @@ function resetChipColours(){
 function saveDraft(opts){
   opts = opts || {};
   const state = collectFormState();
+  // v208.34: someone else saved to this incident after you loaded it — check before adding yours.
+  if (!opts.auto && !opts.confirmed && shared.state === 'connected' && loadedIncident){
+    let key = null; try { key = incidentKey(state); } catch(e){}
+    if (key && key === loadedIncident.key){
+      const newer = drafts.filter(d => d && d.state && draftCreatedAt(d) > loadedIncident.at
+        && d.savedBy && d.savedBy !== operatorName && (() => { try { return incidentKey(d.state) === key; } catch(e){ return false; } })())
+        .sort((a, b) => draftCreatedAt(b) - draftCreatedAt(a));
+      if (newer.length){
+        const n = newer[0];
+        const seq = deriveSeqLabel(n, n.state.tmpl || 'generic') || 'a message';
+        confirmDelete({
+          title: 'Someone else has updated this incident',
+          item: draftConfirmLabel(n),
+          message: `${n.savedBy} saved ${seq} at ${fmtActivity(draftCreatedAt(n))}, after you loaded it. Check Drafts before sending — or save yours anyway.`,
+          okLabel: 'Save anyway', cancelLabel: 'Cancel', tone: 'primary', icon: 'warn'
+        }, () => saveDraft(Object.assign({}, opts, { confirmed: true })));
+        return null;
+      }
+    }
+  }
   const now = new Date();
   const id = 'd' + Date.now() + Math.floor(Math.random()*1000);
   const fullText = (document.getElementById('g_output_text').textContent || '');
@@ -12379,12 +12762,15 @@ function saveDraft(opts){
     fullText,
     auto: !!opts.auto,
     state,
+    createdAt: now.getTime(), lastActivity: now.getTime(),   // v208.34
+    savedBy: operatorName || '',
     // Persist SLO approval state on GEN drafts so the badge shows in the draft list.
     sloState: (state.tmpl === 'generic' && typeof sloState !== 'undefined' && sloState !== null)
       ? sloState : undefined
   };
   drafts.unshift(draft);
   draftSeq++;
+  if (!opts.auto) noteLoadedIncident(draft);   // you're now working from the newest message
 
   const note = document.getElementById((state.tmpl === 'tts') ? 'tts_draft_note' : (state.tmpl === 'av' || state.tmpl === 'avr') ? 'av_draft_note' : (state.tmpl === 'ino') ? 's_draft_note' : (state.tmpl === 'bcc') ? 'b_draft_note' : 'g_draft_note');
   const t = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
@@ -12413,6 +12799,7 @@ function openTemplateCard(which){
 function loadDraftById(id){
   const draft = drafts.find(d => d.id === id);
   if (!draft) return;
+  touchDraft(id); noteLoadedIncident(draft);   // v208.34
   const tmpl = draft.state.tmpl || 'generic';
   genericPrevLanes = null;       // plain load is not an update context
   genericPrevClosed = false;
@@ -12500,6 +12887,7 @@ function advanceInoSequence(){
 function updateDraftById(id){
   const draft = drafts.find(d => d.id === id);
   if (!draft) return;
+  touchDraft(id); noteLoadedIncident(draft);   // v208.34
   const tmpl = draft.state.tmpl || 'generic';
   // If the draft we're advancing from had announced "All lanes are now open", the next
   // escalation must omit lane wording — latch the module flag accordingly.
@@ -12586,6 +12974,7 @@ function updateDraftById(id){
 function escalateAvToRemoval(id){
   const draft = drafts.find(d => d.id === id);
   if (!draft) return;
+  touchDraft(id); noteLoadedIncident(draft);   // v208.34
   const s = draft.state;
   const a = s.av || s.avr || {};
   openTemplateCard('av');
@@ -12637,6 +13026,17 @@ function confirmDelete(opts, onYes){
   document.getElementById('cfMsg').textContent = o.message || "This can't be undone.";
   const ok = document.getElementById('cfOk'), cancel = document.getElementById('cfCancel');
   ok.textContent = o.okLabel || 'Delete';
+  // v208.34: the same dialog also asks non-delete questions (tone/icon/cancel label)
+  ok.className = 'cf-btn ' + (o.tone === 'primary' ? 'primary' : 'danger');
+  cancel.textContent = o.cancelLabel || 'Cancel';
+  const ico = back.querySelector('.cf-ico');
+  if (ico){
+    ico.className = 'cf-ico' + (o.icon ? ' ' + (o.icon === 'warn' ? 'warn' : 'info') : '');
+    ico.innerHTML = o.icon === 'warn'
+      ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3l10 18H2L12 3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5M12 18v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
+      : o.icon ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7M16 6l-4-4-4 4M12 2v13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
   const prevFocus = document.activeElement;
   const close = () => {
     back.style.display = 'none';
@@ -12756,7 +13156,7 @@ function importDraftsFromFile(input){
 function refreshDraftsCount(){
   const el = document.getElementById('draftsCount');
   // v208.27: hidden template groups' drafts aren't counted
-  if (el) el.textContent = drafts.filter(d => !(d && d.state && draftFamilyHidden(draftFamily(d.state.tmpl)))).length;
+  if (el) el.textContent = activeDraftCount();   // v208.34: hidden groups and archived incidents aren't counted
 }
 
 function draftFamily(tmpl){
@@ -12970,7 +13370,7 @@ function renderReferenceRow(d){
     <div class="ref-row ${fam}">
       <div class="ref-info">
         <div class="ref-line1">
-          <span class="ref-seq">${escapeHtml(seq)}${timeHHMM ? ` <span class="ref-seq-time">${escapeHtml(timeHHMM)}</span>` : ''}</span>
+          <span class="ref-seq">${escapeHtml(seq)} <span class="ref-seq-time">${escapeHtml(draftCreatedAt(d) ? fmtActivity(draftCreatedAt(d)) : timeHHMM)}</span>${d.savedBy ? `<span class="ref-by">· ${escapeHtml(d.savedBy)}</span>` : ''}</span>
           ${isCopied ? `<span class="incident-copied ref-copied">copied</span>` : ''}
         </div>
         ${previewShort ? `<div class="ref-snippet" title="${escapeHtml(preview)}">${escapeHtml(previewShort)}</div>` : ''}
@@ -12994,6 +13394,7 @@ function renderReferenceRow(d){
 function copyDraftById(id){
   const d = drafts.find(x => x.id === id);
   if (!d) return;
+  touchDraft(id);   // v208.34
   const text = (typeof d.fullText === 'string' && d.fullText) ? d.fullText : (d.snippet || '');
   const done = () => {
     const note = document.getElementById('g_copied');
@@ -13066,6 +13467,7 @@ const DEL_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none
 const ESC_ICON_SVG = '<svg class="esc-ico" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20.5 12a8.5 8.5 0 11-2.49-6.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.5 4v4.5H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 /* Collapsed summary row for an incident cluster (Option A: newest name + snippet + count). */
+const CLOCK_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 function renderIncidentSummary(cluster, expanded){
   const newest = cluster[0];                       // clusters are newest-first
   const tmpl = newest.state.tmpl || 'generic';
@@ -13127,15 +13529,17 @@ function renderIncidentSummary(cluster, expanded){
               return '';
             })()}
           </div>
+          <div class="incident-activity">${CLOCK_SVG}<span>${escapeHtml(fmtActivity(clusterActivity(cluster)))}</span>${clusterLastBy(cluster) ? `<span>·</span><span>last saved by <b>${escapeHtml(clusterLastBy(cluster))}</b></span>` : ''}</div>
           ${(detail1 || detail2) ? `<div class="incident-detail combined">${[detail1, detail2].filter(Boolean).map(t=>`<span class="incident-detail-seg">${escapeHtml(t)}</span>`).join('<span class="incident-detail-sep">  ·  </span>')}</div>` : ''}
         </div>
         <div class="incident-right">
           <div class="draft-actions">
-            ${canUpdate ? `<button type="button" class="draft-update" onclick="updateDraftById('${newestId}')" title="Load the latest message and advance the sequence">
+            ${isArchivedCluster(cluster) ? `<button type="button" class="draft-restore" data-ids="${cluster.map(d=>d.id).join(',')}" onclick="restoreIncident(this.dataset.ids)" title="Move back to the active drafts">↩ Restore</button>` : ''}
+            ${(canUpdate && !isArchivedCluster(cluster)) ? `<button type="button" class="draft-update" onclick="updateDraftById('${newestId}')" title="Load the latest message and advance the sequence">
               ${ESC_ICON_SVG}
               ${tmpl === 'ino' ? 'Next escalation' : 'Update'}
             </button>` : ''}
-            ${avCanAdvance ? `<button type="button" class="draft-update" onclick="escalateAvToRemoval('${newestId}')" title="Advance to the next step in the AV workflow">
+            ${(avCanAdvance && !isArchivedCluster(cluster)) ? `<button type="button" class="draft-update" onclick="escalateAvToRemoval('${newestId}')" title="Advance to the next step in the AV workflow">
               ${ESC_ICON_SVG}
               ${avAdvanceLabel}
             </button>` : ''}
@@ -13316,6 +13720,7 @@ function deriveSeqLabel(draft, tmpl){
 function renderDraftsList(){
   const list = document.getElementById('draftsList');
   if (!list) return;
+  renderSharedBar();   // v208.34
   if (!drafts.length){
     list.innerHTML = `<div class="drafts-empty">No saved drafts yet. Fill in the form and press “Save draft”.</div>`;
     return;
@@ -13328,14 +13733,29 @@ function renderDraftsList(){
     { fam: 'tts',     label: 'Tow to Safety' },
     { fam: 'bcc',     label: 'BCC · SLAM Escalation Email' }
   ];
-  let html = '';
+  let html = '', archivedHtml = '', archivedCount = 0;
   groups.forEach(g => {
     if (draftFamilyHidden(g.fam)) return;   // v208.27: group hidden in Settings
     const rows = drafts.filter(d => d && d.state && draftFamily(d.state.tmpl) === g.fam);
     if (!rows.length) return;   // omit empty groups
     // Cluster once here so the header count reflects the number of incidents
     // (parent summaries), not the total message count.
-    const clusters = clusterByIncident(rows);
+    // v208.34: incidents with no activity for 24 hours go to the Archived section.
+    const allClusters = clusterByIncident(rows).sort((a, b) => clusterActivity(b) - clusterActivity(a));
+    const arch = allClusters.filter(isArchivedCluster);
+    const clusters = allClusters.filter(c => !isArchivedCluster(c));
+    if (arch.length){
+      archivedCount += arch.length;
+      archivedHtml += `<div class="draft-group-head ${g.fam}"><span class="dgh-toggle"><span class="dgh-label">${g.label} <span class="dgh-count">${arch.length}</span></span></span></div>`
+        + `<div class="draft-group-body">` + arch.map(c => {
+            const cid = clusterId(c);
+            const expanded = !!draftIncidentExpanded[cid];
+            let block = renderIncidentSummary(c, expanded);
+            if (expanded) block += `<div class="incident-rows">${c.map(renderReferenceRow).join('')}</div>`;
+            return `<div class="draft-incident${expanded ? ' expanded' : ''}">${block}</div>`;
+          }).join('') + `</div>`;
+    }
+    if (!clusters.length) return;
     const collapsed = draftGroupCollapsed[g.fam];
     const panelCollapsed = !!(document.getElementById('draftsPanel')||{classList:{contains:()=>false}}).classList.contains('list-collapsed');
     html += `<div class="draft-group-head ${g.fam}${collapsed ? ' collapsed' : ''}"${panelCollapsed ? ` onclick="expandFromCollapsed('${g.fam}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();expandFromCollapsed('${g.fam}');}"` : ''}>
@@ -13362,6 +13782,13 @@ function renderDraftsList(){
       html += `<div class="draft-group-body">${body}</div>`;
     }
   });
+  if (archivedCount){
+    html += `<button type="button" class="archive-head" aria-expanded="${archiveOpen}" onclick="toggleArchive()">
+      <svg class="ah-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="ah-title">Archived · ${archivedCount}</span><span class="ah-sub">No activity for 24 hours — restore to pick one back up</span></button>`;
+    if (archiveOpen) html += `<div class="archive-body">${archivedHtml}</div>`;
+  }
+  if (!html) html = `<div class="drafts-empty">No saved drafts yet. Fill in the form and press “Save draft”.</div>`;
   list.innerHTML = html;
 }
 
@@ -13385,6 +13812,7 @@ function toggleDrafts(){
   if (!panel) return;
   panel.classList.toggle('open');
   if (panel.classList.contains('open')){
+    sharedSync();   // v208.34: fresh copy of everyone's drafts
     // Reset open incident rows so only parent summaries show on open.
     draftIncidentExpanded = {}; try { window.localStorage.removeItem(DRAFT_INCIDENT_KEY); } catch(e){}
     renderDraftsList();
@@ -14462,6 +14890,7 @@ applyInoTimeLock();
 applyInoReopenVisibility();
 renderPreview();
 loadPersistedDrafts();
+sharedInit();   // v208.34: reconnect the shared drafts folder if one was chosen before
 loadChipColours();
 // laneAmpersand removed — always "and"
 loadConsecWordingPref();
