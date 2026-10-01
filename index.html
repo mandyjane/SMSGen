@@ -2260,7 +2260,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.38</span>
+    <span class="app-version">Version 208.40</span>
   </footer>
 </div>
 
@@ -4795,8 +4795,10 @@ function onInoInjUpdateChange(el){
 let inoPrevDivAvail = '';
 let inoDivAvailBeforeNo = false;
 function inoDiversionsWereAvailable(){
-  return inoPrevDivAvail === 'yes' || inoDivAvailBeforeNo
-    || (document.querySelector('input[name="s_div_available"]:checked')||{}).value === 'yes';
+  // v208.40: a QPS-controlled diversion counts as diversions having been in place
+  const isAvail = v => v === 'yes' || v === 'qps';
+  return isAvail(inoPrevDivAvail) || inoDivAvailBeforeNo
+    || isAvail((document.querySelector('input[name="s_div_available"]:checked')||{}).value);
 }
 /* v208.17: remember the order FCU / QPS investigation were ticked in, so the combined wording
    leads with whichever came first. Unticking removes it from the order. */
@@ -5800,8 +5802,12 @@ function buildLanesP(prefix){
   if (prefix !== 's') return buildLanesPCore(prefix);
   // v208.38: ramp closure follows the lane wording ("Left lane blocked; off ramp closed").
   const base = buildLanesPWithCount(prefix);
-  const ramp = inoBoardMode() ? buildInoRampClause() : '';
+  let ramp = inoBoardMode() ? buildInoRampClause() : '';
   if (!ramp) return base;
+  // v208.39: the ramp takes the Direction ("On ramp closed westbound") unless the lane
+  // wording before it already carries it ("Left westbound lane blocked; on ramp closed").
+  const dirTail = withLaneDirection('x', '.s_lane_dir').slice(1).trim();
+  if (dirTail && !(base && base.toLowerCase().includes(dirTail.toLowerCase()))) ramp = `${ramp} ${dirTail}`;
   const rampMid = /^(On|Off) /.test(ramp) ? ramp.charAt(0).toLowerCase() + ramp.slice(1) : ramp;   // keep place names capitalised
   return base ? `${base}; ${rampMid}` : ramp;
 }
@@ -6235,8 +6241,9 @@ function onInoDiversionChange(userChange, auto){
     if (wrap) wrap.style.display = 'none';
     // v207.23: remember that diversions were available before this switch to No, so a FINAL
     // can report "Diversions lifted." (restore paths pass no userChange, so they don't count).
-    if (userChange && (document.querySelector('input[name="s_div_available"]:checked')||{}).value === 'yes') inoDivAvailBeforeNo = true;
+    if (userChange && ['yes','qps'].indexOf((document.querySelector('input[name="s_div_available"]:checked')||{}).value) !== -1) inoDivAvailBeforeNo = true;
     document.querySelectorAll('input[name="s_div_available"]').forEach(r => { r.checked = false; });
+    syncRadioFlags('s_div_available');   // v208.40: deselectable radios
   }
   renderPreview();
   scheduleWorkingSave();
@@ -7516,8 +7523,9 @@ function buildINO(){
         <div class="field" style="margin-bottom:8px;">
           <span class="field-label">Are diversions available?</span>
           <div class="check-grid">
-            <label class="inline-check"><input type="radio" name="s_div_available" value="yes" onchange="onInoDivAvailChange()"> Yes</label>
-            <label class="inline-check"><input type="radio" name="s_div_available" value="no" onchange="onInoDivAvailChange()"> No</label>
+            <label class="inline-check"><input type="radio" class="desel-radio" name="s_div_available" value="yes" onclick="toggleDeselectableRadio(this); onInoDivAvailChange();" onchange="onInoDivAvailChange()"> Yes</label>
+            <label class="inline-check"><input type="radio" class="desel-radio" name="s_div_available" value="no" onclick="toggleDeselectableRadio(this); onInoDivAvailChange();" onchange="onInoDivAvailChange()"> No</label>
+            <label class="inline-check"><input type="radio" class="desel-radio" name="s_div_available" value="qps" onclick="toggleDeselectableRadio(this); onInoDivAvailChange();" onchange="onInoDivAvailChange()"> QPS</label>
           </div>
         </div>
     <div id="demo_div_via_wrap" style="display:none;">
@@ -8746,6 +8754,8 @@ function renderINO(){
       diversion = dt ? `diversion via ${dt}` : 'diversions available';
     } else if (divAvail === 'no'){
       diversion = 'no diversion available';
+    } else if (divAvail === 'qps'){
+      diversion = 'diversion under QPS control';   // v208.40
     }
   } else if (diversionVal === 'no') diversion = '';
   // Congestion = No → explicit "Nil congestion" (sits before the diversion detail).
@@ -14186,7 +14196,7 @@ function applyDraft(s){
     }
     // Legacy: old congPeak boolean → map to AM peak (best guess)
     if (a.congPeak && !a.congPeakVal){ setRadio('s_cong_peak', 'am'); }
-    if (a.diversion){ setRadio('s_diversion', a.diversion); syncRadioFlags('s_diversion'); onInoDiversionChange(); if (a.divAvailable){ setRadio('s_div_available', a.divAvailable); onInoDivAvailChange(); } set('s_diversion_text', a.diversionText); }
+    if (a.diversion){ setRadio('s_diversion', a.diversion); syncRadioFlags('s_diversion'); onInoDiversionChange(); if (a.divAvailable){ setRadio('s_div_available', a.divAvailable); syncRadioFlags('s_div_available'); onInoDivAvailChange(); } set('s_diversion_text', a.diversionText); }
     if (a.addlInfo) set('s_addl_info', a.addlInfo);
     { const sv = a.addlSep || '.'; const si = document.getElementById('s_addl_sep'); if (si) si.value = sv;
       syncInoSepButtons('s_addl_sep_group', sv); }
