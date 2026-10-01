@@ -1304,7 +1304,6 @@
   .lb-whole { font: inherit; font-size:12.5px; display:inline-flex; align-items:center; gap:5px; height:30px; padding:0 12px;
     border-radius:999px; border:1px solid var(--line, #d9dee3); background:transparent; color: var(--ink, #1a1f24); cursor:pointer; }
   .lb-whole.on { background: var(--accent-soft, #e3f1ec); border-color: transparent; font-weight:600; }
-  .lb-hide-open { margin-top: 8px; }   /* v208.41 */
   .lb-whole-road.on { background: rgba(120,40,40,.13); color:#7b241c; }
   /* v208.38: Ramp closed → On / Off */
   .lb-ramp-pick { display:inline-flex; border:1px solid var(--line, #d9dee3); border-radius:999px; overflow:hidden; height:30px; }
@@ -2261,7 +2260,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.41</span>
+    <span class="app-version">Version 208.42</span>
   </footer>
 </div>
 
@@ -4515,6 +4514,9 @@ function cloneBoard(b){ return b ? { L:Object.assign({ Left:'open', Centre:'open
           onName:(b.ramp && b.ramp.onName) || '', offName:(b.ramp && b.ramp.offName) || '' } } : null; }   // v208.38: + ramp
 let inoBoard = emptyBoard();
 let inoPrevBoard = null;
+/* v208.42: "Current state only" (updates): lane board, Road closed and ramps are worded as on a
+   first message — no "now" / "remain(s)", and lanes or ramps that have reopened aren't reported. */
+function inoLanePlain(){ return !!(document.getElementById('s_lane_plain')||{}).checked; }
 function inoBoardMode(){
   try { return localStorage.getItem('bmtmc_ino_lane_board') !== '0'; } catch(e){ return true; }
 }
@@ -4611,7 +4613,7 @@ function onInoRampName(which, el){
    same/no name: "Progress Road on and off ramps closed" / "On and off ramps closed". */
 function buildInoRampClause(){
   const r = inoBoard.ramp || {};
-  const upd = isInoUpdateContext();
+  const upd = isInoUpdateContext() && !inoLanePlain();   // v208.42
   const pr = (upd && inoPrevBoard && inoPrevBoard.ramp) || { on:false, off:false };
   const nm = (src, k) => expandAbbreviations(String((src && src[k + 'Name']) || '').trim());
   const one = (k) => {
@@ -4698,17 +4700,13 @@ function renderInoBoard(){
     const allOpen = !inoBoard.road && BOARD_LANES.every(k => inoBoard.L[k] === 'open');
     nilBtn.classList.toggle('on', allOpen && (upd ? !!prev : inoBoard.nil));
   }
-  { // v208.41: "Don't report open lanes" — updates/FINAL No.2+ only, unless hidden in Settings
-    const hw = document.getElementById('s_hide_open_wrap');
-    if (hw) hw.style.display = (upd && showHideOpenOpt !== false) ? '' : 'none';
-  }
   const hint = document.getElementById('s_board_hint');
   if (hint) hint.textContent = prev ? 'Outlined lanes changed since the last message — the wording follows automatically.' : '';
 }
 function boardAnd(a){ return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
 function buildInoBoardClause(){
   const b = inoBoard;
-  const upd = isInoUpdateContext();
+  const upd = isInoUpdateContext() && !inoLanePlain();   // v208.42
   const prev = upd ? inoPrevBoard : null;
   const dirs = readLaneDirections('.s_lane_dir');
   const plainDir = dirs.length && !dirs.some(d => /unknown|both|all directions/.test(d));
@@ -4722,9 +4720,8 @@ function buildInoBoardClause(){
   const non = BOARD_LANES.filter(k => b.L[k] !== 'open');
   const prevOf = k => prev ? (prev.road ? 'closed' : prev.L[k]) : 'open';
   const prevAnyNon = !!prev && (prev.road || BOARD_LANES.some(k => prev.L[k] !== 'open'));
-  const hideOpen = inoHideOpenLanesActive();   // v208.41: leave reopened lanes out
   if (!non.length){
-    if (prevAnyNon) return hideOpen ? '' : tail(dirWord ? `All ${dirWord} lanes now open` : 'All lanes now open');
+    if (prevAnyNon) return tail(dirWord ? `All ${dirWord} lanes now open` : 'All lanes now open');
     if (b.nil) return withLaneDirection('nil lanes impacted', '.s_lane_dir');
     return '';
   }
@@ -4751,22 +4748,10 @@ function buildInoBoardClause(){
   const same = non.filter(k => prevOf(k) === b.L[k]);
   const changed = non.filter(k => !same.includes(k));
   const parts = [];
-  if (reopened.length && !hideOpen) parts.push(`${phrase(reopened)} now open`);
+  if (reopened.length) parts.push(`${phrase(reopened)} now open`);
   ORDER.forEach(s => { const ks = same.filter(k => b.L[k] === s); if (ks.length) parts.push(`${phrase(ks)} ${ks.length > 1 ? 'remain' : 'remains'} ${s}`); });
   ORDER.forEach(s => { const ks = changed.filter(k => b.L[k] === s); if (ks.length) parts.push(`${phrase(ks)} now ${s}`); });
   return tail(capFirstLetter(parts.join(', ')));
-}
-/* v208.41: "Don't report open lanes" (lane board, updates and No.2+ FINAL). Only counts
-   while the control is actually showing: board mode, update context, and not hidden in
-   Settings. The tick carries over on Next escalation and is saved as hideOpenLanes. */
-function inoHideOpenLanesActive(){
-  if (showHideOpenOpt === false) return false;
-  if (!inoBoardMode() || !isInoUpdateContext()) return false;
-  return !!(document.getElementById('s_hide_open_lanes')||{}).checked;
-}
-function onInoHideOpenChange(){
-  renderPreview();
-  scheduleWorkingSave();
 }
 /* =================== end lane board =================== */
 
@@ -4821,6 +4806,7 @@ function inoDiversionsWereAvailable(){
 /* v208.17: remember the order FCU / QPS investigation were ticked in, so the combined wording
    leads with whichever came first. Unticking removes it from the order. */
 let inoInvestOrder = [];
+let inoDurOrder = [];   // v208.42: order the "Subject to" items (and free text) were added
 function noteInoInvestOrder(el){
   const k = el.id === 's_dur_qps' ? 'QPS' : 'FCU';
   inoInvestOrder = inoInvestOrder.filter(x => x !== k);
@@ -7070,29 +7056,34 @@ function buildInoDuration(){
     if (m > 0) parts.push(`${m} minute${m === 1 ? '' : 's'}`);
     base = parts.join(' ');
   }
-  // "Subject to" clauses: vehicle recovery, FCU/QPS investigation, clean-up
-  const subjectParts = [];
-  if ((document.getElementById('s_dur_recovery')||{}).checked){
-    subjectParts.push('vehicle recovery');
+  // "Subject to" items. v208.42: listed in the order they were ticked / typed (inoDurOrder,
+  // reconciled on every render), and the free text joins the list as one more item —
+  // "Subject to vehicle recovery, clean-up and tow truck arrival".
+  const ck = id => !!(document.getElementById(id)||{}).checked;
+  const fcu = ck('s_dur_fcu'), qps = ck('s_dur_qps');
+  const ITEMS = {
+    recovery: ck('s_dur_recovery') ? 'vehicle recovery' : '',
+    // v208.14/17: both investigations → one item, led by whichever was ticked first
+    invest: (fcu && qps) ? (inoInvestOrder[0] === 'QPS' ? 'QPS & FCU investigation' : 'FCU & QPS investigation')
+          : fcu ? 'FCU investigation' : qps ? 'QPS investigation' : '',
+    cleanup: ck('s_dur_cleanup') ? 'clean-up' : '',
+    emergency_ops: ck('s_dur_emergency_ops') ? 'emergency services operation' : '',
+    road_surface: ck('s_dur_road_surface') ? 'road surface assessment' : '',
+    infra_inspect: ck('s_dur_infra_inspect') ? 'infrastructure inspection' : '',
+    make_safe: ck('s_dur_make_safe') ? 'make safe' : '',
+    other: otherVal
+  };
+  inoDurOrder = inoDurOrder.filter(k => ITEMS[k]);
+  Object.keys(ITEMS).forEach(k => { if (ITEMS[k] && inoDurOrder.indexOf(k) === -1) inoDurOrder.push(k); });
+  const ticked = inoDurOrder.filter(k => k !== 'other');
+  // Free text on its own (nothing ticked) stays as it was typed, not "subject to …".
+  if (!ticked.length){
+    const pieces0 = [base, otherVal].filter(Boolean);
+    return pieces0.length ? capFirst(pieces0.join(', ')) : '';
   }
-  { // v208.14: both ticked → one combined item, "FCU & QPS investigation"
-    const fcu = (document.getElementById('s_dur_fcu')||{}).checked;
-    const qps = (document.getElementById('s_dur_qps')||{}).checked;
-    // v208.17: whichever was ticked first leads ("QPS & FCU investigation" if QPS came first)
-    if (fcu && qps) subjectParts.push(inoInvestOrder[0] === 'QPS' ? 'QPS & FCU investigation' : 'FCU & QPS investigation');
-    else if (fcu) subjectParts.push('FCU investigation');
-    else if (qps) subjectParts.push('QPS investigation');
-  }
-  if ((document.getElementById('s_dur_cleanup')||{}).checked) subjectParts.push('clean-up');
-  if ((document.getElementById('s_dur_emergency_ops')||{}).checked) subjectParts.push('emergency services operation');
-  if ((document.getElementById('s_dur_road_surface')||{}).checked) subjectParts.push('road surface assessment');
-  if ((document.getElementById('s_dur_infra_inspect')||{}).checked) subjectParts.push('infrastructure inspection');
-  if ((document.getElementById('s_dur_make_safe')||{}).checked) subjectParts.push('make safe');
+  const subjectParts = inoDurOrder.map(k => ITEMS[k]);
   const subjectJoined = subjectParts.length <= 2 ? subjectParts.join(' and ') : subjectParts.slice(0,-1).join(', ') + ' and ' + subjectParts[subjectParts.length-1];
-  const subjectClause = subjectParts.length ? 'subject to ' + subjectJoined : '';
-  // Free-text duration appended after everything else
-  const pieces = [base, subjectClause, otherVal].filter(Boolean);
-  if (!pieces.length) return '';
+  const pieces = [base, 'subject to ' + subjectJoined].filter(Boolean);
   return capFirst(pieces.join(', '));
 }
 function onInoRecoveryChange(){
@@ -7381,7 +7372,8 @@ function buildINO(){
     <div class="field" id="s_board_field">
       <div class="addl-label-row">
         <span class="field-label">Impact on lanes</span>
-        <button type="button" class="lb-switch" onclick="setInoLaneMode(false)"><span aria-hidden="true">\u21c4</span> Switch to classic controls</button>
+        <label class="inline-check resp-all-pill" id="s_lane_plain_wrap" style="display:none;margin-left:auto;" title="Describe the lanes as they are now — no “now” / “remains”, and lanes that have reopened aren’t mentioned"><input type="checkbox" id="s_lane_plain" onchange="renderPreview(); scheduleWorkingSave();"> Current state only</label>
+        <button type="button" class="lb-switch" style="margin-left:12px;" onclick="setInoLaneMode(false)"><span aria-hidden="true">\u21c4</span> Switch to classic controls</button>
       </div>
       <div class="lane-board" id="s_board_tiles"></div>
       <div class="lane-board-actions">
@@ -7398,9 +7390,6 @@ function buildINO(){
           <label class="lb-ramp-name" id="s_ramp_off_name_wrap" style="display:none;">Off ramp <input type="text" id="s_ramp_off_name" placeholder="e.g. Progress Road (optional)" oninput="onInoRampName('off', this)"></label>
         </div>
         <span class="lb-cycle-hint">Tap a lane: Open \u2192 Blocked \u2192 Impacted \u2192 Closed</span>
-      </div>
-      <div class="lb-hide-open" id="s_hide_open_wrap" style="display:none;">
-        <label class="inline-check"><input type="checkbox" id="s_hide_open_lanes" onchange="onInoHideOpenChange()"> Don't report open lanes <span class="fld-help" tabindex="0" role="button" aria-label="What this does" data-tip="Leaves reopened lanes out of the message (e.g. &ldquo;All lanes now open&rdquo;). Lanes still blocked, impacted or closed are still reported. On a FINAL, the All lanes open option then only adds &ldquo;Diversions lifted.&rdquo; when diversions were in place. Carries over to the next escalation. Can be hidden in Settings.">?</span></label>
       </div>
       <p class="hint" id="s_board_hint" style="margin:6px 0 0;"></p>
     </div>
@@ -7803,7 +7792,7 @@ function buildINO(){
 
     <div class="field" style="margin-bottom:0;">
       <span class="field-label">Coordinator name</span>
-      <input type="text" id="s_contact" placeholder="e.g. J. Smith">
+      <input type="text" id="s_contact" placeholder="e.g. J. Smith" list="dl_coord_names" autocomplete="off">
     </div>
     </div>
     </div>
@@ -8595,6 +8584,7 @@ function applyInoTimeLock(){
 
 function clearFormINO(){
   inoInvestOrder = [];
+  inoDurOrder = [];     // v208.42
   inoCustomResp = [];   // v208.33
   previewLockedText = null; previewEditing = false;
   carryClearState();   // fresh message: no carried-over text from the previous one
@@ -8808,6 +8798,8 @@ function renderINO(){
   // Resolution
   applyInoDepartedOptions();
   syncInoAddlOpen();   // v208.31
+  { const w = document.getElementById('s_lane_plain_wrap');   // v208.42: updates only, lane board
+    if (w) w.style.display = (isInoUpdateContext() && inoBoardMode()) ? '' : 'none'; }
   { // v208.20: "Include all responders" is offered on updates only (No.2+ / Update from draft).
     const w = document.getElementById('s_resp_all_wrap');
     if (w) w.style.display = isInoUpdateContext() ? '' : 'none';
@@ -9096,15 +9088,8 @@ function renderINO(){
       const dirWord = (dirs.length && !dirs.includes('unknown')) ? inoDirectionWord(dirs) : '';
       // v207.23: "now open"; prefixed "Diversions lifted." when diversions had been available.
       const openClause0 = dirWord ? `All ${dirWord} lanes now open` : 'All lanes now open';
-      if (inoHideOpenLanesActive()){
-        // v208.41: open lanes not reported — keep only "Diversions lifted." (if any) + congestion.
-        niBits = [lengthCong].filter(Boolean);
-        if (inoDiversionsWereAvailable())
-          niBits = niBits.length ? ['Diversions lifted. ' + capFirstLetter(niBits[0])] : ['Diversions lifted'];
-      } else {
       const openClause = inoDiversionsWereAvailable() ? `Diversions lifted. ${openClause0}` : openClause0;
       niBits = [openClause, lengthCong].filter(Boolean);
-      }
     } else if (closedEverFinal && isSeqFinal && finalReinstate){
       // Closure anywhere in the series (or on this FINAL) → past-tense "All lanes were closed",
       // but ONLY when "Summarise impact" is ticked. Without Summarise, plain FINAL falls through
@@ -11870,12 +11855,13 @@ function collectFormState(){
         durFcu: (document.getElementById('s_dur_fcu')||{}).checked,
         durQps: (document.getElementById('s_dur_qps')||{}).checked,
         durInvestOrder: inoInvestOrder.slice(),
+        durOrder: inoDurOrder.slice(),   // v208.42
+        lanePlain: inoLanePlain(),        // v208.42
         durCleanup: (document.getElementById('s_dur_cleanup')||{}).checked,
         durEmergencyOps: (document.getElementById('s_dur_emergency_ops')||{}).checked,
         durRoadSurface: (document.getElementById('s_dur_road_surface')||{}).checked,
         durInfraInspect: (document.getElementById('s_dur_infra_inspect')||{}).checked,
         durMakeSafe: (document.getElementById('s_dur_make_safe')||{}).checked,
-        hideOpenLanes: !!(document.getElementById('s_hide_open_lanes')||{}).checked,   // v208.41
         contact: gv('s_contact'), contactPh: gv('s_contact_ph'),
         // Whether this message has announced (or inherited) "All lanes are now open".
         allOpenAnnounced: inoMessageAnnouncesAllOpen()
@@ -12585,16 +12571,6 @@ function applyShowGeneric(){
   document.body.classList.toggle('hide-svm', !showSvm);
   document.body.classList.toggle('hide-slo', !showSlo);
 }
-/* v208.41: Settings ▸ Display — show the INO "Don't report open lanes" option (default on). */
-const SHOW_HIDE_OPEN_KEY = 'bmtmc_show_hide_open_lanes_v1';
-var showHideOpenOpt = true;
-try { const r = window.localStorage.getItem(SHOW_HIDE_OPEN_KEY); if (r !== null) showHideOpenOpt = (r === '1'); } catch(e){}
-function setShowHideOpenOpt(on){
-  showHideOpenOpt = !!on;
-  try { window.localStorage.setItem(SHOW_HIDE_OPEN_KEY, showHideOpenOpt ? '1' : '0'); } catch(e){}
-  renderChipSettings();
-  renderPreview();
-}
 /* v208.27: template groups that can be hidden along with their drafts (drafts aren't deleted). */
 const SHOW_SVM_KEY = 'bmtmc_show_svm_v1', SHOW_SLO_KEY = 'bmtmc_show_slo_v1';
 var showSvm = true, showSlo = true;
@@ -12755,13 +12731,6 @@ function renderChipSettings(){
       <span class="disp-name">Show “changes from last message” highlight bar<span class="disp-info" tabindex="0" role="img" aria-label="On an update/escalation, show the bar under the preview that lets you keep the changes since the previous message highlighted. Turn off to hide the bar entirely." title="On an update/escalation, show the bar under the preview that lets you keep the changes since the previous message highlighted. Turn off to hide the bar entirely.">i</span></span>
       <label class="disp-switch">
         <input type="checkbox" ${keepHlEnabled ? 'checked' : ''} onchange="setKeepHlEnabled(this.checked)" aria-label="Show changes from last message highlight bar">
-        <span class="disp-track"><span class="disp-knob"></span></span>
-      </label>
-    </div>
-    <div class="disp-row">
-      <span class="disp-name">Show “Don't report open lanes” option (INO)<span class="disp-info" tabindex="0" role="img" aria-label="Shows the Don't report open lanes checkbox under the lane board on INO updates and FINALs. Turn off to hide it; while hidden, open lanes are always reported." title="Shows the Don't report open lanes checkbox under the lane board on INO updates and FINALs. Turn off to hide it; while hidden, open lanes are always reported.">i</span></span>
-      <label class="disp-switch">
-        <input type="checkbox" ${showHideOpenOpt ? 'checked' : ''} onchange="setShowHideOpenOpt(this.checked)" aria-label="Show Don't report open lanes option">
         <span class="disp-track"><span class="disp-knob"></span></span>
       </label>
     </div>
@@ -14288,13 +14257,15 @@ function applyDraft(s){
     if (a.durFcu){ const f = document.getElementById('s_dur_fcu'); if (f) f.checked = true; }
     if (a.durQps){ const q = document.getElementById('s_dur_qps'); if (q) q.checked = true; }
     inoInvestOrder = Array.isArray(a.durInvestOrder) ? a.durInvestOrder.filter(k => k === 'FCU' || k === 'QPS') : [];
+    inoDurOrder = Array.isArray(a.durOrder) ? a.durOrder.slice() : [];   // v208.42 (older drafts: default order)
+    { const lp = document.getElementById('s_lane_plain'); if (lp) lp.checked = !!a.lanePlain; }
     if (a.durCleanup){ const cl = document.getElementById('s_dur_cleanup'); if (cl){ cl.checked = true; } }
     if (a.durEmergencyOps){ const eo = document.getElementById('s_dur_emergency_ops'); if (eo){ eo.checked = true; } }
     if (a.durRoadSurface){ const rs = document.getElementById('s_dur_road_surface'); if (rs){ rs.checked = true; } }
     if (a.durInfraInspect){ const ii = document.getElementById('s_dur_infra_inspect'); if (ii){ ii.checked = true; } }
     if (a.durMakeSafe){ const ms = document.getElementById('s_dur_make_safe'); if (ms){ ms.checked = true; } }
-    { const ho = document.getElementById('s_hide_open_lanes'); if (ho) ho.checked = !!a.hideOpenLanes; }   // v208.41
-    if (a.durOtherOn){ const b = document.getElementById('s_dur_other'); if (b){ b.value = a.durOther || ''; } }
+    // v208.42 fix: durOtherOn was never saved, so the free-text duration was lost on load/reload
+    if (a.durOtherOn || a.durOther){ const b = document.getElementById('s_dur_other'); if (b){ b.value = a.durOther || ''; } }
     if (a.durUnknown){ document.getElementById('s_duration_unknown').checked = true; }
     applyInoDurOtherVisibility();   // reveal Subject to section if recovery / clean-up / free-text present
     applyDurationOverrideGrey();
@@ -15144,5 +15115,13 @@ renderPreview();
     </div>
   </div>
 </div>
+<!-- v208.41: Coordinator name suggestions (INO). Add names here to extend the list. -->
+<datalist id="dl_coord_names">
+  <option value="Steve Casey"></option>
+  <option value="Ben Porteous"></option>
+  <option value="Cailen Woods"></option>
+  <option value="Wendy Smith"></option>
+  <option value="Sheridan Greer"></option>
+</datalist>
 </body>
 </html>
