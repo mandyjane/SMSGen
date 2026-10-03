@@ -2260,7 +2260,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.42</span>
+    <span class="app-version">Version 208.43</span>
   </footer>
 </div>
 
@@ -3151,7 +3151,7 @@ function buildBCC(){
         <label class="inline-check"><input type="checkbox" id="b_lane_unknown" onchange="onBccLaneUnknownChange()"> Unknown</label>
       </div>
       </div>
-      <input type="text" id="b_lanes_prefix" placeholder="Optional free text — appears before the generated lane info" style="margin-top:10px;">
+      <input type="text" id="b_lanes_prefix" placeholder="Optional free text — added after the generated lane info" style="margin-top:10px;">
       <p class="hint" id="b_lanes_gen"></p>
     </div>
 
@@ -3727,10 +3727,19 @@ function buildBccBoardLanes(){
 }
 /* =================== end BCC lane board =================== */
 
+/* v208.43: the Lanes Impacted free text is now APPENDED after the generated lane wording
+   (field id kept as b_lanes_prefix for drafts). Lower-case start → joined with a space
+   ("L1 blocked on the outbound side"); capital start → a new sentence ("L1 blocked. Traffic…"). */
+function bccJoinLaneText(core, extra){
+  extra = String(extra || '').trim();
+  if (!core) return extra;
+  if (!extra) return core;
+  return /^[A-Z0-9]/.test(extra) ? `${core.replace(/[.\s]+$/, '')}. ${extra}` : `${core} ${extra}`;
+}
 function bccLanes(){
   if (bccBoardMode()){   // v208.09 lane board
     const prefix0 = ((document.getElementById('b_lanes_prefix')||{}).value||'').trim();
-    return [prefix0, buildBccBoardLanes()].filter(Boolean).join(' ').trim();
+    return bccJoinLaneText(buildBccBoardLanes(), prefix0);
   }
   const prefix = ((document.getElementById('b_lanes_prefix')||{}).value||'').trim();
   const stateEl = document.querySelector('input[name="b_lane_state"]:checked');
@@ -3744,7 +3753,7 @@ function bccLanes(){
   if (nil){
     // v208.05: Impacted → "impacted"; new Affected option → "affected"; none → "affected" (as before)
     const verb = (state === 'blocked' || state === 'impacted') ? state : 'affected';
-    return [prefix, `Nil lanes ${verb}`].filter(Boolean).join(' ').trim();
+    return bccJoinLaneText(`Nil lanes ${verb}`, prefix);
   }
   const nums = Array.from(document.querySelectorAll('.b_lane_num:checked')).map(c=>c.value);
   const posBits = [];
@@ -3761,7 +3770,7 @@ function bccLanes(){
   if (subject && state) core = `${subject} ${state}`;
   else if (subject) core = subject;
   else if (state) core = state.charAt(0).toUpperCase() + state.slice(1);
-  return [prefix, core].filter(Boolean).join(' ').trim();
+  return bccJoinLaneText(core, prefix);
 }
 function bccActions(){
   const picked = Array.from(document.querySelectorAll('.b_action:checked')).map(c=>c.value);
