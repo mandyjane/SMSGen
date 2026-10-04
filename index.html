@@ -4076,7 +4076,7 @@ async function bccOpenOutlook(){
   }
   flashCopied('Table copied — paste into Outlook');
   // Open mailto
-  const url = `mailto:${encodeURIComponent(BCC_TO_EMAIL)}?subject=${encodeURIComponent(bccSubject())}`;
+  const url = 'mailto:' + BCC_TO_EMAIL + '?subject=' + encodeURIComponent(bccSubject());
   openMailto(url);
 }
 function flashCopied(msg){
