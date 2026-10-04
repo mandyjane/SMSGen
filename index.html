@@ -1310,6 +1310,10 @@
   .lb-ramp-opt { font: inherit; font-size:12.5px; padding:0 12px; border:none; background:transparent; color: var(--ink, #1a1f24); cursor:pointer; }
   .lb-ramp-opt + .lb-ramp-opt { border-left:1px solid var(--line, #d9dee3); }
   .lb-ramp-opt.on { background: rgba(120,40,40,.13); color:#7b241c; font-weight:600; }
+  .ramp-quiet { margin-top: 6px; }
+  .ramp-quiet .moreless-btn.set { color: #7b241c; }
+  .ramp-panel { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin-top:6px; padding:8px 10px; border:1px dashed var(--line, #d9dee3); border-radius:8px; }
+  .ramp-panel-lbl { font-size:12px; font-weight:600; color: var(--muted); }
   .lb-ramp-names { flex-basis: 100%; display:flex; flex-wrap:wrap; gap:8px 14px; margin-top:4px; }
   .lb-ramp-name { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color: var(--muted); flex: 1 1 220px; }
   .lb-ramp-name input { flex:1; min-width:0; font: inherit; font-weight:400; font-size:13px; padding:5px 8px; border:1px solid var(--line-strong,#d1d5db); border-radius:6px; color: var(--ink); }
@@ -2260,7 +2264,7 @@
   <footer class="app-credit" aria-label="Attribution">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11a8 8 0 0116 0M7 11a5 5 0 0110 0M12 11v9M9 20h6" stroke="#0f6e56" stroke-width="2" stroke-linecap="round"/></svg>
     <span>Built by Amanda Tomlinson · Made for BMTMC Operations</span>
-    <span class="app-version">Version 208.43</span>
+    <span class="app-version">Version 208.45</span>
   </footer>
 </div>
 
@@ -2801,10 +2805,11 @@ async function ttsSendInOutlook(e){
     await copyRichHtml(html);
     flashCopied('Formatted email copied — paste into Outlook');
     const subj = AV_TOW_SUBJ_BASE + (get('tts_cov_id') || 'XXXXXXXX');
-    window.location.href = 'mailto:' + AV_TOW_TO + '?bcc=' + encodeURIComponent(AV_TOW_BCC) + '&subject=' + encodeURIComponent(subj);
+    openMailto('mailto:' + AV_TOW_TO + '?bcc=' + encodeURIComponent(AV_TOW_BCC) + '&subject=' + encodeURIComponent(subj));
   } else {
     const btn = document.getElementById('ttsOutlookBtn');
-    if (btn && btn.href && btn.href !== '#') window.location.href = btn.href;
+    if (btn && btn.href && btn.href !== '#') openMailto(btn.href);
+    flashCopied('Subject pre-filled — paste body from preview');
   }
 }
 async function avSendInOutlook(e){
@@ -2820,10 +2825,11 @@ async function avSendInOutlook(e){
     await copyRichHtml(html);
     flashCopied('Formatted email copied — paste into Outlook');
     const subj = AV_TOW_SUBJ_BASE + (get('av_sims') || 'XXXXXXXX');
-    window.location.href = 'mailto:' + AV_TOW_TO + '?bcc=' + encodeURIComponent(AV_TOW_BCC) + '&subject=' + encodeURIComponent(subj);
+    openMailto('mailto:' + AV_TOW_TO + '?bcc=' + encodeURIComponent(AV_TOW_BCC) + '&subject=' + encodeURIComponent(subj));
   } else {
     const btn = document.getElementById('avOutlookBtn');
-    if (btn && btn.href && btn.href !== '#') window.location.href = btn.href;
+    if (btn && btn.href && btn.href !== '#') openMailto(btn.href);
+    flashCopied('Subject pre-filled — paste body from preview');
   }
 }
 
@@ -3122,7 +3128,21 @@ function buildBCC(){
           <button type="button" class="lb-whole" id="b_board_nil" onclick="bccBoardNil()"><i class="ti ti-circle-off" aria-hidden="true"></i> Nil</button>
           <span class="lb-divider" aria-hidden="true"></span>
           <button type="button" class="lb-whole lb-whole-road" id="b_board_road" onclick="bccBoardToggleRoad()"><i class="ti ti-ban" aria-hidden="true"></i> Road closed</button>
+
           <span class="lb-cycle-hint">Tap a lane: Open \u2192 Blocked \u2192 Impacted \u2192 Affected \u2192 Closed</span>
+        </div>
+        <div class="ramp-quiet">
+          <button type="button" class="moreless-btn v6ps-toggle" id="b_ramp_more" aria-expanded="false" onclick="bccRampExpand()"><span id="b_ramp_more_lbl">Ramp closure</span> <span class="ml-chev" id="b_ramp_more_chev">\u25be</span></button>
+          <div class="ramp-panel" id="b_ramp_panel" style="display:none;">
+            <span class="ramp-panel-lbl">Closed:</span>
+            <span class="lb-ramp-pick" id="b_board_ramp_pick" role="group" aria-label="Which ramp">
+              <button type="button" class="lb-ramp-opt" data-ramp="on" onclick="bccBoardRampPick('on')">On ramp</button><button type="button" class="lb-ramp-opt" data-ramp="off" onclick="bccBoardRampPick('off')">Off ramp</button>
+            </span>
+            <div class="lb-ramp-names" id="b_board_ramp_names" style="display:none;">
+              <label class="lb-ramp-name" id="b_ramp_on_name_wrap" style="display:none;">On ramp <input type="text" id="b_ramp_on_name" placeholder="e.g. Coronation Drive (optional)" oninput="onBccRampName('on', this)"></label>
+              <label class="lb-ramp-name" id="b_ramp_off_name_wrap" style="display:none;">Off ramp <input type="text" id="b_ramp_off_name" placeholder="e.g. Coronation Drive (optional)" oninput="onBccRampName('off', this)"></label>
+            </div>
+          </div>
         </div>
       </div>
       <div id="b_lane_classic" style="display:none;">
@@ -3628,12 +3648,14 @@ function bccDirection(){
    "Road closed". The "text before lanes" box still prepends. Classic controls stay behind the
    ⇄ switch (remembered in bmtmc_bcc_lane_board); switching converts in both directions. */
 const BCC_BOARD_CYCLE = ['open','blocked','impacted','affected','closed'];
-function emptyBccBoard(){ return { n:3, L:['open','open','open'], road:false, nil:false }; }
+function emptyBccBoard(){ return { n:3, L:['open','open','open'], road:false, nil:false, ramp:{ on:false, off:false, onName:'', offName:'' } }; }
 function cloneBccBoard(b){
   if (!b) return emptyBccBoard();
   const n = Math.max(1, Math.min(8, parseInt(b.n, 10) || 3));
   const L = Array.from({ length:n }, (_, i) => (b.L && BCC_BOARD_CYCLE.includes(b.L[i])) ? b.L[i] : 'open');
-  return { n, L, road:!!b.road, nil:!!b.nil };
+  const r = b.ramp || {};
+  return { n, L, road:!!b.road, nil:!!b.nil,
+    ramp:{ on:!!r.on, off:!!r.off, onName:r.onName || '', offName:r.offName || '' } };   // v208.44: + ramp
 }
 let bccBoard = emptyBccBoard();
 function bccBoardMode(){ try { return localStorage.getItem('bmtmc_bcc_lane_board') !== '0'; } catch(e){ return true; } }
@@ -3667,7 +3689,7 @@ function syncBccBoardToClassic(){
 }
 function setBccLaneMode(on){
   try { localStorage.setItem('bmtmc_bcc_lane_board', on ? '1' : '0'); } catch(e){}
-  if (on) bccBoard = bccBoardFromClassic();
+  if (on){ const ramp = bccBoard.ramp; bccBoard = bccBoardFromClassic(); if (ramp) bccBoard.ramp = ramp; }
   else { syncBccBoardToClassic(); if (typeof onBccLaneStateChange === 'function') onBccLaneStateChange(); }
   renderBccBoard(); renderPreview(); scheduleWorkingSave();
 }
@@ -3689,6 +3711,39 @@ function bccBoardSetCount(delta){
 function bccBoardAll(){ bccBoard.road = false; bccBoard.nil = false; bccBoard.L = bccBoard.L.map(() => 'blocked'); bccBoardChanged(); }
 function bccBoardNil(){ bccBoard.road = false; bccBoard.L = bccBoard.L.map(() => 'open'); bccBoard.nil = true; bccBoardChanged(); }
 function bccBoardToggleRoad(){ bccBoard.road = !bccBoard.road; if (bccBoard.road) bccBoard.nil = false; bccBoardChanged(); }
+/* v208.44: Ramp closed for BCC — same controls as INO (On / Off + optional names), present
+   tense like the rest of BCC: "Progress Road off ramp closed"; added after the lane wording. */
+let bccRampPickerOpen = false;   // v208.44: the quiet "Ramp closure" expander
+function bccRampExpand(){ bccRampPickerOpen = !bccRampPickerOpen; renderBccBoard(); }
+function bccBoardRampToggle(){
+  const r = bccBoard.ramp || (bccBoard.ramp = { on:false, off:false, onName:'', offName:'' });
+  if (r.on || r.off){ r.on = false; r.off = false; r.onName = ''; r.offName = ''; bccRampPickerOpen = false; }
+  else bccRampPickerOpen = !bccRampPickerOpen;
+  bccBoardChanged();
+}
+function bccBoardRampPick(which){
+  const r = bccBoard.ramp || (bccBoard.ramp = { on:false, off:false, onName:'', offName:'' });
+  r[which] = !r[which];
+  bccBoardChanged();
+}
+function onBccRampName(which, el){
+  const r = bccBoard.ramp || (bccBoard.ramp = { on:false, off:false });
+  r[which + 'Name'] = el.value;
+  renderPreview(); scheduleWorkingSave();
+}
+function buildBccRampClause(){
+  const r = bccBoard.ramp || {};
+  const nm = k => expandAbbreviations(String(r[k + 'Name'] || '').trim());
+  const items = ['on','off'].filter(k => r[k]).map(k => ({ k, place: nm(k) }));
+  if (!items.length) return '';
+  const label = x => [x.place, x.k + ' ramp'].filter(Boolean).join(' ');
+  let out;
+  if (items.length === 2) out = (items[0].place === items[1].place)
+    ? `${items[0].place ? items[0].place + ' ' : ''}on and off ramps closed`
+    : `${label(items[0])} and ${label(items[1])} closed`;
+  else out = `${label(items[0])} closed`;
+  return out.charAt(0).toUpperCase() + out.slice(1);
+}
 function renderBccBoard(){
   const on = bccBoardMode();
   const bw = document.getElementById('b_board_wrap'), cw = document.getElementById('b_lane_classic');
@@ -3711,6 +3766,24 @@ function renderBccBoard(){
   t('b_board_all', !b.road && b.L.every(s => s === 'blocked'));
   t('b_board_nil', !b.road && allOpen && b.nil);
   t('b_board_road', b.road);
+  { // v208.44: quiet "Ramp closure ▾" expander → On ramp / Off ramp + names. Stays open while set.
+    const r = b.ramp || {};
+    const any = !!(r.on || r.off);
+    const open = any || bccRampPickerOpen;
+    const panel = document.getElementById('b_ramp_panel'); if (panel) panel.style.display = open ? '' : 'none';
+    const mb = document.getElementById('b_ramp_more'); if (mb){ mb.setAttribute('aria-expanded', open ? 'true' : 'false'); mb.classList.toggle('set', any); }
+    const lbl = document.getElementById('b_ramp_more_lbl');
+    if (lbl) lbl.textContent = any ? 'Ramp closure · ' + (r.on && r.off ? 'on & off' : (r.on ? 'on' : 'off')) : 'Ramp closure';
+    const pk = document.getElementById('b_board_ramp_pick');
+    if (pk) pk.querySelectorAll('[data-ramp]').forEach(x => x.classList.toggle('on', !!r[x.dataset.ramp]));
+    const names = document.getElementById('b_board_ramp_names');
+    if (names) names.style.display = any ? '' : 'none';
+    ['on','off'].forEach(k => {
+      const w = document.getElementById(`b_ramp_${k}_name_wrap`); if (w) w.style.display = r[k] ? '' : 'none';
+      const inp = document.getElementById(`b_ramp_${k}_name`);
+      if (inp && document.activeElement !== inp) inp.value = r[k + 'Name'] || '';
+    });
+  }
 }
 function buildBccBoardLanes(){
   const b = bccBoard;
@@ -3739,7 +3812,10 @@ function bccJoinLaneText(core, extra){
 function bccLanes(){
   if (bccBoardMode()){   // v208.09 lane board
     const prefix0 = ((document.getElementById('b_lanes_prefix')||{}).value||'').trim();
-    return bccJoinLaneText(buildBccBoardLanes(), prefix0);
+    const ramp = buildBccRampClause();   // v208.44
+    const lanes = buildBccBoardLanes();
+    const core = ramp ? (lanes ? `${lanes}, ${/^(On|Off) /.test(ramp) ? ramp.charAt(0).toLowerCase() + ramp.slice(1) : ramp}` : ramp) : lanes;
+    return bccJoinLaneText(core, prefix0);
   }
   const prefix = ((document.getElementById('b_lanes_prefix')||{}).value||'').trim();
   const stateEl = document.querySelector('input[name="b_lane_state"]:checked');
@@ -4001,13 +4077,23 @@ async function bccOpenOutlook(){
   flashCopied('Table copied — paste into Outlook');
   // Open mailto
   const url = `mailto:${encodeURIComponent(BCC_TO_EMAIL)}?subject=${encodeURIComponent(bccSubject())}`;
-  window.location.href = url;
+  openMailto(url);
 }
 function flashCopied(msg){
   const n = document.getElementById('b_draft_note');
   if (!n) return;
   n.textContent = msg;
   setTimeout(()=>{ if (n.textContent === msg) n.textContent = ''; }, 2600);
+}
+/* Opens a mailto: URL via a short-lived <a> click (more reliable than
+   window.location.href, which some browsers / IT policies block). */
+function openMailto(url){
+  const a = document.createElement('a');
+  a.href = url;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=> a.remove(), 300);
 }
 function clearFormBCC(){
   bccCustomResp = [];
@@ -10743,7 +10829,9 @@ function renderAvTowingEmail(){
     + "SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.\n"
     + "Abandoned vehicles \u2013 light & heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.";
   const subj = AV_TOW_SUBJ_BASE + (covRaw || 'XXXXXXXX');
-  const href = 'mailto:' + AV_TOW_TO + '?bcc=' + encodeURIComponent(AV_TOW_BCC) + '&subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(towBody);
+  // Body omitted from href — full body exceeds mailto URL limits on Windows/Edge.
+  // Plain-text mode: To/BCC/Subject pre-fill; operator pastes body from preview.
+  const href = 'mailto:' + AV_TOW_TO + '?bcc=' + encodeURIComponent(AV_TOW_BCC) + '&subject=' + encodeURIComponent(subj);
   const btn = document.getElementById('avOutlookBtn');
   if (btn) btn.href = href;
 
@@ -10814,7 +10902,9 @@ function renderTTS(){
     + "SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.\n"
     + "Abandoned vehicles \u2013 light & heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.";
   const subj = AV_TOW_SUBJ_BASE + (covRaw || 'XXXXXXXX');
-  const href = 'mailto:' + AV_TOW_TO + '?bcc=' + encodeURIComponent(AV_TOW_BCC) + '&subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(towBody);
+  // Body omitted from href — full body exceeds mailto URL limits on Windows/Edge.
+  // Plain-text mode: To/BCC/Subject pre-fill; operator pastes body from preview.
+  const href = 'mailto:' + AV_TOW_TO + '?bcc=' + encodeURIComponent(AV_TOW_BCC) + '&subject=' + encodeURIComponent(subj);
   const btn = document.getElementById('ttsOutlookBtn');
   if (btn) btn.href = href;
   updateCounts('');
