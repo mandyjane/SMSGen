@@ -2710,7 +2710,7 @@ function buildGeneric(){
 let avStep = 1;
 const AV_STEP_LABELS = { 1:'Initial notice', 2:'Towing authority', 3:'Removal' };
 const AV_TOW_TO = 'despatch@claytonstowing.com.au';
-const AV_TOW_BCC = 'SNO_MetroRTNM@tmr.qld.gov.au,BMTMC_Traffic@brisbane.qld.gov.au';
+const AV_TOW_BCC = 'SNO_MetroRTNM@tmr.qld.gov.au;BMTMC_Traffic@brisbane.qld.gov.au';
 const AV_TOW_SUBJ_BASE = 'QLD GOV - DTMR - METRO - Stationary (Abandoned / Broken-down) Vehicle Removal Authority - Service Order - COV DM ID: ';
 
 const AUTH_NAME_KEY = 'bmtmc_auth_name_v1';
@@ -2805,7 +2805,7 @@ async function ttsSendInOutlook(e){
     await copyRichHtml(html);
     flashCopied('Formatted email copied — paste into Outlook');
     const subj = AV_TOW_SUBJ_BASE + (get('tts_cov_id') || 'XXXXXXXX');
-    openMailto('mailto:' + AV_TOW_TO + '?bcc=' + encodeURIComponent(AV_TOW_BCC) + '&subject=' + encodeURIComponent(subj));
+    openMailto('mailto:' + AV_TOW_TO + '?bcc=' + AV_TOW_BCC + '&subject=' + encodeURIComponent(subj));
   } else {
     const btn = document.getElementById('ttsOutlookBtn');
     if (btn && btn.href && btn.href !== '#') openMailto(btn.href);
@@ -2825,7 +2825,7 @@ async function avSendInOutlook(e){
     await copyRichHtml(html);
     flashCopied('Formatted email copied — paste into Outlook');
     const subj = AV_TOW_SUBJ_BASE + (get('av_sims') || 'XXXXXXXX');
-    openMailto('mailto:' + AV_TOW_TO + '?bcc=' + encodeURIComponent(AV_TOW_BCC) + '&subject=' + encodeURIComponent(subj));
+    openMailto('mailto:' + AV_TOW_TO + '?bcc=' + AV_TOW_BCC + '&subject=' + encodeURIComponent(subj));
   } else {
     const btn = document.getElementById('avOutlookBtn');
     if (btn && btn.href && btn.href !== '#') openMailto(btn.href);
@@ -10831,7 +10831,7 @@ function renderAvTowingEmail(){
   const subj = AV_TOW_SUBJ_BASE + (covRaw || 'XXXXXXXX');
   // Body omitted from href — full body exceeds mailto URL limits on Windows/Edge.
   // Plain-text mode: To/BCC/Subject pre-fill; operator pastes body from preview.
-  const href = 'mailto:' + AV_TOW_TO + '?bcc=' + encodeURIComponent(AV_TOW_BCC) + '&subject=' + encodeURIComponent(subj);
+  const href = 'mailto:' + AV_TOW_TO + '?bcc=' + AV_TOW_BCC + '&subject=' + encodeURIComponent(subj);
   const btn = document.getElementById('avOutlookBtn');
   if (btn) btn.href = href;
 
@@ -10904,7 +10904,7 @@ function renderTTS(){
   const subj = AV_TOW_SUBJ_BASE + (covRaw || 'XXXXXXXX');
   // Body omitted from href — full body exceeds mailto URL limits on Windows/Edge.
   // Plain-text mode: To/BCC/Subject pre-fill; operator pastes body from preview.
-  const href = 'mailto:' + AV_TOW_TO + '?bcc=' + encodeURIComponent(AV_TOW_BCC) + '&subject=' + encodeURIComponent(subj);
+  const href = 'mailto:' + AV_TOW_TO + '?bcc=' + AV_TOW_BCC + '&subject=' + encodeURIComponent(subj);
   const btn = document.getElementById('ttsOutlookBtn');
   if (btn) btn.href = href;
   updateCounts('');
