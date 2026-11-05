@@ -2301,13 +2301,13 @@
           <!-- AV wizard step navigation (v197) -->
           <a id="ttsOutlookBtn" href="#" onclick="ttsSendInOutlook(event)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18v12H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 7l9 6 9-6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg> Send in Outlook</a>
           <a id="avOutlookBtn" href="#" onclick="avSendInOutlook(event)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18v12H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 7l9 6 9-6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg> Send in Outlook</a>
-          <button type="button" class="step-btn outlook-help-btn" id="outlookHelpBtn" onclick="openOutlookHelpModal()" title="Fix Outlook opening the wrong version">? Help</button>
           <div class="av-step-btns" id="avStepBtns" style="display:none;">
             <button type="button" class="av-step-btn" id="avPrevBtn" style="display:none;" onclick="goAvStep(avStep-1)">← Back</button>
             <button type="button" class="av-step-btn primary" id="avNextBtn" onclick="goAvStep(avStep+1)">→ Next: Towing email</button>
           </div>
         </div>
         <div class="new-msg-area" id="newMsgArea">
+          <button type="button" class="step-btn outlook-help-btn" id="outlookHelpBtn" onclick="openOutlookHelpModal()" title="Fix Outlook opening the wrong version">? Help</button>
           <button type="button" class="step-btn ghost new-msg-isolated" id="newMsgBtn" onclick="newMessage()" title="Clear the form and start a new message in this template">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             New message
@@ -2905,6 +2905,8 @@ function applyAvStepVisibility(){
   const s3 = document.getElementById('av_step3_fields');
   if (s2) s2.style.display = avStep === 2 ? 'block' : 'none';
   if (s3) s3.style.display = avStep === 3 ? 'block' : 'none';
+  const helpBtn = document.getElementById('outlookHelpBtn');
+  if (helpBtn) helpBtn.style.display = avStep === 2 ? 'inline-flex' : 'none';
 }
 
 function buildAV(){
@@ -10409,7 +10411,7 @@ function refreshPreviewActions(){
   if (avOutBtn) avOutBtn.classList.toggle('show', isAv && avStep === 2);
   if (ttsOutBtn) ttsOutBtn.classList.toggle('show', isTts);
   const helpBtn = document.getElementById('outlookHelpBtn');
-  if (helpBtn) helpBtn.style.display = (isTts || (isAv && avStep === 2) || isBcc) ? '' : 'none';
+  if (helpBtn) helpBtn.style.display = (isTts || (isAv && avStep === 2) || isBcc) ? 'inline-flex' : 'none';
   // Hide SMS copy button on AV step 2 (email step).
   if (copyBtn && isAv) copyBtn.style.display = avStep === 2 ? 'none' : '';
   if (copyBtn && isTts) copyBtn.style.display = 'none';
