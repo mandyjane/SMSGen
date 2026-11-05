@@ -1924,6 +1924,61 @@
   .slo-modal-btn.danger { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
   .slo-modal-btn.danger:hover { background: #fecaca; }
   .slo-modal-btn.secondary { background: none; color: var(--muted); border-color: var(--line-strong); }
+  /* Outlook Help button */
+  #outlookHelpBtn { display: none; }
+  .outlook-help-btn {
+    font-size: 12px; padding: 4px 10px; border-radius: var(--radius-sm);
+    background: none; color: var(--muted); border: 1.5px solid var(--line-strong);
+    cursor: pointer; white-space: nowrap;
+  }
+  .outlook-help-btn:hover { background: var(--hover); color: var(--ink); }
+  /* Outlook Help modal */
+  .outlook-help-backdrop {
+    display: none; position: fixed; inset: 0;
+    background: rgba(22,32,29,0.45); z-index: 1000;
+    align-items: flex-start; justify-content: center;
+    padding: 40px 20px; overflow-y: auto;
+  }
+  .outlook-help-backdrop.visible { display: flex; }
+  .outlook-help-modal {
+    background: var(--card); border-radius: var(--radius); border: 1px solid var(--line);
+    box-shadow: 0 8px 40px rgba(22,32,29,0.18); padding: 24px 26px 20px;
+    width: 540px; max-width: calc(100vw - 40px); position: relative;
+  }
+  .outlook-help-modal h2 {
+    font-family: var(--display); font-size: 16px; font-weight: 700;
+    margin: 0 0 4px; color: var(--ink);
+  }
+  .outlook-help-modal .oh-sub {
+    font-size: 13px; color: var(--muted); margin-bottom: 18px;
+  }
+  .outlook-help-modal h3 {
+    font-family: var(--display); font-size: 13.5px; font-weight: 700;
+    margin: 16px 0 6px; color: var(--ink);
+  }
+  .outlook-help-modal h3:first-of-type { margin-top: 0; }
+  .outlook-help-modal ol {
+    margin: 0 0 4px 18px; padding: 0;
+    font-size: 13px; color: var(--ink); line-height: 1.65;
+  }
+  .outlook-help-modal ol li { margin-bottom: 4px; }
+  .outlook-help-modal code {
+    background: var(--hover); border-radius: 3px; padding: 1px 5px;
+    font-family: var(--mono); font-size: 12px; color: var(--ink);
+  }
+  .oh-close-btn {
+    position: absolute; top: 14px; right: 16px;
+    background: none; border: none; font-size: 20px; line-height: 1;
+    color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 4px;
+  }
+  .oh-close-btn:hover { background: var(--hover); color: var(--ink); }
+  .oh-footer-btn {
+    display: block; margin: 18px 0 0 auto;
+    padding: 8px 20px; border-radius: var(--radius-sm);
+    background: var(--teal); color: #fff; border: none;
+    font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--sans);
+  }
+  .oh-footer-btn:hover { background: var(--teal-deep); }
   /* Banner */
   .slo-banner {
     display: none; align-items: center; gap: 10px; cursor: pointer;
@@ -2246,6 +2301,7 @@
           <!-- AV wizard step navigation (v197) -->
           <a id="ttsOutlookBtn" href="#" onclick="ttsSendInOutlook(event)">✉️ Send in Outlook</a>
           <a id="avOutlookBtn" href="#" onclick="avSendInOutlook(event)">✉️ Send in Outlook</a>
+          <button type="button" class="step-btn outlook-help-btn" id="outlookHelpBtn" onclick="openOutlookHelpModal()" title="Fix Outlook opening the wrong version">? Help</button>
           <div class="av-step-btns" id="avStepBtns" style="display:none;">
             <button type="button" class="av-step-btn" id="avPrevBtn" style="display:none;" onclick="goAvStep(avStep-1)">← Back</button>
             <button type="button" class="av-step-btn primary" id="avNextBtn" onclick="goAvStep(avStep+1)">→ Next: Towing email</button>
@@ -10352,6 +10408,8 @@ function refreshPreviewActions(){
   if (avStepBtns) avStepBtns.style.display = isAv ? 'flex' : 'none';
   if (avOutBtn) avOutBtn.classList.toggle('show', isAv && avStep === 2);
   if (ttsOutBtn) ttsOutBtn.classList.toggle('show', isTts);
+  const helpBtn = document.getElementById('outlookHelpBtn');
+  if (helpBtn) helpBtn.style.display = (isTts || (isAv && avStep === 2)) ? '' : 'none';
   // Hide SMS copy button on AV step 2 (email step).
   if (copyBtn && isAv) copyBtn.style.display = avStep === 2 ? 'none' : '';
   if (copyBtn && isTts) copyBtn.style.display = 'none';
@@ -11669,6 +11727,19 @@ document.addEventListener('click', function(e){
     const modal = document.getElementById(id);
     if (modal && e.target === modal) sloCloseModals();
   });
+});
+
+/* ── Outlook Help modal ── */
+function openOutlookHelpModal(){
+  const modal = document.getElementById('outlookHelpModal');
+  if (modal) modal.classList.add('visible');
+}
+function closeOutlookHelpModal(){
+  const modal = document.getElementById('outlookHelpModal');
+  if (modal) modal.classList.remove('visible');
+}
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape') closeOutlookHelpModal();
 });
 
 /* Save Draft button action — saves and scrolls to the draft */
@@ -15212,6 +15283,43 @@ renderPreview();
       <button class="slo-modal-btn danger" onclick="sloDenySubmit()">Deny</button>
       <button class="slo-modal-btn secondary" onclick="sloCloseModals()">Cancel</button>
     </div>
+  </div>
+</div>
+<!-- Outlook Help modal -->
+<div class="outlook-help-backdrop" id="outlookHelpModal" role="dialog" aria-modal="true" aria-label="Fix Outlook link" onclick="if(event.target===this)closeOutlookHelpModal()">
+  <div class="outlook-help-modal">
+    <button class="oh-close-btn" onclick="closeOutlookHelpModal()" aria-label="Close">×</button>
+    <h2>📧 Fix: Send in Outlook opens the wrong app</h2>
+    <p class="oh-sub">If the mail button opens New Outlook or webmail instead of Outlook Classic, follow these steps.</p>
+
+    <h3>Step 1: Change the Default MAILTO App in Windows</h3>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 6px;">Chrome relies on Windows to determine which application handles <code>mailto:</code> links.</p>
+    <ol>
+      <li>Press <strong>Windows Key</strong>, type <strong>Default Apps</strong>, and open it.</li>
+      <li>In the search box at the top (or by scrolling down), type <code>MAILTO</code> or click <strong>Choose defaults by link type</strong>.</li>
+      <li>Look for <strong>MAILTO</strong> in the list of file/link types.</li>
+      <li>Click on the current app listed next to <code>MAILTO</code> (it might be set to the new "Outlook", "Mail", or a browser app like Edge/Chrome).</li>
+      <li>Select <strong>Outlook (Classic)</strong> from the options and confirm. (Make sure you select the entry explicitly labelled "Outlook (Classic)" rather than the general "Outlook" or "Mail" app).</li>
+    </ol>
+
+    <h3>Step 2: Disable the "New Outlook" Auto-Switch (If Applicable)</h3>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 6px;">If Microsoft's newer app keeps intercepting your desktop launch requests:</p>
+    <ol>
+      <li>Open <strong>Outlook Classic</strong>.</li>
+      <li>Go to <strong>File &gt; Options &gt; General</strong> (or Advanced).</li>
+      <li>Uncheck or disable <strong>"Automatically switch me to the new Outlook app"</strong> if the toggle is present.</li>
+      <li>If you have the <strong>"Try the new Outlook"</strong> toggle active in the top-right corner of Outlook Classic, turn it <strong>Off</strong>.</li>
+    </ol>
+
+    <h3>Step 3: Check Chrome Protocol Handlers (If Chrome is intercepting it)</h3>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 6px;">If Chrome itself is catching the mail button and trying to send it to Gmail or a web handler:</p>
+    <ol>
+      <li>In Chrome, go to <code>chrome://settings/handlers</code>.</li>
+      <li>Ensure <strong>Sites can ask to handle protocols</strong> is enabled.</li>
+      <li>Remove any unwanted web handlers (like <code>mailto</code> mapped to Gmail or Outlook on the web) if they are listed there.</li>
+    </ol>
+
+    <button class="oh-footer-btn" onclick="closeOutlookHelpModal()">Got it</button>
   </div>
 </div>
 <!-- v208.41: Coordinator name suggestions (INO). Add names here to extend the list. -->
