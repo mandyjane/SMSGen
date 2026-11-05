@@ -2292,15 +2292,15 @@
         <div class="preview-actions" id="previewActions">
           <button type="button" class="step-btn bcc-primary" id="bccOutlookBtn" onclick="bccOpenOutlook()" style="display:none;" title="Open your mail client with To and Subject pre-filled, table copied to clipboard">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18v12H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 7l9 6 9-6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-            Open Outlook
+            Send in Outlook
           </button>
           <button type="button" class="step-btn" id="nextEscBtn" onclick="nextEscalation()" title="Advance this message to the next escalation in the series">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="step-label">Next escalation</span>
           </button>
           <!-- AV wizard step navigation (v197) -->
-          <a id="ttsOutlookBtn" href="#" onclick="ttsSendInOutlook(event)">✉️ Send in Outlook</a>
-          <a id="avOutlookBtn" href="#" onclick="avSendInOutlook(event)">✉️ Send in Outlook</a>
+          <a id="ttsOutlookBtn" href="#" onclick="ttsSendInOutlook(event)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18v12H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 7l9 6 9-6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg> Send in Outlook</a>
+          <a id="avOutlookBtn" href="#" onclick="avSendInOutlook(event)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18v12H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 7l9 6 9-6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg> Send in Outlook</a>
           <button type="button" class="step-btn outlook-help-btn" id="outlookHelpBtn" onclick="openOutlookHelpModal()" title="Fix Outlook opening the wrong version">? Help</button>
           <div class="av-step-btns" id="avStepBtns" style="display:none;">
             <button type="button" class="av-step-btn" id="avPrevBtn" style="display:none;" onclick="goAvStep(avStep-1)">← Back</button>
@@ -10409,7 +10409,7 @@ function refreshPreviewActions(){
   if (avOutBtn) avOutBtn.classList.toggle('show', isAv && avStep === 2);
   if (ttsOutBtn) ttsOutBtn.classList.toggle('show', isTts);
   const helpBtn = document.getElementById('outlookHelpBtn');
-  if (helpBtn) helpBtn.style.display = (isTts || (isAv && avStep === 2)) ? '' : 'none';
+  if (helpBtn) helpBtn.style.display = (isTts || (isAv && avStep === 2) || isBcc) ? '' : 'none';
   // Hide SMS copy button on AV step 2 (email step).
   if (copyBtn && isAv) copyBtn.style.display = avStep === 2 ? 'none' : '';
   if (copyBtn && isTts) copyBtn.style.display = 'none';
