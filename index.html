@@ -14004,13 +14004,7 @@ function summaryDetailLine2(state, chipText){
     const cleanType = (chipText && type && type.trim() === chipText.trim()) ? '' : type;
     return [cleanType, lane].filter(Boolean).join(' · ');
   };
-  if (t === 'av' || t === 'avr'){
-    const a = (t === 'avr') ? (state.avr||{}) : (state.av||{});
-    let colour = a.colour === '__other' ? a.colourOther : a.colour;
-    const veh = [colour, a.make, a.model].filter(Boolean).join(' ');
-    const tail = (t === 'avr') ? 'vehicle recovered' : 'subject to vehicle recovery';
-    return [veh, tail].filter(Boolean).join(' · ');
-  }
+  if (t === 'av' || t === 'avr') return '';  // vehicle already shown in the chip
   if (t === 'ino'){
     const a = state.ino||{};
     const type = inoEventDetailFromState(a) || '';
