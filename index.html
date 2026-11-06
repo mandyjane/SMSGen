@@ -4170,6 +4170,11 @@ function onAvColourChange(){
   document.getElementById('av_colour_other').style.display = (v==='__other') ? 'block' : 'none';
   renderPreview();
 }
+function onTtsColourChange(){
+  const v = document.getElementById('tts_colour').value;
+  document.getElementById('tts_colour_other').style.display = (v==='__other') ? 'block' : 'none';
+  renderPreview();
+}
 
 function clearFormAV(){
   buildAV();
@@ -4185,6 +4190,9 @@ function clearFormAV(){
 function buildTTS(){
   const b = document.getElementById('body-tts');
   if (!b) return;
+  const colourOptions = `<option value="" selected>— select colour —</option>`
+    + CAR_COLOURS.map(c=>`<option value="${c}">${c}</option>`).join('')
+    + `<option value="__other">Other (type below)…</option>`;
   b.innerHTML = `
     <div class="form-topbar">
       <button type="button" class="back-btn" onclick="closeTemplate('tts')">
@@ -4215,6 +4223,19 @@ function buildTTS(){
     <div class="field">
       <span class="field-label">Vehicle Registration</span>
       <input type="text" id="tts_plate" placeholder="e.g. 123ABC">
+    </div>
+    <div class="field">
+      <span class="field-label">Colour</span>
+      <select id="tts_colour" onchange="onTtsColourChange()">${colourOptions}</select>
+      <input type="text" id="tts_colour_other" placeholder="Enter colour" style="display:none;margin-top:8px;">
+    </div>
+    <div class="field">
+      <span class="field-label">Make</span>
+      <input type="text" id="tts_make" placeholder="e.g. Toyota">
+    </div>
+    <div class="field">
+      <span class="field-label">Model</span>
+      <input type="text" id="tts_model" placeholder="e.g. Camry">
     </div>
     <div class="field">
       <span class="field-label">Tow Service Type</span>
@@ -11928,7 +11949,9 @@ function collectFormState(){
         authName: gv('tts_auth_name'),
         covId: gv('tts_cov_id'), covTitle: gv('tts_cov_title'),
         plate: gv('tts_plate'), locDetail: gv('tts_loc_detail'),
-        road: gv('tts_road'), suburb: gv('tts_suburb'),   // v208.26: were never saved
+        colour: gv('tts_colour'), colourOther: gv('tts_colour_other'),
+        make: gv('tts_make'), model: gv('tts_model'),
+        road: gv('tts_road'), suburb: gv('tts_suburb'),
         towType: (document.querySelector('input[name="tts_tow_type"]:checked')||{}).value || "Clayton's TTS - Light"
       }
     };
@@ -12496,7 +12519,8 @@ function deriveDraftName(state){
   }
   if (state.tmpl === 'tts'){
     const a = state.tts || {};
-    const bits = ['TTS', a.plate].filter(Boolean);
+    let colour = a.colour === '__other' ? a.colourOther : a.colour;
+    const bits = ['TTS', colour, a.make, a.model, a.plate].filter(Boolean);
     return bits.length > 1 ? bits.join(' · ') : `TTS ${draftSeq}`;
   }
   if (state.tmpl === 'av' || state.tmpl === 'avr'){
@@ -12531,6 +12555,7 @@ function draftLocation(state){
   if (t === 'ino'){ const a = state.ino||{}; road = a.road; suburb = a.suburb; }
   else if (t === 'av'){ const a = state.av||{}; road = a.road; suburb = a.suburb; }
   else if (t === 'avr'){ const a = state.avr||{}; road = a.road; suburb = a.suburb; } // legacy
+  else if (t === 'tts'){ const a = state.tts||{}; road = a.road; suburb = a.suburb; }
   else { road = (state.texts||{})['g_road']||''; suburb = (state.texts||{})['g_suburb']||''; }
   const bits = [titleCaseProperNoun((road||'').trim()), titleCaseProperNoun((suburb||'').trim())].filter(Boolean);
   return bits.join(' · ');
@@ -12545,6 +12570,14 @@ function draftChipText(state){
   }
   if (t === 'generic'){
     return state.eventValue || '';
+  }
+  // TTS: colour + make + model, then · plate
+  if (t === 'tts'){
+    const a = state.tts || {};
+    let colour = a.colour === '__other' ? a.colourOther : a.colour;
+    const veh = [colour, a.make, a.model].filter(Boolean).join(' ');
+    const bits = [veh, a.plate].filter(Boolean);
+    return bits.join(' · ');
   }
   // AV / AVR: colour + model, then · plate
   const a = (t === 'avr') ? (state.avr||{}) : (state.av||{});
@@ -13787,6 +13820,7 @@ function renderIncidentSummary(cluster, expanded){
     if (typeKey){ chipStyle = chipStyleForType(chipText, tmpl); }
     else if (fam === 'av') chipStyle = { bg:'var(--purple-soft-2)', fg:'var(--purple-deep)' };
     else if (fam === 'avr') chipStyle = { bg:'var(--coral-soft-2)', fg:'var(--coral-deep)' };
+    else if (fam === 'tts') chipStyle = { bg:'var(--copper-soft-2)', fg:'var(--copper-deep)' };
   }
   const chipHtml = chipText
     ? `<span class="incident-typechip" style="background:${chipStyle?chipStyle.bg:'var(--teal-soft)'};color:${chipStyle?chipStyle.fg:'var(--teal-deep)'};">${escapeHtml(chipText)}</span>`
@@ -14230,6 +14264,9 @@ function applyDraft(s){
     set('tts_auth_name', a.authName);
     set('tts_cov_id', a.covId); set('tts_cov_title', a.covTitle);
     set('tts_plate', a.plate); set('tts_loc_detail', a.locDetail);
+    set('tts_colour', a.colour); onTtsColourChange();
+    set('tts_colour_other', a.colourOther);
+    set('tts_make', a.make); set('tts_model', a.model);
     set('tts_road', a.road); set('tts_suburb', a.suburb);
     if (a.towType){ const r = document.querySelector('input[name="tts_tow_type"][value="'+a.towType+'"]'); if(r) r.checked = true; }
     renderPreview();
