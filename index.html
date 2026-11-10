@@ -12531,6 +12531,7 @@ function draftLocation(state){
   if (t === 'ino'){ const a = state.ino||{}; road = a.road; suburb = a.suburb; }
   else if (t === 'av'){ const a = state.av||{}; road = a.road; suburb = a.suburb; }
   else if (t === 'avr'){ const a = state.avr||{}; road = a.road; suburb = a.suburb; } // legacy
+  else if (t === 'tts'){ const a = state.tts||{}; road = a.road; suburb = a.suburb; }
   else { road = (state.texts||{})['g_road']||''; suburb = (state.texts||{})['g_suburb']||''; }
   const bits = [titleCaseProperNoun((road||'').trim()), titleCaseProperNoun((suburb||'').trim())].filter(Boolean);
   return bits.join(' · ');
