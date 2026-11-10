@@ -861,8 +861,8 @@
   }
   .tmpl[data-tmpl="generic"] .tl-seq { background: var(--teal-soft); color: var(--teal-deep); }
   .tmpl[data-tmpl="ino"]     .tl-seq { background: var(--blue-soft); color: var(--blue-deep); }
-  .tmpl[data-tmpl="av"]      .tl-seq,
-  .tmpl[data-tmpl="tts"]     .tl-seq { background: var(--purple-soft); color: var(--purple-deep); }
+  .tmpl[data-tmpl="av"]      .tl-seq  { background: var(--purple-soft); color: var(--purple-deep); }
+  .tmpl[data-tmpl="tts"]     .tl-seq  { background: var(--copper-soft); color: var(--copper-deep); }
   /* Location: road · suburb, secondary colour. */
   .tl-loc { font-size: 12px; font-weight: 400; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
   .tmpl-right .tl-loc { padding-left: 10px; text-align: right; }
@@ -9557,7 +9557,7 @@ function templateSummary(t){
     style = { bg:'var(--purple-soft)', fg:'var(--purple-deep)' };
   } else if (t === 'tts'){
     desc = gv('tts_cov_title') || gv('tts_plate');
-    style = { bg:'var(--purple-soft)', fg:'var(--purple-deep)' };
+    style = { bg:'var(--copper-soft)', fg:'var(--copper-deep)' };
   }
   if (!style) style = { bg:'var(--teal-soft)', fg:'var(--teal-deep)' };
   const descFull = desc;
@@ -12536,7 +12536,8 @@ function draftLocation(state){
   return bits.join(' · ');
 }
 /* Chip text: the incident/event type for INO & Generic; the vehicle (colour model · plate)
-   for AV & AV Removal — that's what tells two vehicle notices apart. */
+   for AV & AV Removal; the STREAMS COV DM Title · plate for TTS — that's what tells two
+   vehicle notices apart. */
 function draftChipText(state){
   const t = state.tmpl || 'generic';
   if (t === 'ino'){
@@ -12545,6 +12546,11 @@ function draftChipText(state){
   }
   if (t === 'generic'){
     return state.eventValue || '';
+  }
+  if (t === 'tts'){
+    const a = state.tts || {};
+    const bits = [a.covTitle, a.plate].filter(Boolean);
+    return bits.join(' · ');
   }
   // AV / AVR: colour + model, then · plate
   const a = (t === 'avr') ? (state.avr||{}) : (state.av||{});
@@ -13787,6 +13793,7 @@ function renderIncidentSummary(cluster, expanded){
     if (typeKey){ chipStyle = chipStyleForType(chipText, tmpl); }
     else if (fam === 'av') chipStyle = { bg:'var(--purple-soft-2)', fg:'var(--purple-deep)' };
     else if (fam === 'avr') chipStyle = { bg:'var(--coral-soft-2)', fg:'var(--coral-deep)' };
+    else if (fam === 'tts') chipStyle = { bg:'var(--copper-soft)', fg:'var(--copper-deep)' };
   }
   const chipHtml = chipText
     ? `<span class="incident-typechip" style="background:${chipStyle?chipStyle.bg:'var(--teal-soft)'};color:${chipStyle?chipStyle.fg:'var(--teal-deep)'};">${escapeHtml(chipText)}</span>`
@@ -13971,11 +13978,9 @@ function summaryDetailLine2(state, chipText){
     return [cleanType, lane].filter(Boolean).join(' · ');
   };
   if (t === 'av' || t === 'avr'){
-    const a = (t === 'avr') ? (state.avr||{}) : (state.av||{});
-    let colour = a.colour === '__other' ? a.colourOther : a.colour;
-    const veh = [colour, a.make, a.model].filter(Boolean).join(' ');
-    const tail = (t === 'avr') ? 'vehicle recovered' : 'subject to vehicle recovery';
-    return [veh, tail].filter(Boolean).join(' · ');
+    // v209: no second detail line for AV — the vehicle (colour/model · plate) already
+    // shows in the chip above, so this line was just redundant/noisy.
+    return '';
   }
   if (t === 'ino'){
     const a = state.ino||{};
