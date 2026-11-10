@@ -13971,11 +13971,9 @@ function summaryDetailLine2(state, chipText){
     return [cleanType, lane].filter(Boolean).join(' · ');
   };
   if (t === 'av' || t === 'avr'){
-    const a = (t === 'avr') ? (state.avr||{}) : (state.av||{});
-    let colour = a.colour === '__other' ? a.colourOther : a.colour;
-    const veh = [colour, a.make, a.model].filter(Boolean).join(' ');
-    const tail = (t === 'avr') ? 'vehicle recovered' : 'subject to vehicle recovery';
-    return [veh, tail].filter(Boolean).join(' · ');
+    // v209: no second detail line for AV — the vehicle (colour/model · plate) already
+    // shows in the chip above, so this line was just redundant/noisy.
+    return '';
   }
   if (t === 'ino'){
     const a = state.ino||{};
