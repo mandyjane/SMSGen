@@ -12536,7 +12536,8 @@ function draftLocation(state){
   return bits.join(' · ');
 }
 /* Chip text: the incident/event type for INO & Generic; the vehicle (colour model · plate)
-   for AV & AV Removal — that's what tells two vehicle notices apart. */
+   for AV & AV Removal; the STREAMS COV DM Title · plate for TTS — that's what tells two
+   vehicle notices apart. */
 function draftChipText(state){
   const t = state.tmpl || 'generic';
   if (t === 'ino'){
@@ -12545,6 +12546,11 @@ function draftChipText(state){
   }
   if (t === 'generic'){
     return state.eventValue || '';
+  }
+  if (t === 'tts'){
+    const a = state.tts || {};
+    const bits = [a.covTitle, a.plate].filter(Boolean);
+    return bits.join(' · ');
   }
   // AV / AVR: colour + model, then · plate
   const a = (t === 'avr') ? (state.avr||{}) : (state.av||{});
@@ -13787,6 +13793,7 @@ function renderIncidentSummary(cluster, expanded){
     if (typeKey){ chipStyle = chipStyleForType(chipText, tmpl); }
     else if (fam === 'av') chipStyle = { bg:'var(--purple-soft-2)', fg:'var(--purple-deep)' };
     else if (fam === 'avr') chipStyle = { bg:'var(--coral-soft-2)', fg:'var(--coral-deep)' };
+    else if (fam === 'tts') chipStyle = { bg:'var(--copper-soft)', fg:'var(--copper-deep)' };
   }
   const chipHtml = chipText
     ? `<span class="incident-typechip" style="background:${chipStyle?chipStyle.bg:'var(--teal-soft)'};color:${chipStyle?chipStyle.fg:'var(--teal-deep)'};">${escapeHtml(chipText)}</span>`
