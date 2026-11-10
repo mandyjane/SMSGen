@@ -861,8 +861,8 @@
   }
   .tmpl[data-tmpl="generic"] .tl-seq { background: var(--teal-soft); color: var(--teal-deep); }
   .tmpl[data-tmpl="ino"]     .tl-seq { background: var(--blue-soft); color: var(--blue-deep); }
-  .tmpl[data-tmpl="av"]      .tl-seq,
-  .tmpl[data-tmpl="tts"]     .tl-seq { background: var(--purple-soft); color: var(--purple-deep); }
+  .tmpl[data-tmpl="av"]      .tl-seq  { background: var(--purple-soft); color: var(--purple-deep); }
+  .tmpl[data-tmpl="tts"]     .tl-seq  { background: var(--copper-soft); color: var(--copper-deep); }
   /* Location: road · suburb, secondary colour. */
   .tl-loc { font-size: 12px; font-weight: 400; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
   .tmpl-right .tl-loc { padding-left: 10px; text-align: right; }
@@ -9557,7 +9557,7 @@ function templateSummary(t){
     style = { bg:'var(--purple-soft)', fg:'var(--purple-deep)' };
   } else if (t === 'tts'){
     desc = gv('tts_cov_title') || gv('tts_plate');
-    style = { bg:'var(--purple-soft)', fg:'var(--purple-deep)' };
+    style = { bg:'var(--copper-soft)', fg:'var(--copper-deep)' };
   }
   if (!style) style = { bg:'var(--teal-soft)', fg:'var(--teal-deep)' };
   const descFull = desc;
