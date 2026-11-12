@@ -1237,6 +1237,16 @@
   }
   .ino-seg-edit:hover { background: rgba(255,255,255,0.28); }
   .ino-seg.condensed .ino-seg-edit { display: inline-flex; }
+  /* v208.48: "Include in update" checkbox pill in the Incident segment header — same chrome
+     as .ino-seg-edit, shown/hidden via JS (update context only), not tied to condensed mode. */
+  .ino-seg-updpill {
+    margin-left: 8px; display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--sans); font-size: 11.5px; font-weight: 600; letter-spacing: 0;
+    background: rgba(255,255,255,0.16); color: #fff; border: none;
+    padding: 4px 11px; border-radius: 100px; cursor: pointer;
+  }
+  .ino-seg-updpill:hover { background: rgba(255,255,255,0.28); }
+  .ino-seg-updpill input { width: 12px; height: 12px; margin: 0; accent-color: #fff; cursor: pointer; }
   /* The chevron is inert on a condensed segment (summary is the collapsed view), so hide it. */
   .ino-seg.condensed .ino-seg-chev { display: none; }
   /* When condensed, hide the real fields and show the summary line instead. */
@@ -1262,6 +1272,16 @@
     padding: 3px 9px; border-radius: 100px; cursor: pointer;
   }
   .field-edit-pill:hover { background: #d7e6fa; }
+  /* v208.48: "Include in update" checkbox pill next to a field label (Estimated duration) —
+     same chrome as .field-edit-pill, shown/hidden via JS same way as .resp-all-pill. */
+  .field-updpill {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: var(--sans); font-size: 11px; font-weight: 600;
+    background: var(--blue-soft); color: var(--blue-deep); border: none;
+    padding: 3px 9px; border-radius: 100px; cursor: pointer;
+  }
+  .field-updpill:hover { background: #d7e6fa; }
+  .field-updpill input { width: 12px; height: 12px; margin: 0; accent-color: var(--blue-deep); cursor: pointer; }
   .field.condensed .field-controls { display: none; }
   .field-summary { display: none; font-size: 13.5px; color: var(--ink-soft); padding: 4px 0; line-height: 1.5; }
   .field.condensed .field-summary { display: block; }
@@ -7479,7 +7499,7 @@ function buildINO(){
 
     <div class="ino-seg" id="s_seg_incident">
     <div class="ino-seg-head" role="button" tabindex="0" onclick="onInoSegHeadClick(event,'s_seg_incident')" onkeydown="onInoSegHeadKey(event,'s_seg_incident')">
-      <span class="ino-seg-chev">▾</span><span class="ino-seg-title">Incident</span><span class="ino-seg-count" id="s_seg_incident_count"></span><button type="button" class="ino-seg-edit" id="s_seg_incident_edit" onclick="editInoSeg(event,'s_seg_incident')"><i class="ti ti-pencil" style="font-size:12px;" aria-hidden="true"></i>Edit</button>
+      <span class="ino-seg-chev">▾</span><span class="ino-seg-title">Incident</span><span class="ino-seg-count" id="s_seg_incident_count"></span><label class="ino-seg-updpill" id="s_inc_update_wrap" style="display:none;" title="Include the vehicles/parties, infrastructure damage, injuries and fatalities in this update's Update: line" onclick="event.stopPropagation()"><input type="checkbox" id="s_inc_update" onchange="renderPreview(); scheduleWorkingSave();"> Include in update</label><button type="button" class="ino-seg-edit" id="s_seg_incident_edit" onclick="editInoSeg(event,'s_seg_incident')"><i class="ti ti-pencil" style="font-size:12px;" aria-hidden="true"></i>Edit</button>
     </div>
     <div class="ino-seg-summary" id="s_seg_incident_summary"></div>
     <div class="ino-seg-body">
@@ -7809,7 +7829,10 @@ function buildINO(){
     <div class="field" id="s_groups_field">
       <div class="resp-head-row">
         <span class="field-label" style="margin:0;">Response</span>
-        <label class="inline-check resp-all-pill" id="s_resp_all_wrap" style="display:none;" title="On an update, list every responder at scene and proceeding, not just the changes"><input type="checkbox" id="s_resp_all" onchange="renderPreview(); scheduleWorkingSave();"> Include all responders</label>
+        <div class="resp-pill-group" style="display:flex;align-items:center;gap:8px;">
+          <label class="inline-check resp-all-pill" id="s_resp_update_wrap" style="display:none;" title="Include responder changes at the end of this update's Update: line"><input type="checkbox" id="s_resp_update" checked onchange="renderPreview(); scheduleWorkingSave();"> Include in update</label>
+          <label class="inline-check resp-all-pill" id="s_resp_all_wrap" style="display:none;" title="On an update, list every responder at scene and proceeding, not just the changes"><input type="checkbox" id="s_resp_all" onchange="renderPreview(); scheduleWorkingSave();"> Include all responders</label>
+        </div>
       </div>
       <div class="responder-cols">
         <div class="responder-col-card">
@@ -7903,6 +7926,7 @@ function buildINO(){
     <div class="field" id="s_dur_field">
       <div class="field-condense-head">
         <span class="field-label" style="margin:0;">Estimated duration to clear</span>
+        <label class="field-updpill" id="s_dur_update_wrap" style="display:none;" title="Include the estimated duration in this update's Update: line"><input type="checkbox" id="s_dur_update" checked onchange="renderPreview(); scheduleWorkingSave();"> Include in update</label>
         <button type="button" class="field-edit-pill" id="s_dur_edit" style="display:none;" onclick="editInoField('s_dur_field')"><i class="ti ti-pencil" style="font-size:12px;" aria-hidden="true"></i>Edit</button>
       </div>
       <div class="field-summary" id="s_dur_summary"></div>
@@ -8972,6 +8996,14 @@ function renderINO(){
     const w = document.getElementById('s_resp_all_wrap');
     if (w) w.style.display = isInoUpdateContext() ? '' : 'none';
   }
+  { // v208.48: "Include in update" pills (Incident / Estimated duration / Response) are
+    // offered on updates only — on No.1 there's nothing to opt into, the info already shows.
+    const updOn = isInoUpdateContext();
+    ['s_inc_update_wrap','s_dur_update_wrap','s_resp_update_wrap'].forEach(id => {
+      const w = document.getElementById(id);
+      if (w) w.style.display = updOn ? '' : 'none';
+    });
+  }
   const groupList = reconcileRespOrder(inoRespSceneOrder, 's_groups_ck');
   const groupsOtherOn = (document.getElementById('s_groups_other_ck')||{}).checked;
   if (groupsOtherOn){ const o = get('s_groups_other'); if (o) groupList.push(o); }
@@ -9366,7 +9398,10 @@ function renderINO(){
     // diversion. Ordering: infra -> injuries -> fatalities. Injuries and infrastructure show
     // Unknown injuries and infrastructure now generate nothing (v203);
     // fatalities is dropped (fatBit already resolves to '' in that case).
-    const updDetailBits = isUpdateContext ? [infra, injBit, fatBit].filter(Boolean) : [];
+    // v208.48: "Include in update" (Incident) moves this detail into its own bundle at the
+    // front of the line instead (see incIncludeOn below), so skip the mid-line fold here.
+    const incIncludeOn = isUpdateContext && !!(document.getElementById('s_inc_update')||{}).checked;
+    const updDetailBits = (isUpdateContext && !incIncludeOn) ? [infra, injBit, fatBit].filter(Boolean) : [];
     const netBits = [laneClause ? laneClause + oppStr : oppAlone, ...updDetailBits, lengthCong, nilCong2].filter(Boolean);
     // The reopen ("… now open") and still-impacted ("… remain blocked/closed") clauses read as
     // one comma-joined statement, then the "; " separator applies before the rest.
@@ -9377,7 +9412,11 @@ function renderINO(){
     // v207.17: in an UPDATE, responder changes since the previous message go at the end of the
     // Update line (the separate Groups at Scene line is dropped). Only NEW info is reported:
     // newly at scene (incl. previously proceeding), newly proceeding, newly departed.
-    if (isUpdateContext){
+    // v208.48: "Include in update" (Response) gates whether responder changes are reported at
+    // all in this update — defaults checked, so this preserves today's behaviour unless
+    // the operator unticks it to keep responders out of this particular message.
+    const respIncludeOn = !isUpdateContext || !!(document.getElementById('s_resp_update')||{}).checked;
+    if (isUpdateContext && respIncludeOn){
       const prev = inoPrevGroupSnap || { scene:[], route:[], departed:[] };
       const has = (list, g) => list.some(x => String(x).toLowerCase() === String(g).toLowerCase());
       // v208.20: "Include all responders" lists everyone at scene / proceeding, not just changes.
@@ -9417,6 +9456,14 @@ function renderINO(){
     regSeg(oppStr, 's_opp_text');
     // update-context infra/inj/fat already registered above to their own fields
     // The reopen ("… now open") and still-impacted ("… remain blocked/closed") clauses read as
+    // v208.48: "Include in update" (Incident) — no separate "Incident Type:" heading on an
+    // update, it just leads the Update: line instead (incidentTypeStr already carries
+    // eventType/infra/injuries/fatalities, capitalised correctly as its own sentence-start;
+    // lowercase what used to lead so the two read as one sentence).
+    if (incIncludeOn && incidentTypeStr){
+      const lcFirstFull = s => s ? s.charAt(0).toLowerCase() + s.slice(1) : s;
+      netFull = netFull ? `${incidentTypeStr}; ${lcFirstFull(netFull)}` : incidentTypeStr;
+    }
     const netLabel = isUpdateContext ? 'Update' : 'Network Impact';
     lines.push(`${netLabel}: ${netFull || '[impact]'}.`);
   }
@@ -9471,8 +9518,10 @@ function renderINO(){
     groupsLine = `${groupsLabel}: ${gParts.length ? gParts.join(' ') : 'nil.'}`;
   }
   if (groupsLine) lines.push(groupsLine);
-  // v207.17: Estimated Duration to Clear is left out of UPDATE messages.
-  if (!finalOn && !isUpdateContext) lines.push(`Estimated Duration to Clear: ${duration || '[insert]'}.`);
+  // v207.17: Estimated Duration to Clear is left out of UPDATE messages by default.
+  // v208.48: "Include in update" pill brings it back in — defaults checked.
+  const durIncludeOn = isUpdateContext && !!(document.getElementById('s_dur_update')||{}).checked;
+  if (!finalOn && (!isUpdateContext || durIncludeOn)) lines.push(`Estimated Duration to Clear: ${duration || '[insert]'}.`);
   lines.push(`Contact: INO Operations Coordinator Ph. ${contactPh} (${contact || '[insert name]'}).`);
 
   // collapse runs of spaces within each line, then join with newlines
@@ -12031,11 +12080,14 @@ function collectFormState(){
         actOther: Array.from(document.querySelectorAll('.s_act_other_ck:checked')).map(c=>c.value),
         groupsList: reconcileRespOrder(inoRespSceneOrder, 's_groups_ck'),
         respAll: !!(document.getElementById('s_resp_all')||{}).checked,
+        respUpdateOn: !!(document.getElementById('s_resp_update')||{checked:true}).checked,   // v208.48
         groupsOther: (document.getElementById('s_groups_other_ck')||{}).checked, groupsOtherText: gv('s_groups_other'),
         routeList: reconcileRespOrder(inoRespRouteOrder, 's_route_ck'),
         routeOther: (document.getElementById('s_route_other_ck')||{}).checked, routeOtherText: gv('s_route_other'),
         respCustom: inoCustomResp.map(x => ({ name: x.name, origin: x.origin })),   // v208.33
         departedList: reconcileRespOrder(inoRespDepartedOrder, 's_departed_ck'), departedOther: (document.getElementById('s_departed_other_ck')||{}).checked, departedOtherText: gv('s_departed_other'),
+        incUpdateOn: !!(document.getElementById('s_inc_update')||{}).checked,   // v208.48
+        durUpdateOn: !!(document.getElementById('s_dur_update')||{checked:true}).checked,   // v208.48
         durUnknown: (document.getElementById('s_duration_unknown')||{}).checked, durHH: gv('s_dur_hh'), durMM: gv('s_dur_mm'),
         durOther: gv('s_dur_other'),
         durRecovery: (document.getElementById('s_dur_recovery')||{}).checked,
@@ -14439,6 +14491,8 @@ function applyDraft(s){
     setChecks('s_groups_ck', a.groupsList);
     inoRespSceneOrder = Array.isArray(a.groupsList) ? a.groupsList.slice() : [];   // v208.47
     { const ra = document.getElementById('s_resp_all'); if (ra) ra.checked = !!a.respAll; }
+    { const ru = document.getElementById('s_resp_update'); if (ru) ru.checked = (a.respUpdateOn !== false); }   // v208.48: default on
+    { const iu = document.getElementById('s_inc_update'); if (iu) iu.checked = !!a.incUpdateOn; }   // v208.48: default off
     if (a.groupsOther && a.groupsOtherText) inoOtherTextToCustom('scene', a.groupsOtherText);   // legacy → + Other
     setChecks('s_route_ck', a.routeList);
     inoRespRouteOrder = Array.isArray(a.routeList) ? a.routeList.slice() : [];   // v208.47
@@ -14463,6 +14517,7 @@ function applyDraft(s){
     // v208.42 fix: durOtherOn was never saved, so the free-text duration was lost on load/reload
     if (a.durOtherOn || a.durOther){ const b = document.getElementById('s_dur_other'); if (b){ b.value = a.durOther || ''; } }
     if (a.durUnknown){ document.getElementById('s_duration_unknown').checked = true; }
+    { const du = document.getElementById('s_dur_update'); if (du) du.checked = (a.durUpdateOn !== false); }   // v208.48: default on
     applyInoDurOtherVisibility();   // reveal Subject to section if recovery / clean-up / free-text present
     applyDurationOverrideGrey();
     set('s_contact', a.contact); set('s_contact_ph', a.contactPh);
