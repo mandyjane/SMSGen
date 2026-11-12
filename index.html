@@ -7564,8 +7564,7 @@ function buildINO(){
     <div class="field" id="s_board_field">
       <div class="addl-label-row">
         <span class="field-label">Impact on lanes</span>
-        <label class="inline-check resp-all-pill" id="s_lane_plain_wrap" style="display:none;margin-left:auto;" title="Describe the lanes as they are now — no “now” / “remains”, and lanes that have reopened aren’t mentioned"><input type="checkbox" id="s_lane_plain" onchange="renderPreview(); scheduleWorkingSave();"> Current state only</label>
-        <button type="button" class="lb-switch" style="margin-left:12px;" onclick="setInoLaneMode(false)"><span aria-hidden="true">\u21c4</span> Switch to classic controls</button>
+        <button type="button" class="lb-switch" style="margin-left:auto;" onclick="setInoLaneMode(false)"><span aria-hidden="true">\u21c4</span> Switch to classic controls</button>
       </div>
       <div class="lane-board" id="s_board_tiles"></div>
       <div class="lane-board-actions">
@@ -7583,7 +7582,10 @@ function buildINO(){
         </div>
         <span class="lb-cycle-hint">Tap a lane: Open \u2192 Blocked \u2192 Impacted \u2192 Closed</span>
       </div>
-      <p class="hint" id="s_board_hint" style="margin:6px 0 0;"></p>
+      <div class="board-hint-row" style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+        <p class="hint" id="s_board_hint" style="margin:0;flex:1;min-width:0;"></p>
+        <label class="inline-check resp-all-pill" id="s_lane_plain_wrap" style="display:none;flex:none;" title="Describe the lanes as they are now — no “now” / “remains”, and lanes that have reopened aren’t mentioned"><input type="checkbox" id="s_lane_plain" onchange="renderPreview(); scheduleWorkingSave();"> Current state only</label>
+      </div>
     </div>
 
     <div id="s_lane_classic" style="display:none;">
