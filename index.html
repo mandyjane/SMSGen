@@ -4965,6 +4965,20 @@ function noteInoInvestOrder(el){
   inoInvestOrder = inoInvestOrder.filter(x => x !== k);
   if (el.checked) inoInvestOrder.push(k);
 }
+/* v208.47: Response (At scene / Proceeding / Departed) listed in the order responders are
+   added, not their fixed on-screen grouping (Emergency / Traffic & Road / Support / More).
+   Reconciled on every render, same approach as inoDurOrder above: drop anything no longer
+   ticked, then append anything newly ticked that isn't tracked yet. */
+let inoRespSceneOrder = [];
+let inoRespRouteOrder = [];
+let inoRespDepartedOrder = [];
+function reconcileRespOrder(order, cls){
+  const checkedVals = Array.from(document.querySelectorAll('.'+cls+':checked')).map(c=>c.value);
+  const checkedSet = new Set(checkedVals);
+  for (let i = order.length - 1; i >= 0; i--){ if (!checkedSet.has(order[i])) order.splice(i, 1); }
+  checkedVals.forEach(v => { if (order.indexOf(v) === -1) order.push(v); });
+  return order.slice();
+}
 function isInoUpdateContext(){
   if (Array.isArray(inoPrevLanes)) return true;   // advanced/updated from a prior message
   if (inoUpdate.on) return true;
@@ -8738,6 +8752,7 @@ function applyInoTimeLock(){
 function clearFormINO(){
   inoInvestOrder = [];
   inoDurOrder = [];     // v208.42
+  inoRespSceneOrder = []; inoRespRouteOrder = []; inoRespDepartedOrder = [];   // v208.47
   inoCustomResp = [];   // v208.33
   previewLockedText = null; previewEditing = false;
   carryClearState();   // fresh message: no carried-over text from the previous one
@@ -8957,7 +8972,7 @@ function renderINO(){
     const w = document.getElementById('s_resp_all_wrap');
     if (w) w.style.display = isInoUpdateContext() ? '' : 'none';
   }
-  const groupList = Array.from(document.querySelectorAll('.s_groups_ck:checked')).map(c=>c.value);
+  const groupList = reconcileRespOrder(inoRespSceneOrder, 's_groups_ck');
   const groupsOtherOn = (document.getElementById('s_groups_other_ck')||{}).checked;
   if (groupsOtherOn){ const o = get('s_groups_other'); if (o) groupList.push(o); }
   // Map "Road Steward" to "TMR Road Steward" in output
@@ -8968,13 +8983,13 @@ function renderINO(){
   if (aesIdx > 0) { sceneList.splice(aesIdx, 1); sceneList.unshift('All emergency services'); }
   const towIdx = sceneList.findIndex(g => g.toLowerCase() === 'tow');
   if (towIdx >= 0 && towIdx < sceneList.length - 1) { sceneList.splice(towIdx, 1); sceneList.push('tow'); }
-  const routeList = mapRoadSteward(Array.from(document.querySelectorAll('.s_route_ck:checked')).map(c=>c.value));
+  const routeList = mapRoadSteward(reconcileRespOrder(inoRespRouteOrder, 's_route_ck'));
   const routeOtherOn = (document.getElementById('s_route_other_ck')||{}).checked;
   if (routeOtherOn){ const o = get('s_route_other'); if (o) routeList.push(o); }
   const fullRouteList = routeList;
   // Suffix for en-route clause — always "proceeding"
   const routeSuffix = 'proceeding';
-  const departedList = dropAesCovered(mapRoadSteward(Array.from(document.querySelectorAll('.s_departed_ck:checked')).map(c=>c.value)));   // v208.33
+  const departedList = dropAesCovered(mapRoadSteward(reconcileRespOrder(inoRespDepartedOrder, 's_departed_ck')));   // v208.33
   const departedOtherOn = (document.getElementById('s_departed_other_ck')||{}).checked;
   if (departedOtherOn){ const o = (document.getElementById('s_departed_other')||{value:''}).value.trim(); if (o) departedList.push(o); }
   // Sort: "All emergency services" first, "tow" last
@@ -12014,13 +12029,13 @@ function collectFormState(){
         systems: Array.from(document.querySelectorAll('.s_sys:checked')).map(c=>c.value),
         cctv: rb('s_cctv'),
         actOther: Array.from(document.querySelectorAll('.s_act_other_ck:checked')).map(c=>c.value),
-        groupsList: Array.from(document.querySelectorAll('.s_groups_ck:checked')).map(c=>c.value),
+        groupsList: reconcileRespOrder(inoRespSceneOrder, 's_groups_ck'),
         respAll: !!(document.getElementById('s_resp_all')||{}).checked,
         groupsOther: (document.getElementById('s_groups_other_ck')||{}).checked, groupsOtherText: gv('s_groups_other'),
-        routeList: Array.from(document.querySelectorAll('.s_route_ck:checked')).map(c=>c.value),
+        routeList: reconcileRespOrder(inoRespRouteOrder, 's_route_ck'),
         routeOther: (document.getElementById('s_route_other_ck')||{}).checked, routeOtherText: gv('s_route_other'),
         respCustom: inoCustomResp.map(x => ({ name: x.name, origin: x.origin })),   // v208.33
-        departedList: Array.from(document.querySelectorAll('.s_departed_ck:checked')).map(c=>c.value), departedOther: (document.getElementById('s_departed_other_ck')||{}).checked, departedOtherText: gv('s_departed_other'),
+        departedList: reconcileRespOrder(inoRespDepartedOrder, 's_departed_ck'), departedOther: (document.getElementById('s_departed_other_ck')||{}).checked, departedOtherText: gv('s_departed_other'),
         durUnknown: (document.getElementById('s_duration_unknown')||{}).checked, durHH: gv('s_dur_hh'), durMM: gv('s_dur_mm'),
         durOther: gv('s_dur_other'),
         durRecovery: (document.getElementById('s_dur_recovery')||{}).checked,
@@ -14422,11 +14437,14 @@ function applyDraft(s){
     inoCustomResp = Array.isArray(a.respCustom) ? a.respCustom.map(x => ({ name: x.name, origin: x.origin })) : [];
     renderInoCustomResp();
     setChecks('s_groups_ck', a.groupsList);
+    inoRespSceneOrder = Array.isArray(a.groupsList) ? a.groupsList.slice() : [];   // v208.47
     { const ra = document.getElementById('s_resp_all'); if (ra) ra.checked = !!a.respAll; }
     if (a.groupsOther && a.groupsOtherText) inoOtherTextToCustom('scene', a.groupsOtherText);   // legacy → + Other
     setChecks('s_route_ck', a.routeList);
+    inoRespRouteOrder = Array.isArray(a.routeList) ? a.routeList.slice() : [];   // v208.47
     if (a.routeOther && a.routeOtherText) inoOtherTextToCustom('route', a.routeOtherText);   // legacy → + Other
     if (a.departedList && a.departedList.length){ setChecks('s_departed_ck', a.departedList); document.getElementById('s_departed_wrap').style.display='block'; document.getElementById('s_departed_toggle').querySelector('.ml-chev').textContent='\u25be'; }
+    inoRespDepartedOrder = Array.isArray(a.departedList) ? a.departedList.slice() : [];   // v208.47
     if (a.departedOther && a.departedOtherText) inoOtherTextToCustom('departed', a.departedOtherText);   // legacy → + Other
     autoExpandRespMore();
     set('s_dur_hh', a.durHH); set('s_dur_mm', a.durMM);
