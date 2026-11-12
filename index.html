@@ -8872,7 +8872,7 @@ function renderINO(){
   const eventType = buildEventTypeP('s');
   const infraVal = (document.querySelector('input[name="s_infra"]:checked')||{}).value;
   let infra = '';
-  if (infraVal === 'yes'){ const t = get('s_infra_text'); infra = t || 'Infrastructure damage'; }
+  if (infraVal === 'yes'){ const t = get('s_infra_text'); infra = t || 'Infrastructure damage'; infra = infra.charAt(0).toLowerCase() + infra.slice(1); }
   else if (infraVal === 'unknown') infra = '';
   else if (infraVal === 'no') infra = 'nil infrastructure damage';
 
