@@ -961,6 +961,11 @@
   .resp-head-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; min-height: 26px; }
   .inline-check.resp-all-pill { font-size: 12px; padding: 3px 10px; gap: 6px; }
   .inline-check.resp-all-pill input:not([type="number"]) { width: 13px; height: 13px; }
+  /* v208.49: greyed out while its effect is off ("Include in update" unticked) — still shows
+     its own state, but reads as inert rather than silently doing nothing when clicked. */
+  .inline-check.resp-all-pill.pill-disabled { opacity: 0.5; cursor: not-allowed; }
+  .inline-check.resp-all-pill.pill-disabled:hover { border-color: var(--line); background: none; }
+  .inline-check.resp-all-pill.pill-disabled input { cursor: not-allowed; }
   .field-label {
     display: block; font-family: var(--mono); font-size: 11px;
     letter-spacing: 0.07em; text-transform: uppercase;
@@ -7831,7 +7836,7 @@ function buildINO(){
         <span class="field-label" style="margin:0;">Response</span>
         <div class="resp-pill-group" style="display:flex;align-items:center;gap:8px;">
           <label class="inline-check resp-all-pill" id="s_resp_update_wrap" style="display:none;" title="Include responder changes at the end of this update's Update: line"><input type="checkbox" id="s_resp_update" checked onchange="renderPreview(); scheduleWorkingSave();"> Include in update</label>
-          <label class="inline-check resp-all-pill" id="s_resp_all_wrap" style="display:none;" title="On an update, list every responder at scene and proceeding, not just the changes"><input type="checkbox" id="s_resp_all" onchange="renderPreview(); scheduleWorkingSave();"> Include all responders</label>
+          <label class="inline-check resp-all-pill" id="s_resp_all_wrap" style="display:none;" title="On an update, list every responder at scene and proceeding, not just the changes"><input type="checkbox" id="s_resp_all" onchange="onInoRespAllChange(this)"> Include all responders</label>
         </div>
       </div>
       <div class="responder-cols">
@@ -9003,6 +9008,14 @@ function renderINO(){
       const w = document.getElementById(id);
       if (w) w.style.display = updOn ? '' : 'none';
     });
+  }
+  { // v208.49: "Include all responders" only does anything once "Include in update" is on —
+    // grey it out (and disable it) rather than let it silently do nothing when ticked.
+    const respOn = !!(document.getElementById('s_resp_update')||{}).checked;
+    const ra = document.getElementById('s_resp_all');
+    const raWrap = document.getElementById('s_resp_all_wrap');
+    if (ra) ra.disabled = !respOn;
+    if (raWrap) raWrap.classList.toggle('pill-disabled', !respOn);
   }
   const groupList = reconcileRespOrder(inoRespSceneOrder, 's_groups_ck');
   const groupsOtherOn = (document.getElementById('s_groups_other_ck')||{}).checked;
@@ -11269,6 +11282,18 @@ function updateCounts(msg){
 }
 
 /* ---------- Responder mutual exclusion ---------- */
+/* v208.49: "Include all responders" only matters once "Include in update" is on — ticking
+   it while the master switch is off used to silently do nothing (looked broken). Ticking it
+   now also turns the master switch on, so it always has a visible effect; renderINO greys
+   the pill out (and disables it) whenever the master switch is off. */
+function onInoRespAllChange(el){
+  if (el.checked){
+    const ru = document.getElementById('s_resp_update');
+    if (ru && !ru.checked) ru.checked = true;
+  }
+  renderPreview();
+  scheduleWorkingSave();
+}
 function syncResponder(which, value){
   // If just checked in one column, uncheck the same value in the other column
   const otherCol = which === 'scene' ? 'route' : 'scene';
