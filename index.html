@@ -13124,6 +13124,39 @@ function saveDraft(opts){
     if (out.classList.contains('empty')) return null;
   }
 
+  // v208.49: INO — re-saving the same escalation number (e.g. editing No.2 again before
+  // copying it) should update that draft in place, not pile up a second "No.2" row. A
+  // draft that was actually copied (auto:true) is a sent record and stays put untouched;
+  // the next save of that same number creates a fresh one, same as today.
+  if (state.tmpl === 'ino' && !opts.auto){
+    let key = null; try { key = incidentKey(state); } catch(e){}
+    if (key){
+      const seqLabel = deriveSeqLabel({ state }, 'ino');
+      const existing = drafts.find(d => d && d.state && d.state.tmpl === 'ino' && !d.auto
+        && deriveSeqLabel(d, 'ino') === seqLabel
+        && (() => { try { return incidentKey(d.state) === key; } catch(e){ return false; } })());
+      if (existing){
+        existing.name = deriveDraftName(state);
+        existing.time = now.toLocaleString([], {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+        existing.snippet = snippet;
+        existing.fullText = fullText;
+        existing.state = state;
+        existing.lastActivity = now.getTime();
+        existing.savedBy = operatorName || '';
+        noteLoadedIncident(existing);
+        const note = document.getElementById('s_draft_note');
+        const t = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        if (note){ note.classList.remove('warn'); note.textContent = `Saved “${existing.name}” at ${t} ✓`; }
+        setAutosave(true, `Saved ${t}`);
+        persistDrafts();
+        captureRecentsFromForm();
+        refreshDraftsCount();
+        renderDraftsList();
+        return existing;
+      }
+    }
+  }
+
   const draft = {
     id,
     name: deriveDraftName(state),
