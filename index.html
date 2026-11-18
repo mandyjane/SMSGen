@@ -2792,7 +2792,11 @@ let avStep = 1;
 const AV_STEP_LABELS = { 1:'Initial notice', 2:'Towing authority', 3:'Removal' };
 const AV_TOW_TO = 'despatch@claytonstowing.com.au';
 const AV_TOW_BCC = 'SNO_MetroRTNM@tmr.qld.gov.au;BMTMC_Traffic@brisbane.qld.gov.au';
-const AV_TOW_SUBJ_BASE = 'QLD GOV - DTMR - METRO - Stationary (Abandoned / Broken-down) Vehicle Removal Authority - Service Order - COV DM ID: ';
+// v208.51: AV and TTS used to share one generic subject ("Stationary (Abandoned /
+// Broken-down) Vehicle") with no signal as to which job it actually was — split so each
+// names its own job type, in case the contractor's dispatch system sorts by subject text.
+const AV_SUBJ_BASE = 'QLD GOV - DTMR - METRO - Abandoned Vehicle Removal Authority - Service Order - COV DM ID: ';
+const TTS_SUBJ_BASE = 'QLD GOV - DTMR - METRO - Tow to Safety (Broken-down Vehicle) Removal Authority - Service Order - COV DM ID: ';
 
 const AUTH_NAME_KEY = 'bmtmc_auth_name_v1';
 const TOWING_RICH_KEY = 'bmtmc_towing_rich_v1';
@@ -2930,7 +2934,7 @@ async function ttsSendInOutlook(e){
   if (towingRichEmail) await copyRichHtml(buildTowingRichHtml.apply(null, args));
   else await copyPlainText(buildTowingPlainText.apply(null, args));
   flashCopied('Email copied — paste into email body', 'tts_draft_note');
-  const subj = AV_TOW_SUBJ_BASE + (get('tts_cov_id') || 'XXXXXXXX');
+  const subj = TTS_SUBJ_BASE + (get('tts_cov_id') || 'XXXXXXXX');
   openMailto('mailto:' + AV_TOW_TO + '?bcc=' + AV_TOW_BCC + '&subject=' + encodeURIComponent(subj));
 }
 async function avSendInOutlook(e){
@@ -2947,7 +2951,7 @@ async function avSendInOutlook(e){
   if (towingRichEmail) await copyRichHtml(buildTowingRichHtml.apply(null, args));
   else await copyPlainText(buildTowingPlainText.apply(null, args));
   flashCopied('Email copied — paste into email body', 'av_draft_note');
-  const subj = AV_TOW_SUBJ_BASE + (get('av_sims') || 'XXXXXXXX');
+  const subj = AV_SUBJ_BASE + (get('av_sims') || 'XXXXXXXX');
   openMailto('mailto:' + AV_TOW_TO + '?bcc=' + AV_TOW_BCC + '&subject=' + encodeURIComponent(subj));
 }
 
@@ -10964,7 +10968,7 @@ function renderAvTowingEmail(){
   out.innerHTML = '<div class="av-tow-preview">'
     + '<div class="tow-meta"><b>To:</b> ' + esc(AV_TOW_TO) + '</div>'
     + '<div class="tow-meta"><b>BCC:</b> SNO_MetroRTNM; BMTMC_Traffic</div>'
-    + '<div class="tow-meta"><b>Subject:</b> ' + esc(AV_TOW_SUBJ_BASE + (covRaw || 'XXXXXXXX')) + '</div>'
+    + '<div class="tow-meta"><b>Subject:</b> ' + esc(AV_SUBJ_BASE + (covRaw || 'XXXXXXXX')) + '</div>'
     + '<hr class="tow-divider">'
     + '<div style="font-size:12.5px;">To Clayton\u2019s Towing,</div>'
     + '<div class="tow-section">Authorisation</div>'
@@ -10987,7 +10991,7 @@ function renderAvTowingEmail(){
 
   // Build mailto link. Body omitted — full body exceeds mailto URL limits on
   // Windows/Edge; *SendInOutlook() copies the body (rich or plain text) instead.
-  const subj = AV_TOW_SUBJ_BASE + (covRaw || 'XXXXXXXX');
+  const subj = AV_SUBJ_BASE + (covRaw || 'XXXXXXXX');
   const href = 'mailto:' + AV_TOW_TO + '?bcc=' + AV_TOW_BCC + '&subject=' + encodeURIComponent(subj);
   const btn = document.getElementById('avOutlookBtn');
   if (btn) btn.href = href;
@@ -11015,7 +11019,7 @@ function renderTTS(){
   out.innerHTML = '<div class="av-tow-preview">'
     + '<div class="tow-meta"><b>To:</b> ' + esc(AV_TOW_TO) + '</div>'
     + '<div class="tow-meta"><b>BCC:</b> SNO_MetroRTNM; BMTMC_Traffic</div>'
-    + '<div class="tow-meta"><b>Subject:</b> ' + esc(AV_TOW_SUBJ_BASE + (covRaw || 'XXXXXXXX')) + '</div>'
+    + '<div class="tow-meta"><b>Subject:</b> ' + esc(TTS_SUBJ_BASE + (covRaw || 'XXXXXXXX')) + '</div>'
     + '<hr class="tow-divider">'
     + '<div style="font-size:12.5px;">To Clayton\u2019s Towing,</div>'
     + '<div class="tow-section">Authorisation</div>'
@@ -11038,7 +11042,7 @@ function renderTTS(){
 
   // Build mailto link. Body omitted — full body exceeds mailto URL limits on
   // Windows/Edge; *SendInOutlook() copies the body (rich or plain text) instead.
-  const subj = AV_TOW_SUBJ_BASE + (covRaw || 'XXXXXXXX');
+  const subj = TTS_SUBJ_BASE + (covRaw || 'XXXXXXXX');
   const href = 'mailto:' + AV_TOW_TO + '?bcc=' + AV_TOW_BCC + '&subject=' + encodeURIComponent(subj);
   const btn = document.getElementById('ttsOutlookBtn');
   if (btn) btn.href = href;
