@@ -3367,9 +3367,9 @@ function buildBCC(){
 
 
 /* ---------- BCC: responder list (INO order, FCU moved above Maintenance) ---------- */
-const BCC_RESPONDERS = ["TRU","TMA","Towing","QPS","QAS","QFD","TQ","FCU","Maintenance","Heavy haulage","Road Steward","Media","Energex","Traffic Control"];
+const BCC_RESPONDERS = ["TRU","TMA","Towing","QPS","QAS","QFD","TQ","FCU","Maintenance","Heavy haulage","Road Steward","Media","Energex","Traffic Control","NCC"];
 // v208.12: these sit behind one "More" that opens in both At scene and En route.
-const BCC_RESP_MORE = ["TQ","Road Steward","Media","Energex","Traffic Control"];
+const BCC_RESP_MORE = ["TQ","Road Steward","Media","Energex","Traffic Control","NCC"];
 const BCC_RESP_CORE = BCC_RESPONDERS.filter(r => !BCC_RESP_MORE.includes(r));   // v208.03: + Media, Energex, Traffic Control
 const BCC_SEVERITY = ["Minor","Moderate","Serious","Critical","Life threatening","Medical episode","Fatality"];
 
