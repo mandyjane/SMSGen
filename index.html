@@ -2810,7 +2810,33 @@ function setTowingRichEmail(on){
 
 /* Build a formatted HTML email body for the towing authority email.
    Used by both AV (step 2) and TTS when the rich-email setting is on. */
-function buildTowingRichHtml(authName, covRaw, covTitle, plate, towType, locDetail){
+/* v208.52: Set Down Location / KPI wording now differs by job type instead of reciting both
+   the TTS and the Abandoned-vehicle clause in every email — Clayton's dispatch system was
+   reportedly reading AV service orders as TTS jobs, and these were the only sections where
+   the word "TTS" (and its own KPI times) appeared on an AV email at all. */
+function towingSetDownHtml(jobType){
+  return jobType === 'av'
+    ? `Abandoned vehicles – light &amp; heavy – Vehicle shall be set down at Contractors storage facility.<br><br>`
+    : `SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.<br><br>`;
+}
+function towingKpiHtml(jobType){
+  return jobType === 'av'
+    ? `Abandoned vehicles – light &amp; heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.`
+    : `SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.<br>`
+      + `SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.`;
+}
+function towingSetDownText(jobType){
+  return jobType === 'av'
+    ? "Abandoned vehicles – light & heavy – Vehicle shall be set down at Contractors storage facility.\n\n"
+    : "SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.\n\n";
+}
+function towingKpiText(jobType){
+  return jobType === 'av'
+    ? "Abandoned vehicles – light & heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk."
+    : "SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.\n"
+      + "SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.";
+}
+function buildTowingRichHtml(authName, covRaw, covTitle, plate, towType, locDetail, jobType){
   const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const locFormatted = esc(locDetail||'[Location Details]').replace(/\n/g,'<br>');
   return `<div style="font-family:Aptos,Calibri,Arial,sans-serif;font-size:12pt;">`
@@ -2831,19 +2857,16 @@ function buildTowingRichHtml(authName, covRaw, covTitle, plate, towType, locDeta
     + `Service Order is confirmed received on receipt of the Service Order by phone, as per conditions of contract.<br>`
     + `Contractor shall provide estimate of arrival time within fifteen (15) minutes of receipt of Service Order.<br><br>`
     + `<b>Set Down Location</b><br>`
-    + `SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.<br>`
-    + `Abandoned vehicles \u2013 light &amp; heavy \u2013 Vehicle shall be set down at Contractors storage facility.<br><br>`
+    + towingSetDownHtml(jobType)
     + `<b>Key Performance Indicators</b><br>`
-    + `SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.<br>`
-    + `SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.<br>`
-    + `Abandoned vehicles \u2013 light &amp; heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.`
+    + towingKpiHtml(jobType)
     + `</div>`;
 }
 
 /* Plain-text twin of buildTowingRichHtml, for "Send formatted email" OFF — same content,
    no table, so turning formatting off still gets the body into the clipboard instead of
    leaving the operator to copy it from the live preview by hand. */
-function buildTowingPlainText(authName, covRaw, covTitle, plate, towType, locDetail){
+function buildTowingPlainText(authName, covRaw, covTitle, plate, towType, locDetail, jobType){
   return "To Clayton's Towing,\n\n"
     + "Authorisation\n"
     + "I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton's Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.\n\n"
@@ -2859,12 +2882,9 @@ function buildTowingPlainText(authName, covRaw, covTitle, plate, towType, locDet
     + "Service Order is confirmed received on receipt of the Service Order by phone, as per conditions of contract.\n"
     + "Contractor shall provide estimate of arrival time within fifteen (15) minutes of receipt of Service Order.\n\n"
     + "Set Down Location\n"
-    + "SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.\n"
-    + "Abandoned vehicles – light & heavy – Vehicle shall be set down at Contractors storage facility.\n\n"
+    + towingSetDownText(jobType)
     + "Key Performance Indicators\n"
-    + "SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.\n"
-    + "SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.\n"
-    + "Abandoned vehicles – light & heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.";
+    + towingKpiText(jobType);
 }
 
 /* Plain-text clipboard copy, same resilience pattern as copyRichHtml below. */
@@ -2927,7 +2947,7 @@ async function ttsSendInOutlook(e){
   const args = [
     get('tts_auth_name') || getSavedAuthName(),
     get('tts_cov_id'), get('tts_cov_title'), get('tts_plate'),
-    towType, formatLocationDetail(get('tts_loc_detail'))
+    towType, formatLocationDetail(get('tts_loc_detail')), 'tts'
   ];
   // v208.50: OFF now copies the same body as plain text (no table) instead of leaving the
   // clipboard untouched — either way the operator just pastes into the empty Outlook body.
@@ -2944,7 +2964,7 @@ async function avSendInOutlook(e){
   const args = [
     get('av_auth_name') || getSavedAuthName(),
     get('av_sims'), get('av_cov_title'), get('av_plate'),
-    "Clayton's - Abandoned", formatLocationDetail(get('av_loc_detail'))
+    "Clayton's - Abandoned", formatLocationDetail(get('av_loc_detail')), 'av'
   ];
   // v208.50: OFF now copies the same body as plain text (no table) instead of leaving the
   // clipboard untouched — either way the operator just pastes into the empty Outlook body.
@@ -10984,9 +11004,9 @@ function renderAvTowingEmail(){
     + '<div class="tow-section">Response Details</div>'
     + '<div class="tow-legal">Service Order is confirmed received on receipt of the Service Order by phone, as per conditions of contract.<br>Contractor shall provide estimate of arrival time within fifteen (15) minutes of receipt of Service Order.</div>'
     + '<div class="tow-section">Set Down Location</div>'
-    + '<div class="tow-legal">SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.<br>Abandoned vehicles \u2013 light &amp; heavy \u2013 Vehicle shall be set down at Contractors storage facility.</div>'
+    + '<div class="tow-legal">Abandoned vehicles \u2013 light &amp; heavy \u2013 Vehicle shall be set down at Contractors storage facility.</div>'
     + '<div class="tow-section">Key Performance Indicators</div>'
-    + '<div class="tow-legal">SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.<br>SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.<br>Abandoned vehicles \u2013 light &amp; heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.</div>'
+    + '<div class="tow-legal">Abandoned vehicles \u2013 light &amp; heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.</div>'
     + '</div>';
 
   // Build mailto link. Body omitted — full body exceeds mailto URL limits on
@@ -11035,9 +11055,9 @@ function renderTTS(){
     + '<div class="tow-section">Response Details</div>'
     + '<div class="tow-legal">Service Order is confirmed received on receipt of the Service Order by phone, as per conditions of contract.<br>Contractor shall provide estimate of arrival time within fifteen (15) minutes of receipt of Service Order.</div>'
     + '<div class="tow-section">Set Down Location</div>'
-    + '<div class="tow-legal">SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.<br>Abandoned vehicles \u2013 light &amp; heavy \u2013 Vehicle shall be set down at Contractors storage facility.</div>'
+    + '<div class="tow-legal">SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.</div>'
     + '<div class="tow-section">Key Performance Indicators</div>'
-    + '<div class="tow-legal">SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.<br>SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.<br>Abandoned vehicles \u2013 light &amp; heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.</div>'
+    + '<div class="tow-legal">SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.<br>SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.</div>'
     + '</div>';
 
   // Build mailto link. Body omitted — full body exceeds mailto URL limits on
