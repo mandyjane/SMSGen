@@ -1845,14 +1845,21 @@
   .preview-actions.ino .step-btn:not(.ghost) { background: var(--blue-soft); color: var(--blue-deep); }
   .preview-actions.ino .step-btn:not(.ghost):hover:not(:disabled) { border-color: var(--blue); }
   .preview-actions.ino .step-btn.ghost:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); }
-  .copied-note { display: block; text-align: center; margin-top: 8px; font-size: 13px; color: var(--teal); font-weight: 600; opacity: 0; transition: opacity 0.2s; }
+  /* v208.54: upgraded from quiet fading text to a visible pill-badge toast — easy to miss
+     before, especially for "Send in Outlook" where the operator's about to alt-tab away. */
+  .copied-note {
+    display: table; margin: 8px auto 0; padding: 7px 16px; border-radius: 999px;
+    background: var(--teal-soft); color: var(--teal-deep); font-size: 13px; font-weight: 700;
+    opacity: 0; transform: translateY(-4px); transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+  }
   .kbd-hint { text-align: center; margin: 8px 0 0; font-size: 11.5px; color: var(--muted); }
   .kbd-hint kbd {
     font-family: var(--mono); font-size: 10.5px; font-weight: 600;
     background: var(--paper); border: 1px solid var(--line-strong); border-bottom-width: 2px;
     border-radius: 4px; padding: 1px 5px; color: var(--ink-soft);
   }
-  .copied-note.show { opacity: 1; }
+  .copied-note.show { opacity: 1; transform: translateY(0); }
 
   /* ---- SLO Approval ---- */
   .slo-flag-row {
@@ -2338,7 +2345,7 @@
             New message
           </button>
         </div>
-        <span class="copied-note" id="g_copied">Copied to clipboard ✓</span>
+        <span class="copied-note" id="g_copied"></span>
       </div>
     </div>
   </div>
@@ -2940,6 +2947,7 @@ async function ttsSendInOutlook(e){
   // clipboard untouched — either way the operator just pastes into the empty Outlook body.
   if (towingRichEmail) await copyRichHtml(buildTowingRichHtml.apply(null, args));
   else await copyPlainText(buildTowingPlainText.apply(null, args));
+  showCopiedToast('Copied — ready to paste into the email body ✓', 3000);
   flashCopied('Email copied — paste into email body', 'tts_draft_note');
   const subj = AV_TOW_SUBJ_BASE + (get('tts_cov_id') || 'XXXXXXXX');
   openMailto('mailto:' + AV_TOW_TO + '?bcc=' + AV_TOW_BCC + '&subject=' + encodeURIComponent(subj));
@@ -2957,6 +2965,7 @@ async function avSendInOutlook(e){
   // clipboard untouched — either way the operator just pastes into the empty Outlook body.
   if (towingRichEmail) await copyRichHtml(buildTowingRichHtml.apply(null, args));
   else await copyPlainText(buildTowingPlainText.apply(null, args));
+  showCopiedToast('Copied — ready to paste into the email body ✓', 3000);
   flashCopied('Email copied — paste into email body', 'av_draft_note');
   const subj = AV_TOW_SUBJ_BASE + (get('av_sims') || 'XXXXXXXX');
   openMailto('mailto:' + AV_TOW_TO + '?bcc=' + AV_TOW_BCC + '&subject=' + encodeURIComponent(subj));
@@ -4205,6 +4214,7 @@ async function bccOpenOutlook(){
     try { document.execCommand('copy'); } catch(_){}
     sel.removeAllRanges(); holder.remove();
   }
+  showCopiedToast('Copied — ready to paste into the email body ✓', 3000);
   flashCopied('Table copied — paste into Outlook');
   // Open mailto
   const url = 'mailto:' + BCC_TO_EMAIL + '?subject=' + encodeURIComponent(bccSubject());
@@ -4218,6 +4228,18 @@ function flashCopied(msg, noteId){
   if (!n) return;
   n.textContent = msg;
   setTimeout(()=>{ if (n.textContent === msg) n.textContent = ''; }, 2600);
+}
+/* v208.54: the visible pill-badge toast next to the action buttons (shared by Copy message,
+   Save, and all three Send in Outlook buttons) — on top of flashCopied's quiet per-template
+   note, since that one's easy to miss right when the operator's about to alt-tab to Outlook. */
+let copiedToastTimer = null;
+function showCopiedToast(msg, duration){
+  const note = document.getElementById('g_copied');
+  if (!note) return;
+  note.textContent = msg;
+  note.classList.add('show');
+  clearTimeout(copiedToastTimer);
+  copiedToastTimer = setTimeout(()=>{ note.classList.remove('show'); }, duration || 1600);
 }
 /* Opens a mailto: URL via a short-lived <a> click (more reliable than
    window.location.href, which some browsers / IT policies block). */
@@ -11868,9 +11890,8 @@ function copyOutput(){
   // NEXT escalation both start from corrected values.
   tidyProperNounFields();
   const text = document.getElementById('g_output_text').textContent;
-  const note = document.getElementById('g_copied');
   const done = () => {
-    note.classList.add('show'); setTimeout(()=>note.classList.remove('show'), 1600);
+    showCopiedToast('Copied to clipboard ✓', 1600);
     saveDraft({ auto: true });
     captureRecentsFromForm();
     sloConsumeApproval();
@@ -13834,8 +13855,7 @@ function copyDraftById(id){
   touchDraft(id);   // v208.34
   const text = (typeof d.fullText === 'string' && d.fullText) ? d.fullText : (d.snippet || '');
   const done = () => {
-    const note = document.getElementById('g_copied');
-    if (note){ note.classList.add('show'); setTimeout(()=>note.classList.remove('show'), 1600); }
+    showCopiedToast('Copied to clipboard ✓', 1600);
   };
   if (navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text, done));
