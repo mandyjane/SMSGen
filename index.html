@@ -2792,11 +2792,11 @@ let avStep = 1;
 const AV_STEP_LABELS = { 1:'Initial notice', 2:'Towing authority', 3:'Removal' };
 const AV_TOW_TO = 'despatch@claytonstowing.com.au';
 const AV_TOW_BCC = 'SNO_MetroRTNM@tmr.qld.gov.au;BMTMC_Traffic@brisbane.qld.gov.au';
-// v208.51: AV and TTS used to share one generic subject ("Stationary (Abandoned /
-// Broken-down) Vehicle") with no signal as to which job it actually was — split so each
-// names its own job type, in case the contractor's dispatch system sorts by subject text.
-const AV_SUBJ_BASE = 'QLD GOV - DTMR - METRO - Abandoned Vehicle Removal Authority - Service Order - COV DM ID: ';
-const TTS_SUBJ_BASE = 'QLD GOV - DTMR - METRO - Tow to Safety (Broken-down Vehicle) Removal Authority - Service Order - COV DM ID: ';
+// v208.53: reverted to the exact subject from TMR's official SVM template (confirmed
+// against the attached .msg) — AV and TTS share the one generic subject by design, not a
+// bug; splitting it (v208.51) deviated from the prescribed wording without fixing Clayton's
+// misclassification, so it's reverted.
+const AV_TOW_SUBJ_BASE = 'QLD GOV - DTMR - METRO - Stationary (Abandoned / Broken-down) Vehicle Removal Authority - Service Order - COV DM ID: ';
 
 const AUTH_NAME_KEY = 'bmtmc_auth_name_v1';
 const TOWING_RICH_KEY = 'bmtmc_towing_rich_v1';
@@ -2809,82 +2809,69 @@ function setTowingRichEmail(on){
 }
 
 /* Build a formatted HTML email body for the towing authority email.
-   Used by both AV (step 2) and TTS when the rich-email setting is on. */
-/* v208.52: Set Down Location / KPI wording now differs by job type instead of reciting both
-   the TTS and the Abandoned-vehicle clause in every email — Clayton's dispatch system was
-   reportedly reading AV service orders as TTS jobs, and these were the only sections where
-   the word "TTS" (and its own KPI times) appeared on an AV email at all. */
-function towingSetDownHtml(jobType){
-  return jobType === 'av'
-    ? `Abandoned vehicles – light &amp; heavy – Vehicle shall be set down at Contractors storage facility.<br><br>`
-    : `SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.<br><br>`;
-}
-function towingKpiHtml(jobType){
-  return jobType === 'av'
-    ? `Abandoned vehicles – light &amp; heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.`
-    : `SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.<br>`
-      + `SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.`;
-}
-function towingSetDownText(jobType){
-  return jobType === 'av'
-    ? "Abandoned vehicles – light & heavy – Vehicle shall be set down at Contractors storage facility.\n\n"
-    : "SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.\n\n";
-}
-function towingKpiText(jobType){
-  return jobType === 'av'
-    ? "Abandoned vehicles – light & heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk."
-    : "SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.\n"
-      + "SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.";
-}
-function buildTowingRichHtml(authName, covRaw, covTitle, plate, towType, locDetail, jobType){
+   Used by both AV (step 2) and TTS when the rich-email setting is on.
+   v208.53: rebuilt to match TMR's official SVM template .msg exactly — Arial font, plain
+   label/value lines (no table) for Towing and Vehicle Details, no shaded box for location,
+   the bold-run pattern and the "Locations Details" heading (sic) all copied from the
+   template's own HTML export. Both Set Down Location clauses and both KPI clauses are
+   recited on every email regardless of job type, per the template — this was reverted
+   from the per-job-type split in v208.52, which deviated from the prescribed wording
+   without fixing Clayton's misclassification. */
+function buildTowingRichHtml(authName, covRaw, covTitle, plate, towType, locDetail){
   const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const locFormatted = esc(locDetail||'[Location Details]').replace(/\n/g,'<br>');
-  return `<div style="font-family:Aptos,Calibri,Arial,sans-serif;font-size:12pt;">`
-    + `To Clayton\u2019s Towing,<br><br>`
+  const nbsp = n => '&nbsp;'.repeat(n);
+  return `<div style="font-family:Arial,Calibri,sans-serif;font-size:12pt;">`
+    + `To Clayton’s Towing,<br><br>`
     + `<b>Authorisation</b><br>`
-    + `I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton\u2019s Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.<br><br>`
-    + `<b>Authorised by:</b> ${esc(authName||'[name]')}<br><br>`
+    + `I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton’s Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.<br><br>`
+    + `<b>Authorised by: </b>${esc(authName||'[name]')}<br><br>`
     + `<b>Towing and Vehicle Details</b><br>`
-    + `<table style="border-collapse:collapse;font-family:Aptos,Calibri,Arial,sans-serif;font-size:12pt;margin:4px 0 12px;">`
-    + `<tr><td style="padding:3px 8px 3px 0;border-bottom:1px solid #ccc;">STREAMS COV DM ID:</td><td style="padding:3px 8px;border-bottom:1px solid #ccc;">${esc(covRaw||'[COV DM ID]')}</td></tr>`
-    + `<tr><td style="padding:3px 8px 3px 0;border-bottom:1px solid #ccc;">STREAMS COV DM Title:</td><td style="padding:3px 8px;border-bottom:1px solid #ccc;">${esc(covTitle||'[title]')}</td></tr>`
-    + `<tr><td style="padding:3px 8px 3px 0;border-bottom:1px solid #ccc;">Vehicle Registration:</td><td style="padding:3px 8px;border-bottom:1px solid #ccc;">${esc(plate||'[plate]')}</td></tr>`
-    + `<tr><td style="padding:3px 8px 3px 0;">Tow Service Type:</td><td style="padding:3px 8px;">${esc(towType)}</td></tr>`
-    + `</table><br>`
-    + `<b>Location Details</b><br>`
-    + `<table width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 12px;"><tr><td bgcolor="#f0f0ee" style="background:#f0f0ee;border:1px solid #ccc;padding:8px 12px;font-family:Aptos,Calibri,Arial,sans-serif;font-size:11pt;">${locFormatted}</td></tr></table><br>`
+    + `STREAMS COV DM ID:${nbsp(19)}${esc(covRaw||'[COV DM ID]')}<br>`
+    + `STREAMS COV DM Title:${nbsp(15)}${esc(covTitle||'[title]')}<br>`
+    + `Vehicle Registration:${nbsp(22)}${esc(plate||'[plate]')}<br>`
+    + `Tow Service Type:${nbsp(28)}${esc(towType)}<br><br>`
+    + `<b>Locations Details</b><br>`
+    + `${locFormatted}<br><br>`
     + `<b>Response Details</b><br>`
     + `Service Order is confirmed received on receipt of the Service Order by phone, as per conditions of contract.<br>`
     + `Contractor shall provide estimate of arrival time within fifteen (15) minutes of receipt of Service Order.<br><br>`
     + `<b>Set Down Location</b><br>`
-    + towingSetDownHtml(jobType)
+    + `<b>SVM Tow to Safety (TTS)</b> - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.<br>`
+    + `<b>Abandoned vehicles</b> – <b>light &amp; heavy</b> – Vehicle shall be set down at Contractors storage facility.<br><br>`
     + `<b>Key Performance Indicators</b><br>`
-    + towingKpiHtml(jobType)
+    + `<b>SVM (TTS) light vehicles</b> - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.<br>`
+    + `<b>SVM (TTS) heavy vehicles</b> - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.<br>`
+    + `<b>Abandoned vehicles</b> – <b>light &amp; heavy</b> - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.`
     + `</div>`;
 }
 
 /* Plain-text twin of buildTowingRichHtml, for "Send formatted email" OFF — same content,
    no table, so turning formatting off still gets the body into the clipboard instead of
-   leaving the operator to copy it from the live preview by hand. */
-function buildTowingPlainText(authName, covRaw, covTitle, plate, towType, locDetail, jobType){
-  return "To Clayton's Towing,\n\n"
+   leaving the operator to copy it from the live preview by hand. Matches the official
+   template's own plain-text body (extracted from the .msg) line for line. */
+function buildTowingPlainText(authName, covRaw, covTitle, plate, towType, locDetail){
+  return "To Clayton\u2019s Towing,\n\n"
     + "Authorisation\n"
-    + "I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton's Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.\n\n"
+    + "I hear by request Stationary Vehicle Management (SVM) Service Provider (Clayton\u2019s Towing) to remove the vehicle (see Vehicle Details below) from the location (see Location Details below) by taking steps that are reasonable and necessary and in accordance with Transport and Main Roads conditions of contract. Transport and Main Roads authority is provided under Section 51G (Power to move or remove the vehicle, load, or other thing from the road; or power to request service to towing vehicle operator to remove the vehicle, load, or other thing) of the Transport Operations (Road Use Management) Act 1995.\n\n"
     + "Authorised by: " + (authName || '[name]') + "\n\n"
     + "Towing and Vehicle Details\n"
-    + "STREAMS COV DM ID:               " + (covRaw || '[COV DM ID]') + "\n"
-    + "STREAMS COV DM Title:           " + (covTitle || '[STREAMS COV DM Title]') + "\n"
-    + "Vehicle Registration:                  " + (plate || '[plate]') + "\n"
-    + "Tow Service Type:                        " + (towType || '') + "\n\n"
+    + "STREAMS COV DM ID:" + " ".repeat(20) + (covRaw || '[COV DM ID]') + "\n"
+    + "STREAMS COV DM Title:" + " ".repeat(16) + (covTitle || '[STREAMS COV DM Title]') + "\n"
+    + "Vehicle Registration:" + " ".repeat(23) + (plate || '[plate]') + "\n"
+    + "Tow Service Type:" + " ".repeat(29) + (towType || '') + "\n\n"
     + "Locations Details\n"
-    + (locDetail || '[Location Details]') + "\n\n\n"
+    + (locDetail || '[Location Details]') + "\n\n"
     + "Response Details\n"
     + "Service Order is confirmed received on receipt of the Service Order by phone, as per conditions of contract.\n"
     + "Contractor shall provide estimate of arrival time within fifteen (15) minutes of receipt of Service Order.\n\n"
     + "Set Down Location\n"
-    + towingSetDownText(jobType)
+    + "SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.\n"
+    + "Abandoned vehicles – light & heavy – Vehicle shall be set down at Contractors storage facility.\n\n"
     + "Key Performance Indicators\n"
-    + towingKpiText(jobType);
+    + "SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.\n"
+    + "SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.\n"
+    + "Abandoned vehicles – light & heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.";
 }
 
 /* Plain-text clipboard copy, same resilience pattern as copyRichHtml below. */
@@ -2947,14 +2934,14 @@ async function ttsSendInOutlook(e){
   const args = [
     get('tts_auth_name') || getSavedAuthName(),
     get('tts_cov_id'), get('tts_cov_title'), get('tts_plate'),
-    towType, formatLocationDetail(get('tts_loc_detail')), 'tts'
+    towType, formatLocationDetail(get('tts_loc_detail'))
   ];
   // v208.50: OFF now copies the same body as plain text (no table) instead of leaving the
   // clipboard untouched — either way the operator just pastes into the empty Outlook body.
   if (towingRichEmail) await copyRichHtml(buildTowingRichHtml.apply(null, args));
   else await copyPlainText(buildTowingPlainText.apply(null, args));
   flashCopied('Email copied — paste into email body', 'tts_draft_note');
-  const subj = TTS_SUBJ_BASE + (get('tts_cov_id') || 'XXXXXXXX');
+  const subj = AV_TOW_SUBJ_BASE + (get('tts_cov_id') || 'XXXXXXXX');
   openMailto('mailto:' + AV_TOW_TO + '?bcc=' + AV_TOW_BCC + '&subject=' + encodeURIComponent(subj));
 }
 async function avSendInOutlook(e){
@@ -2964,14 +2951,14 @@ async function avSendInOutlook(e){
   const args = [
     get('av_auth_name') || getSavedAuthName(),
     get('av_sims'), get('av_cov_title'), get('av_plate'),
-    "Clayton's - Abandoned", formatLocationDetail(get('av_loc_detail')), 'av'
+    "Clayton's - Abandoned", formatLocationDetail(get('av_loc_detail'))
   ];
   // v208.50: OFF now copies the same body as plain text (no table) instead of leaving the
   // clipboard untouched — either way the operator just pastes into the empty Outlook body.
   if (towingRichEmail) await copyRichHtml(buildTowingRichHtml.apply(null, args));
   else await copyPlainText(buildTowingPlainText.apply(null, args));
   flashCopied('Email copied — paste into email body', 'av_draft_note');
-  const subj = AV_SUBJ_BASE + (get('av_sims') || 'XXXXXXXX');
+  const subj = AV_TOW_SUBJ_BASE + (get('av_sims') || 'XXXXXXXX');
   openMailto('mailto:' + AV_TOW_TO + '?bcc=' + AV_TOW_BCC + '&subject=' + encodeURIComponent(subj));
 }
 
@@ -10988,7 +10975,7 @@ function renderAvTowingEmail(){
   out.innerHTML = '<div class="av-tow-preview">'
     + '<div class="tow-meta"><b>To:</b> ' + esc(AV_TOW_TO) + '</div>'
     + '<div class="tow-meta"><b>BCC:</b> SNO_MetroRTNM; BMTMC_Traffic</div>'
-    + '<div class="tow-meta"><b>Subject:</b> ' + esc(AV_SUBJ_BASE + (covRaw || 'XXXXXXXX')) + '</div>'
+    + '<div class="tow-meta"><b>Subject:</b> ' + esc(AV_TOW_SUBJ_BASE + (covRaw || 'XXXXXXXX')) + '</div>'
     + '<hr class="tow-divider">'
     + '<div style="font-size:12.5px;">To Clayton\u2019s Towing,</div>'
     + '<div class="tow-section">Authorisation</div>'
@@ -10999,19 +10986,19 @@ function renderAvTowingEmail(){
     + '<tr><td>STREAMS COV DM Title:</td><td>' + esc(covTitle || '[enter in form]') + '</td></tr>'
     + '<tr><td>Vehicle Registration:</td><td>' + esc(plate || '[plate]') + '</td></tr>'
     + '<tr><td>Tow Service Type:</td><td>Clayton\u2019s - Abandoned</td></tr></table>'
-    + '<div class="tow-section">Location Details</div>'
+    + '<div class="tow-section">Locations Details</div>'
     + '<div class="av-tow-loc">' + esc(locDetail || '[paste location details]') + '</div>'
     + '<div class="tow-section">Response Details</div>'
     + '<div class="tow-legal">Service Order is confirmed received on receipt of the Service Order by phone, as per conditions of contract.<br>Contractor shall provide estimate of arrival time within fifteen (15) minutes of receipt of Service Order.</div>'
     + '<div class="tow-section">Set Down Location</div>'
-    + '<div class="tow-legal">Abandoned vehicles \u2013 light &amp; heavy \u2013 Vehicle shall be set down at Contractors storage facility.</div>'
+    + '<div class="tow-legal">SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.<br>Abandoned vehicles \u2013 light &amp; heavy \u2013 Vehicle shall be set down at Contractors storage facility.</div>'
     + '<div class="tow-section">Key Performance Indicators</div>'
-    + '<div class="tow-legal">Abandoned vehicles \u2013 light &amp; heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.</div>'
+    + '<div class="tow-legal">SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.<br>SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.<br>Abandoned vehicles \u2013 light &amp; heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.</div>'
     + '</div>';
 
   // Build mailto link. Body omitted — full body exceeds mailto URL limits on
   // Windows/Edge; *SendInOutlook() copies the body (rich or plain text) instead.
-  const subj = AV_SUBJ_BASE + (covRaw || 'XXXXXXXX');
+  const subj = AV_TOW_SUBJ_BASE + (covRaw || 'XXXXXXXX');
   const href = 'mailto:' + AV_TOW_TO + '?bcc=' + AV_TOW_BCC + '&subject=' + encodeURIComponent(subj);
   const btn = document.getElementById('avOutlookBtn');
   if (btn) btn.href = href;
@@ -11039,7 +11026,7 @@ function renderTTS(){
   out.innerHTML = '<div class="av-tow-preview">'
     + '<div class="tow-meta"><b>To:</b> ' + esc(AV_TOW_TO) + '</div>'
     + '<div class="tow-meta"><b>BCC:</b> SNO_MetroRTNM; BMTMC_Traffic</div>'
-    + '<div class="tow-meta"><b>Subject:</b> ' + esc(TTS_SUBJ_BASE + (covRaw || 'XXXXXXXX')) + '</div>'
+    + '<div class="tow-meta"><b>Subject:</b> ' + esc(AV_TOW_SUBJ_BASE + (covRaw || 'XXXXXXXX')) + '</div>'
     + '<hr class="tow-divider">'
     + '<div style="font-size:12.5px;">To Clayton\u2019s Towing,</div>'
     + '<div class="tow-section">Authorisation</div>'
@@ -11050,19 +11037,19 @@ function renderTTS(){
     + '<tr><td>STREAMS COV DM Title:</td><td>' + esc(covTitle || '[enter in form]') + '</td></tr>'
     + '<tr><td>Vehicle Registration:</td><td>' + esc(plate || '[plate]') + '</td></tr>'
     + '<tr><td>Tow Service Type:</td><td>' + esc(towType) + '</td></tr></table>'
-    + '<div class="tow-section">Location Details</div>'
+    + '<div class="tow-section">Locations Details</div>'
     + '<div class="av-tow-loc">' + esc(locDetail || '[paste location details]') + '</div>'
     + '<div class="tow-section">Response Details</div>'
     + '<div class="tow-legal">Service Order is confirmed received on receipt of the Service Order by phone, as per conditions of contract.<br>Contractor shall provide estimate of arrival time within fifteen (15) minutes of receipt of Service Order.</div>'
     + '<div class="tow-section">Set Down Location</div>'
-    + '<div class="tow-legal">SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.</div>'
+    + '<div class="tow-legal">SVM Tow to Safety (TTS) - Safe set down location must be in the vicinity of amenities (included restrooms, convenience stores, public phone and the like) such that stationary vehicle occupants can easily access required services.<br>Abandoned vehicles – light &amp; heavy – Vehicle shall be set down at Contractors storage facility.</div>'
     + '<div class="tow-section">Key Performance Indicators</div>'
-    + '<div class="tow-legal">SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.<br>SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.</div>'
+    + '<div class="tow-legal">SVM (TTS) light vehicles - thirty (30) minutes from time contractor is proceeding for high-risk vehicles and within sixty (60) minutes for medium to low risk.<br>SVM (TTS) heavy vehicles - sixty (60) minutes from time when Contractor is proceeding for high-risk vehicles and one hundred and twenty (120) minutes for medium to low risk.<br>Abandoned vehicles – light &amp; heavy - forty-five (45) minutes from time contractor is proceeding for high-risk vehicles and within ninety (90) minutes for medium to low risk.</div>'
     + '</div>';
 
   // Build mailto link. Body omitted — full body exceeds mailto URL limits on
   // Windows/Edge; *SendInOutlook() copies the body (rich or plain text) instead.
-  const subj = TTS_SUBJ_BASE + (covRaw || 'XXXXXXXX');
+  const subj = AV_TOW_SUBJ_BASE + (covRaw || 'XXXXXXXX');
   const href = 'mailto:' + AV_TOW_TO + '?bcc=' + AV_TOW_BCC + '&subject=' + encodeURIComponent(subj);
   const btn = document.getElementById('ttsOutlookBtn');
   if (btn) btn.href = href;
